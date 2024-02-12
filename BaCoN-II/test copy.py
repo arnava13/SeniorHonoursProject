@@ -407,7 +407,7 @@ def main():
     print('-------------------- out_path with FLAGS_fname', out_path)
 
     # LT: added to save prints as log-file (use same method as in train.py)
-    logfile = os.path.join(out_path, cm_name_custom+'_log.txt')
+    logfile = os.path.join(out_path, 'cm_'+cm_name_custom+'_log.txt')
     myLog = Logger(logfile)
     sys.stdout = myLog
 
