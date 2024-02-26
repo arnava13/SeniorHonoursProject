@@ -64,6 +64,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                 sample_pace = 4, pad=False, 
                 Verbose=False, Verbose_2=False,
                 k_max=2.5, i_max = None,
+                k_min=0.0, i_min = None,
                 add_noise=True, n_noisy_samples = 10, 
                 add_shot=True, add_sys=True, add_cosvar=True, sigma_sys=5,
                 rescale_curves = None, 
@@ -103,7 +104,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         self.swap_axes = swap_axes 
         
         self.k_max=k_max
+        self.k_min=k_min
         self.i_max=i_max
+        self.i_min=i_min
         self.sample_pace=sample_pace
         if sample_pace ==1:
           self.dim = dim
@@ -123,6 +126,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         self.data_root=data_root
         self.norm_data_path = self.data_root+norm_data_name
         print('Normalisation file is %s' %norm_data_name)
+
         # Select points up to k_max or i_max
         self.all_ks = np.loadtxt(self.norm_data_path)[:, 0]
         if self.sample_pace !=1:
@@ -135,7 +139,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             print('Corresponding i_max is %s' %self.i_max)
             print('Closest k to k_max is %s' %k_max_res)
             #print('Selecting ks up to k_max=%s, or index %s for input k_max=%s' %(self.ind_max, k_max_res, self.k_max))
-            
+
         elif self.i_max is not None:
             self.k_max = self.all_ks[self.i_max]
             print('Specified i_max is %s' %self.i_max)
@@ -145,18 +149,48 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             print('Specified i_max is %s' %self.i_max)
             print('Specified k_max is %s' %self.k_max)
             
-            i_m, k_m = find_nearest(self.all_ks, self.k_max)
-            assert(i_m==self.i_max)
+            i_max, k_max = find_nearest(self.all_ks, self.k_max)
+            assert(i_max==self.i_max)
         
         else:
             self.i_max = -1
-            print('No cut in k. Using all ks . k_max=%s' %self.all_ks[self.i_max])
-            
+            print('No max in k. Using all ks . k_max=%s' %self.all_ks[self.i_max])
+
+        # Select points from k_min or i_min
+        self.all_ks = np.loadtxt(self.norm_data_path)[:, 0]
+        if self.sample_pace !=1:
+                self.all_ks = np.loadtxt(self.norm_data_path)[0::sample_pace, 0]
         
-        self.all_ks = self.all_ks[:self.i_max]
+        #print('Data Gen using k max %s' %str(self.k_min))
+        if self.k_min is not None:
+            print('Specified k_min is %s' %self.k_min)
+            self.i_min, k_min_res = find_nearest(self.all_ks, self.k_min) # self.all_ks[self.all_ks==self.k_min]
+            print('Corresponding i_min is %s' %self.i_min)
+            print('Closest k to k_min is %s' %k_min_res)
+            #print('Selecting ks up to k_min=%s, or index %s for input k_min=%s' %(self.ind_max, k_min_res, self.k_min))
+
+        elif self.i_min is not None:
+            self.k_min = self.all_ks[self.i_min]
+            print('Specified i_min is %s' %self.i_min)
+            print('Corresponding k_min is %s' %self.k_min)
+            
+        elif self.i_min is not None and self.k_min is not None:
+            print('Specified i_min is %s' %self.i_min)
+            print('Specified k_min is %s' %self.k_min)
+            
+            i_min, k_min = find_nearest(self.all_ks, self.k_min)
+            assert(i_min==self.i_min)
+        
+        else:
+            self.i_min = 0
+            print('No min in k. Using all ks . k_min=%s' %self.all_ks[self.i_min])
+        
+            
+        self.all_ks = self.all_ks[self.i_min:self.i_max]
         self.dim = (self.all_ks.shape[0], self.dim[1])
         print('New data dim: %s' %str(self.dim) )
         print('Final i_max used is %s' %self.i_max)
+        print('Final i_min used is %s' %self.i_min)
             
         
             
@@ -208,7 +242,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
           self.norm_data = np.loadtxt(self.norm_data_path)[:, 1:]
           if self.sample_pace !=1:
             self.norm_data = self.norm_data[0::self.sample_pace, :]
-          self.norm_data = self.norm_data[:self.i_max]
+          self.norm_data = self.norm_data[self.i_min:self.i_max]
               
         
         self.idx_file_name = idx_file_name
@@ -383,7 +417,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
               if self.sample_pace!=1:
                 P_original = P_original[0::self.sample_pace, :]
                 k = k[0::self.sample_pace]
-              P_original, k = P_original[:self.i_max], k[:self.i_max]
+              P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
               #print('P_original.shape ',P_original.shape)
               if self.Verbose:
                 print('Dimension of original data: %s' %str(P_original.shape))
@@ -414,7 +448,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                     if self.sample_pace!=1:
                         noise_sys = noise_sys[0::self.sample_pace, :]
                         k_sys = k_sys[0::self.sample_pace]
-                    noise_sys, k_sys = noise_sys[:self.i_max], k_sys[:self.i_max]
+                    noise_sys, k_sys = noise_sys[self.i_min:self.i_max], k_sys[self.i_min:self.i_max]
                     if (k.all() != k_sys.all()):
                         print('ERROR: k-values in spectrum and theory-error curve file not identical')
 
@@ -703,7 +737,7 @@ def create_generators(FLAGS):
           'n_noisy_samples':n_noisy_samples,
           'fine_tune':FLAGS.fine_tune,
           'add_shot':FLAGS.add_shot, 'add_sys':FLAGS.add_sys,'add_cosvar':FLAGS.add_cosvar,
-          'k_max':FLAGS.k_max, 'i_max':FLAGS.i_max, 'sigma_sys':sigma_sys,
+          'k_max':FLAGS.k_max, 'i_max':FLAGS.i_max, 'k_min':FLAGS.k_min, 'i_min':FLAGS.i_min, 'sigma_sys':sigma_sys,
           'swap_axes':swap_axes,
           'z_bins':z_bins,
           'test_mode':FLAGS.test_mode,
@@ -822,7 +856,7 @@ def create_test_generator(FLAGS):
           'n_noisy_samples':n_noisy_samples, 
           'fine_tune':FLAGS.fine_tune,
           'add_shot':FLAGS.add_shot, 'add_sys':FLAGS.add_sys,'add_cosvar':FLAGS.add_cosvar,
-          'k_max':FLAGS.k_max, 'i_max':FLAGS.i_max, 'sigma_sys':FLAGS.sigma_sys,
+          'k_max':FLAGS.k_max, 'i_max':FLAGS.i_max, 'k_min':FLAGS.k_min, 'i_min':FLAGS.i_min, 'sigma_sys':sigma_sys,
           'swap_axes':FLAGS.swap_axes,
           'z_bins':FLAGS.z_bins,
           'test_mode':FLAGS.test_mode,

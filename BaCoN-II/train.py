@@ -277,7 +277,9 @@ def main():
     parser.add_argument("--sample_pace", default=4, type=int, required=False)
     
     parser.add_argument("--k_max", default=2.5, type=float, required=False)
+    parser.add_argument("--k_min", default=0, type=float, required=False)
     parser.add_argument("--i_max", default=None, type=int, required=False)
+    parser.add_argument("--i_min", default=None, type=int, required=False)
     
     parser.add_argument("--add_noise", default=True, type=str2bool, required=False)
     parser.add_argument("--n_noisy_samples", default=10, type=int, required=False)
