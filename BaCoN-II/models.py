@@ -27,7 +27,7 @@ def make_model(model_name, **params):
 # ------------------------------------------------------
 
 def make_custom_model(    drop=0.5, 
-                          n_labels=5, 
+                          n_labels=6, 
                           input_shape=( 100, 4), 
                           padding='valid', 
                           filters=(8, 16, 32),
@@ -214,7 +214,7 @@ def make_fine_tuning_model(base_model, input_shape, n_out_labels, dense_dim=0,
 
 
 def make_model_dummy(drop=0., 
-                          n_labels=5, 
+                          n_labels=6, 
                           input_shape=( 125, 4, 1), 
                           padding='valid', 
                           k_1=96, k_2 = 256, k_3  =384,
