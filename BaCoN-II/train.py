@@ -274,7 +274,7 @@ def main():
     parser.add_argument("--sort_labels", default=True, type=str2bool, required=False)
     parser.add_argument("--norm_data_name", default=None, type=str, required=False)
     parser.add_argument("--normalization", default='stdcosmo', type=str, required=False)
-    parser.add_argument("--sample_pace", default=4, type=int, required=False)
+    parser.add_argument("--sample_pace", default=1, type=int, required=False)
     
     parser.add_argument("--k_max", default=2.5, type=float, required=False)
     parser.add_argument("--k_min", default=0, type=float, required=False)

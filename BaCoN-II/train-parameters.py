@@ -208,6 +208,7 @@ def main():
                      "--z_bins", z1,z2,z3,z4, \
                      "--filters", f1,f2,f3, "--kernel_sizes", k1,k2,k3, "--strides", s1,s2,s3, "--pool_sizes", p1,p2,p3, "--strides_pooling", sp1,sp2,sp3, \
                      "--k_max", k_max,\
+                     "--k_min", k_min, \
                      "--n_dense", n_dense,\
                      "--add_FT_dense", add_FT_dense, \
                      "--n_epochs", n_epochs, "--patience", patience, "--batch_size", batch_size, "--lr", lr, \

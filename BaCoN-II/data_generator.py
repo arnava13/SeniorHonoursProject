@@ -161,7 +161,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         if self.sample_pace !=1:
                 self.all_ks = np.loadtxt(self.norm_data_path)[0::sample_pace, 0]
         
-        #print('Data Gen using k max %s' %str(self.k_min))
+        #print('Data Gen using k min %s' %str(self.k_min))
         if self.k_min is not None:
             print('Specified k_min is %s' %self.k_min)
             self.i_min, k_min_res = find_nearest(self.all_ks, self.k_min) # self.all_ks[self.all_ks==self.k_min]
