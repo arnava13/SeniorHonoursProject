@@ -419,13 +419,11 @@ def main():
     # Does not work on Google Colab
     ###
         
-    tf.io.gfile.makedirs(out_path)
-    
-    """if not os.path.exists(out_path):
+    if not os.path.exists(out_path):
         print('Creating directory %s' %out_path)
         tf.io.gfile.makedirs(out_path)
     else:
-       print('Directory %s not created' %out_path)"""
+       print('Directory %s not created' %out_path)
     
     
     logfile = os.path.join(out_path, FLAGS.fname+log_fname_add+'_log.txt')
