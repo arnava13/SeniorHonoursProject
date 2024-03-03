@@ -320,6 +320,7 @@ def main():
     parser.add_argument("--batch_size", default=2500, type=int, required=False)
     parser.add_argument("--patience", default=100, type=int, required=False)
     parser.add_argument("--GPU", default=True, type=str2bool, required=False)
+    parser.add_argument("--TPU", default=False, type=str2bool, required=False)
     parser.add_argument("--decay", default=0.95, type=float, required=False)
     parser.add_argument("--BatchNorm", default=True, type=str2bool, required=False)
     
@@ -334,7 +335,10 @@ def main():
     FLAGS.strides_pooling = [int(z) for z in FLAGS.strides_pooling]
     FLAGS.c_1.sort()
     FLAGS.c_0.sort()
-                  
+
+    if Flags.TPU and Flags.GPU:
+            raise Exception("Both --GPU and --TPU are true, only one must be true")
+
     #if not FLAGS.fine_tune:
     #    if not FLAGS.dataset_balanced and FLAGS.one_vs_all:
     #        raise ValueError('dataset_balanced must be true in one vs all mode')
@@ -454,6 +458,7 @@ def main():
     
     
     print('------------ BUILDING MODEL ------------')
+
     if FLAGS.swap_axes:
         input_shape = ( int(training_generator.dim[0]), 
                    int(training_generator.n_channels))
@@ -485,153 +490,296 @@ def main():
             BatchNorm=True
         filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense
 
-    model=make_model(     model_name=model_name,
-                         drop=drop, 
-                          n_labels=n_classes, 
-                          input_shape=input_shape, 
-                          padding='valid', 
-                          filters=filters,
-                          kernel_sizes=kernel_sizes,
-                          strides=strides,
-                          pool_sizes=pool_sizes,
-                          strides_pooling=strides_pooling,
-                          activation=tf.nn.leaky_relu,
-                          bayesian=bayesian, 
-                          n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
-                             )
-    
-    
-    model.build(input_shape=input_shape)
-    print(model.summary())
-    
-    if FLAGS.fine_tune:
-        loss_0 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
-        print('Loss before loading weights/ %s\n' %loss_0.numpy())
-    
-    if FLAGS.decay is not None:
-        lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_generator), FLAGS.decay)
-        optimizer = tf.keras.optimizers.Adam(lr_fn)
-    else:
-        optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
-    
-    if FLAGS.restore and FLAGS.decay is not None:
-        decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / len(training_generator))
-        
-    #optimizer.iterations  # this access will invoke optimizer._iterations method and create optimizer.iter attribute
-    #if FLAGS.decay is not None:
-    #    optimizer.decay = tf.Variable(tf.Variable(FLAGS.decay))
-    
-    
-    if not FLAGS.unfreeze:
-        ckpts_path = out_path+'/tf_ckpts/'
-    else:
-        ckpts_path=out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name_base_unfreezing+'/'
-    ckpt_name = 'ckpt'
-    ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model) 
-    
-    if FLAGS.fine_tune:
-        print('Loading ckpt from %s' %ckpts_path)
-        latest = tf.train.latest_checkpoint(ckpts_path)
-        print('Loading ckpt %s' %latest)
-        if not FLAGS.test_mode:
-            ckpts_path = out_path+'/tf_ckpts_fine_tuning'+add_ckpt_name+'/'
-        else:
-            ckpts_path = out_path+'/tf_ckpts_fine_tuning_test'+add_ckpt_name+'/'
-        ckpt_name = ckpt_name+'_fine_tuning'+add_ckpt_name
-        if FLAGS.test_mode:
-            ckpt_name+='_test'
-        ckpt.restore(latest)
-        print('Last learning rate was %s' %ckpt.optimizer.learning_rate)
-        ckpt.optimizer.learning_rate = FLAGS.lr
-        print('Learning rate set to %s' %ckpt.optimizer.learning_rate)
-        
-        loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
-        print('Loss after loading weights/ %s\n' %loss_1.numpy())
-        if FLAGS.add_FT_dense:
-            if not FLAGS.swap_axes:
-                dense_dim=filters[-1]
-            else:
-                dense_dim=filters[-1]
-        else:
-            dense_dim=0
-        
-        if not FLAGS.unfreeze:
-            model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
-                                       n_out_labels=training_generator.n_classes_out,
-                                       dense_dim= dense_dim, bayesian=bayesian, 
-                                       trainable=FLAGS.trainable, 
-                                       drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
-        else:
-            model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
-                                       n_out_labels=training_generator.n_classes_out,
-                                       dense_dim= dense_dim, bayesian=bayesian, 
-                                       drop=drop,  BatchNorm=FLAGS.BatchNorm)
-            
-        model.build(input_shape=input_shape)
-        print(model.summary())
-    
-        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)     
-    elif FLAGS.one_vs_all:
-        if not FLAGS.test_mode:
-            ckpts_path = out_path+'/tf_ckpts'+add_ckpt_name+'/'
-        else:
-            ckpts_path = out_path+'/tf_ckpts_test'+add_ckpt_name+'/'
-        ckpt_name = ckpt_name+add_ckpt_name
-        if FLAGS.test_mode:
-            ckpt_name+='_test'
-        
-        
-    manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
-                                         max_to_keep=2, 
-                                         checkpoint_name=ckpt_name)
-    
-    
-    train_acc_metric = tf.keras.metrics.Accuracy()
-    val_acc_metric = tf.keras.metrics.Accuracy()
-    
-    
     if FLAGS.GPU:
         device_name = tf.test.gpu_device_name()
         if device_name != '/device:GPU:0':
             #raise SystemError('GPU device not found')
             print('GPU device not found ! Device: %s' %device_name)
         else: print('Found GPU at: {}'.format(device_name))
-    
-    
-    print('------------ TRAINING ------------\n')
-    if FLAGS.bayesian:
-        loss=ELBO
-    else:
-        loss=my_loss
-    
-    
-    #print('Model n_classes : %s ' %n_classes)
-    print('Features shape: %s' %str(training_generator[0][0].shape))
-    print('Labels shape: %s' %str(training_generator[0][1].shape))   
-    model, history = my_train(model, optimizer, loss,
-             FLAGS.n_epochs, 
-             training_generator, 
-             validation_generator, manager, ckpt,
-             train_acc_metric, val_acc_metric,
-             patience=FLAGS.patience, restore=FLAGS.restore, 
-             bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None #not(FLAGS.test_mode)
-)
-    hist_path =  out_path+'/hist.png'
-    if FLAGS.fine_tune:
-        if FLAGS.test_mode:
-            hist_path = out_path +'/hist_fine_tuning'+add_ckpt_name+'_test.png'
-        else:
-            hist_path = out_path +'/hist_fine_tuning'+add_ckpt_name+'.png'  
-    
-    plot_hist(DummyHist(history), epochs=len(history['loss']), save=True, path=hist_path, show=False)
-    
-    
-    print('Done in %.2fs' %(time.time() - in_time))
-    ###
-    # Uncoment if saving output on file, to properly close
-    ###    
-    sys.stdout = sys.__stdout__
-    myLog.close()
+        model=make_model(     model_name=model_name,
+                                drop=drop, 
+                                n_labels=n_classes, 
+                                input_shape=input_shape, 
+                                padding='valid', 
+                                filters=filters,
+                                kernel_sizes=kernel_sizes,
+                                strides=strides,
+                                pool_sizes=pool_sizes,
+                                strides_pooling=strides_pooling,
+                                activation=tf.nn.leaky_relu,
+                                bayesian=bayesian, 
+                                n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
+                                    )
+        model.build(input_shape=input_shape)
+        print(model.summary())
+
+        if FLAGS.fine_tune:
+            loss_0 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
+            print('Loss before loading weights/ %s\n' %loss_0.numpy())
+            
+            if FLAGS.decay is not None:
+                lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_generator), FLAGS.decay)
+                optimizer = tf.keras.optimizers.Adam(lr_fn)
+            else:
+                optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
+            
+            if FLAGS.restore and FLAGS.decay is not None:
+                decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / len(training_generator))
+                
+            #optimizer.iterations  # this access will invoke optimizer._iterations method and create optimizer.iter attribute
+            #if FLAGS.decay is not None:
+            #    optimizer.decay = tf.Variable(tf.Variable(FLAGS.decay))
+            
+            
+            if not FLAGS.unfreeze:
+                ckpts_path = out_path+'/tf_ckpts/'
+            else:
+                ckpts_path=out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name_base_unfreezing+'/'
+            ckpt_name = 'ckpt'
+            ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model) 
+            
+            if FLAGS.fine_tune:
+                print('Loading ckpt from %s' %ckpts_path)
+                latest = tf.train.latest_checkpoint(ckpts_path)
+                print('Loading ckpt %s' %latest)
+                if not FLAGS.test_mode:
+                    ckpts_path = out_path+'/tf_ckpts_fine_tuning'+add_ckpt_name+'/'
+                else:
+                    ckpts_path = out_path+'/tf_ckpts_fine_tuning_test'+add_ckpt_name+'/'
+                ckpt_name = ckpt_name+'_fine_tuning'+add_ckpt_name
+                if FLAGS.test_mode:
+                    ckpt_name+='_test'
+                ckpt.restore(latest)
+                print('Last learning rate was %s' %ckpt.optimizer.learning_rate)
+                ckpt.optimizer.learning_rate = FLAGS.lr
+                print('Learning rate set to %s' %ckpt.optimizer.learning_rate)
+                
+                loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
+                print('Loss after loading weights/ %s\n' %loss_1.numpy())
+                if FLAGS.add_FT_dense:
+                    if not FLAGS.swap_axes:
+                        dense_dim=filters[-1]
+                    else:
+                        dense_dim=filters[-1]
+                else:
+                    dense_dim=0
+                
+                if not FLAGS.unfreeze:
+                    model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
+                                            n_out_labels=training_generator.n_classes_out,
+                                            dense_dim= dense_dim, bayesian=bayesian, 
+                                            trainable=FLAGS.trainable, 
+                                            drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
+                else:
+                    model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
+                                            n_out_labels=training_generator.n_classes_out,
+                                            dense_dim= dense_dim, bayesian=bayesian, 
+                                            drop=drop,  BatchNorm=FLAGS.BatchNorm)
+                    
+                model.build(input_shape=input_shape)
+                print(model.summary())
+            
+                ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)     
+            elif FLAGS.one_vs_all:
+                if not FLAGS.test_mode:
+                    ckpts_path = out_path+'/tf_ckpts'+add_ckpt_name+'/'
+                else:
+                    ckpts_path = out_path+'/tf_ckpts_test'+add_ckpt_name+'/'
+                ckpt_name = ckpt_name+add_ckpt_name
+                if FLAGS.test_mode:
+                    ckpt_name+='_test'
+                
+                
+            manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
+                                                max_to_keep=2, 
+                                                checkpoint_name=ckpt_name)
+            
+            
+            train_acc_metric = tf.keras.metrics.Accuracy()
+            val_acc_metric = tf.keras.metrics.Accuracy()
+                
+            print('------------ TRAINING ------------\n')
+            if FLAGS.bayesian:
+                loss=ELBO
+            else:
+                loss=my_loss
+            
+            
+            #print('Model n_classes : %s ' %n_classes)
+            print('Features shape: %s' %str(training_generator[0][0].shape))
+            print('Labels shape: %s' %str(training_generator[0][1].shape))   
+            model, history = my_train(model, optimizer, loss,
+                    FLAGS.n_epochs, 
+                    training_generator, 
+                    validation_generator, manager, ckpt,
+                    train_acc_metric, val_acc_metric,
+                    patience=FLAGS.patience, restore=FLAGS.restore, 
+                    bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None #not(FLAGS.test_mode)
+        )
+            hist_path =  out_path+'/hist.png'
+            if FLAGS.fine_tune:
+                if FLAGS.test_mode:
+                    hist_path = out_path +'/hist_fine_tuning'+add_ckpt_name+'_test.png'
+                else:
+                    hist_path = out_path +'/hist_fine_tuning'+add_ckpt_name+'.png'  
+            
+            plot_hist(DummyHist(history), epochs=len(history['loss']), save=True, path=hist_path, show=False)
+            
+            
+            print('Done in %.2fs' %(time.time() - in_time))
+            ###
+            # Uncoment if saving output on file, to properly close
+            ###    
+            sys.stdout = sys.__stdout__
+            myLog.close()
+
+    if FLAGS.TPU:
+        try:
+            tpu_resolver = tf.distribute.cluster_resolver.TPUClusterResolver()  # Automatically detects the TPU
+            tf.config.experimental_connect_to_cluster(tpu_resolver)  # Connects to the TPU cluster
+            tf.tpu.experimental.initialize_tpu_system(tpu_resolver)  # Initializes the TPU for use
+            strategy = tf.distribute.experimental.TPUStrategy(resolver)
+            tpu_device = tpu_resolver.master()  # Retrieves the TPU device URI
+            print('Found TPU at: {}'.format(tpu_device))
+            model=make_model(     model_name=model_name,
+                            drop=drop, 
+                            n_labels=n_classes, 
+                            input_shape=input_shape, 
+                            padding='valid', 
+                            filters=filters,
+                            kernel_sizes=kernel_sizes,
+                            strides=strides,
+                            pool_sizes=pool_sizes,
+                            strides_pooling=strides_pooling,
+                            activation=tf.nn.leaky_relu,
+                            bayesian=bayesian, 
+                            n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
+                                )
+            model.build(input_shape=input_shape)
+            print(model.summary())
+            
+            if FLAGS.fine_tune:
+                loss_0 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
+                print('Loss before loading weights/ %s\n' %loss_0.numpy())
+            
+            if FLAGS.decay is not None:
+                lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_generator), FLAGS.decay)
+                optimizer = tf.keras.optimizers.Adam(lr_fn)
+            else:
+                optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
+            
+            if FLAGS.restore and FLAGS.decay is not None:
+                decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / len(training_generator))
+                
+            #optimizer.iterations  # this access will invoke optimizer._iterations method and create optimizer.iter attribute
+            #if FLAGS.decay is not None:
+            #    optimizer.decay = tf.Variable(tf.Variable(FLAGS.decay))
+            
+            
+            if not FLAGS.unfreeze:
+                ckpts_path = out_path+'/tf_ckpts/'
+            else:
+                ckpts_path=out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name_base_unfreezing+'/'
+            ckpt_name = 'ckpt'
+            ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model) 
+            
+            if FLAGS.fine_tune:
+                print('Loading ckpt from %s' %ckpts_path)
+                latest = tf.train.latest_checkpoint(ckpts_path)
+                print('Loading ckpt %s' %latest)
+                if not FLAGS.test_mode:
+                    ckpts_path = out_path+'/tf_ckpts_fine_tuning'+add_ckpt_name+'/'
+                else:
+                    ckpts_path = out_path+'/tf_ckpts_fine_tuning_test'+add_ckpt_name+'/'
+                ckpt_name = ckpt_name+'_fine_tuning'+add_ckpt_name
+                if FLAGS.test_mode:
+                    ckpt_name+='_test'
+                ckpt.restore(latest)
+                print('Last learning rate was %s' %ckpt.optimizer.learning_rate)
+                ckpt.optimizer.learning_rate = FLAGS.lr
+                print('Learning rate set to %s' %ckpt.optimizer.learning_rate)
+                
+                loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
+                print('Loss after loading weights/ %s\n' %loss_1.numpy())
+                if FLAGS.add_FT_dense:
+                    if not FLAGS.swap_axes:
+                        dense_dim=filters[-1]
+                    else:
+                        dense_dim=filters[-1]
+                else:
+                    dense_dim=0
+                
+                if not FLAGS.unfreeze:
+                    model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
+                                            n_out_labels=training_generator.n_classes_out,
+                                            dense_dim= dense_dim, bayesian=bayesian, 
+                                            trainable=FLAGS.trainable, 
+                                            drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
+                else:
+                    model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
+                                            n_out_labels=training_generator.n_classes_out,
+                                            dense_dim= dense_dim, bayesian=bayesian, 
+                                            drop=drop,  BatchNorm=FLAGS.BatchNorm)
+                    
+                model.build(input_shape=input_shape)
+                print(model.summary())
+            
+                ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)     
+            elif FLAGS.one_vs_all:
+                if not FLAGS.test_mode:
+                    ckpts_path = out_path+'/tf_ckpts'+add_ckpt_name+'/'
+                else:
+                    ckpts_path = out_path+'/tf_ckpts_test'+add_ckpt_name+'/'
+                ckpt_name = ckpt_name+add_ckpt_name
+                if FLAGS.test_mode:
+                    ckpt_name+='_test'
+                
+                
+            manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
+                                                max_to_keep=2, 
+                                                checkpoint_name=ckpt_name)
+            
+            
+            train_acc_metric = tf.keras.metrics.Accuracy()
+            val_acc_metric = tf.keras.metrics.Accuracy()
+                
+            print('------------ TRAINING ------------\n')
+            if FLAGS.bayesian:
+                loss=ELBO
+            else:
+                loss=my_loss
+            
+            
+            #print('Model n_classes : %s ' %n_classes)
+            print('Features shape: %s' %str(training_generator[0][0].shape))
+            print('Labels shape: %s' %str(training_generator[0][1].shape))   
+            model, history = my_train(model, optimizer, loss,
+                    FLAGS.n_epochs, 
+                    training_generator, 
+                    validation_generator, manager, ckpt,
+                    train_acc_metric, val_acc_metric,
+                    patience=FLAGS.patience, restore=FLAGS.restore, 
+                    bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None)
+            hist_path =  out_path+'/hist.png'
+            if FLAGS.fine_tune:
+                if FLAGS.test_mode:
+                    hist_path = out_path +'/hist_fine_tuning'+add_ckpt_name+'_test.png'
+                else:
+                    hist_path = out_path +'/hist_fine_tuning'+add_ckpt_name+'.png'  
+            
+            plot_hist(DummyHist(history), epochs=len(history['loss']), save=True, path=hist_path, show=False)
+            
+            
+            print('Done in %.2fs' %(time.time() - in_time))
+            ###
+            # Uncoment if saving output on file, to properly close
+            ###    
+            sys.stdout = sys.__stdout__
+            myLog.close()
+        except ValueError as e:
+            print('TPU device not found. Make sure TensorFlow version is compatible with TPU and the environment is correctly set up.')
+            print(e)
+
 
 
      
