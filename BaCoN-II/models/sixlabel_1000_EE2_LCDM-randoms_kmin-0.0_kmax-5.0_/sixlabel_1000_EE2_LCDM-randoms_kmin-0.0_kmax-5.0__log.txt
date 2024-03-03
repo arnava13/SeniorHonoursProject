@@ -10,13 +10,13 @@ c_0 ['lcdm']
 c_1 ['True', 'dgp', 'ds', 'fR', 'rand--save_ckpt', 'wcdm']
 dataset_balanced False
 include_last False
-log_path models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0__log.txt
+log_path 
 restore False
 fname sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_
 model_name custom
 my_path None
 DIR data/ds_ee2_train_1k_lcdm_rands
-TEST_DIR data/test_data/
+TEST_DIR data/ds_ee2_test_1k_lcdm_rands
 models_dir models/
 save_ckpt True
 out_path_overwrite False
@@ -66,8 +66,10 @@ patience 50
 GPU True
 decay 0.95
 BatchNorm True
-
+group_lab_dict {'True': 'non_lcdm', 'dgp': 'non_lcdm', 'ds': 'non_lcdm', 'fR': 'non_lcdm', 'rand--save_ckpt': 'non_lcdm', 'wcdm': 'non_lcdm', 'lcdm': 'lcdm'}
+save_indexes False
 ------------ CREATING DATA GENERATORS ------------
+
 labels : ['dgp', 'ds', 'fr', 'lcdm', 'rand', 'wcdm']
 Labels encoding: 
 {'dgp': 0, 'ds': 1, 'fr': 2, 'lcdm': 3, 'rand': 4, 'wcdm': 5}
@@ -81,35 +83,24 @@ wcdm - 1000 training examples
 
 N. of data files: 1000
 get_all_indexes labels dict: {'dgp': 0, 'ds': 1, 'fr': 2, 'lcdm': 3, 'rand': 4, 'wcdm': 5}
-create_generators n_labels: 6
 create_generators n_labels_eff: 6
 create_generators len_c1: 1
-Check for no duplicates in test: (0=ok):
-0.0
-Check for no duplicates in val: (0=ok):
-0
-N of files in training set: 850
-N of files in validation set: 150
-N of files in test set: 0
-Check - total: 1000
---create_generators, train indexes
+--Train
 batch_size: 3000
 - Cut sample
 bs: 3000
 N_labels: 6
 N_noise: 10
 len_c1: 1
-Train index length: 850
---create_generators, validation indexes
-- Cut sample
-bs: 3000
-N_labels: 6
-N_noise: 10
-len_c1: 1
-Val index length: 150
-len(train_index_1), batch_size, n_labels_eff, n_noisy_samples = 850, 3000, 6, 10
-
---DataGenerator Train
+Indexes length: 1000
+n_keep: 1000
+Sampling
+New length: 1000
+N batches: 20.0
+ len_C1: 1
+N indexes: 50.0
+Ok.
+N. of test files used: 1000
 Data Generator Initialization
 Using z bins [0, 1, 2, 3]
 Normalisation file is /planck_ee2.txt
@@ -128,50 +119,24 @@ base_case_dataset: True
 N. classes: 6
 N. n_classes in output: 6
 LABELS: ['dgp', 'ds', 'fr', 'lcdm', 'rand', 'wcdm']
-list_IDs length: 850
+list_IDs length: 1000
 n_indexes (n of file IDs read for each batch): 50
 batch size: 3000
-n_batches : 17
+n_batches : 20
 For each batch we read 50 file IDs
 For each file ID we have 6 labels
 For each ID, label we have 10 realizations of noise
 In total, for each batch we have 3000 training examples
 Input batch size: 3000
-N of batches to cover all file IDs: 17
-
---DataGenerator Validation
-Data Generator Initialization
-Using z bins [0, 1, 2, 3]
-Normalisation file is /planck_ee2.txt
-Specified k_max is 5.0
-Corresponding i_max is 112
-Closest k to k_max is 4.936132
-Specified k_min is 0.0
-Corresponding i_min is 0
-Closest k to k_min is 0.01
-New data dim: (112, 1)
-Final i_max used is 112
-Final i_min used is 0
-one_vs_all: False
-dataset_balanced: False
-base_case_dataset: True
-N. classes: 6
-N. n_classes in output: 6
-LABELS: ['dgp', 'ds', 'fr', 'lcdm', 'rand', 'wcdm']
-list_IDs length: 150
-n_indexes (n of file IDs read for each batch): 50
-batch size: 3000
-n_batches : 3
-For each batch we read 50 file IDs
-For each file ID we have 6 labels
-For each ID, label we have 10 realizations of noise
-In total, for each batch we have 3000 training examples
-Input batch size: 3000
-N of batches to cover all file IDs: 3
+N of batches to cover all file IDs: 20
 ------------ DONE ------------
 
------------- BUILDING MODEL ------------
 Input shape (112, 4)
+------------ BUILDING MODEL ------------
+
+Model n_classes : 6 
+Features shape: (3000, 112, 4)
+Labels shape: (3000, 6)
 using 1D layers and 4 channels
 Expected output dimension of layer conv1d_flipout: 52.0
 Expected output dimension of layer max_pooling1d: 26.0
@@ -226,211 +191,60 @@ Trainable params: 6670 (26.05 KB)
 Non-trainable params: 176 (704.00 Byte)
 _________________________________________________________________
 None
-Found GPU at: /device:GPU:0
------------- TRAINING ------------
+Computing loss for randomly initialized model...
+Loss before loading weights/ 1.9352134
 
-Features shape: (3000, 112, 4)
-Labels shape: (3000, 6)
-Initializing checkpoint from scratch.
-Epoch 0
-Validation loss decreased. Saved checkpoint for step 1: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-1
-Time:  99.51s, ---- Loss: 1.6239, Acc.: 0.3016, Val. Loss: 2.6752, Val. Acc.: 0.1900
+------------ RESTORING CHECKPOINT ------------
 
-Epoch 1
-Loss did not decrease. Count = 1
-Time:  86.80s, ---- Loss: 1.3846, Acc.: 0.4583, Val. Loss: 2.6787, Val. Acc.: 0.1733
+Looking for ckpt in models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/
+Restoring checkpoint from models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-35
+Loss after loading weights/ 0.9334448
 
-Epoch 2
-Validation loss decreased. Saved checkpoint for step 3: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-2
-Time:  86.46s, ---- Loss: 1.2525, Acc.: 0.5262, Val. Loss: 2.6252, Val. Acc.: 0.1843
+Threshold probability for classification: 0.5 
+Accuracy on 0 batch using median of sampled probabilities: 0.5606667 %
+Accuracy on 0 batch using median of sampled probabilities, not considering unclassified examples: 0.84395385 %
+Accuracy on 1 batch using median of sampled probabilities: 0.563 %
+Accuracy on 1 batch using median of sampled probabilities, not considering unclassified examples: 0.8283472 %
+Accuracy on 2 batch using median of sampled probabilities: 0.591 %
+Accuracy on 2 batch using median of sampled probabilities, not considering unclassified examples: 0.8196949 %
+Accuracy on 3 batch using median of sampled probabilities: 0.56733334 %
+Accuracy on 3 batch using median of sampled probabilities, not considering unclassified examples: 0.84215736 %
+Accuracy on 4 batch using median of sampled probabilities: 0.5646667 %
+Accuracy on 4 batch using median of sampled probabilities, not considering unclassified examples: 0.8287671 %
+Accuracy on 5 batch using median of sampled probabilities: 0.5566667 %
+Accuracy on 5 batch using median of sampled probabilities, not considering unclassified examples: 0.82960755 %
+Accuracy on 6 batch using median of sampled probabilities: 0.567 %
+Accuracy on 6 batch using median of sampled probabilities, not considering unclassified examples: 0.8325991 %
+Accuracy on 7 batch using median of sampled probabilities: 0.5653333 %
+Accuracy on 7 batch using median of sampled probabilities, not considering unclassified examples: 0.82852954 %
+Accuracy on 8 batch using median of sampled probabilities: 0.5423333 %
+Accuracy on 8 batch using median of sampled probabilities, not considering unclassified examples: 0.78942263 %
+Accuracy on 9 batch using median of sampled probabilities: 0.58433336 %
+Accuracy on 9 batch using median of sampled probabilities, not considering unclassified examples: 0.850558 %
+Accuracy on 10 batch using median of sampled probabilities: 0.5566667 %
+Accuracy on 10 batch using median of sampled probabilities, not considering unclassified examples: 0.8071532 %
+Accuracy on 11 batch using median of sampled probabilities: 0.55733335 %
+Accuracy on 11 batch using median of sampled probabilities, not considering unclassified examples: 0.82405126 %
+Accuracy on 12 batch using median of sampled probabilities: 0.5503333 %
+Accuracy on 12 batch using median of sampled probabilities, not considering unclassified examples: 0.8209846 %
+Accuracy on 13 batch using median of sampled probabilities: 0.59033334 %
+Accuracy on 13 batch using median of sampled probabilities, not considering unclassified examples: 0.8618005 %
+Accuracy on 14 batch using median of sampled probabilities: 0.59533334 %
+Accuracy on 14 batch using median of sampled probabilities, not considering unclassified examples: 0.83928573 %
+Accuracy on 15 batch using median of sampled probabilities: 0.56633335 %
+Accuracy on 15 batch using median of sampled probabilities, not considering unclassified examples: 0.8239573 %
+Accuracy on 16 batch using median of sampled probabilities: 0.60733336 %
+Accuracy on 16 batch using median of sampled probabilities, not considering unclassified examples: 0.82257336 %
+Accuracy on 17 batch using median of sampled probabilities: 0.57666665 %
+Accuracy on 17 batch using median of sampled probabilities, not considering unclassified examples: 0.8129699 %
+Accuracy on 18 batch using median of sampled probabilities: 0.587 %
+Accuracy on 18 batch using median of sampled probabilities, not considering unclassified examples: 0.8306604 %
+Accuracy on 19 batch using median of sampled probabilities: 0.5316667 %
+Accuracy on 19 batch using median of sampled probabilities, not considering unclassified examples: 0.8007028 %
+-- Accuracy on test set using median of sampled probabilities: 0.5690667 % 
 
-Epoch 3
-Validation loss decreased. Saved checkpoint for step 4: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-3
-Time:  86.29s, ---- Loss: 1.2022, Acc.: 0.5584, Val. Loss: 2.5233, Val. Acc.: 0.2340
+-- Accuracy on test set using median of sampled probabilities, not considering unclassified examples: 0.82688886 % 
 
-Epoch 4
-Validation loss decreased. Saved checkpoint for step 5: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-4
-Time:  85.87s, ---- Loss: 1.1827, Acc.: 0.5786, Val. Loss: 2.4361, Val. Acc.: 0.2897
-
-Epoch 5
-Validation loss decreased. Saved checkpoint for step 6: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-5
-Time:  85.41s, ---- Loss: 1.1207, Acc.: 0.5936, Val. Loss: 2.4324, Val. Acc.: 0.2973
-
-Epoch 6
-Validation loss decreased. Saved checkpoint for step 7: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-6
-Time:  85.82s, ---- Loss: 1.0986, Acc.: 0.6015, Val. Loss: 2.4206, Val. Acc.: 0.3174
-
-Epoch 7
-Loss did not decrease. Count = 1
-Time:  85.41s, ---- Loss: 1.0858, Acc.: 0.6120, Val. Loss: 2.4357, Val. Acc.: 0.3316
-
-Epoch 8
-Validation loss decreased. Saved checkpoint for step 9: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-7
-Time:  86.07s, ---- Loss: 1.0445, Acc.: 0.6202, Val. Loss: 2.4166, Val. Acc.: 0.3449
-
-Epoch 9
-Loss did not decrease. Count = 1
-Time:  85.51s, ---- Loss: 1.0584, Acc.: 0.6212, Val. Loss: 2.4539, Val. Acc.: 0.3544
-
-Epoch 10
-Loss did not decrease. Count = 2
-Time:  81.65s, ---- Loss: 1.0330, Acc.: 0.6310, Val. Loss: 2.4367, Val. Acc.: 0.3691
-
-Epoch 11
-Validation loss decreased. Saved checkpoint for step 12: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-8
-Time:  80.85s, ---- Loss: 1.0436, Acc.: 0.6313, Val. Loss: 2.3614, Val. Acc.: 0.4162
-
-Epoch 12
-Validation loss decreased. Saved checkpoint for step 13: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-9
-Time:  80.63s, ---- Loss: 1.0279, Acc.: 0.6362, Val. Loss: 2.3288, Val. Acc.: 0.4226
-
-Epoch 13
-Validation loss decreased. Saved checkpoint for step 14: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-10
-Time:  80.49s, ---- Loss: 1.0094, Acc.: 0.6428, Val. Loss: 2.2927, Val. Acc.: 0.4238
-
-Epoch 14
-Validation loss decreased. Saved checkpoint for step 15: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-11
-Time:  80.37s, ---- Loss: 0.9986, Acc.: 0.6436, Val. Loss: 2.2927, Val. Acc.: 0.4498
-
-Epoch 15
-Validation loss decreased. Saved checkpoint for step 16: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-12
-Time:  80.13s, ---- Loss: 0.9916, Acc.: 0.6464, Val. Loss: 2.2593, Val. Acc.: 0.4681
-
-Epoch 16
-Validation loss decreased. Saved checkpoint for step 17: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-13
-Time:  79.75s, ---- Loss: 0.9766, Acc.: 0.6473, Val. Loss: 2.2296, Val. Acc.: 0.4750
-
-Epoch 17
-Validation loss decreased. Saved checkpoint for step 18: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-14
-Time:  79.48s, ---- Loss: 0.9639, Acc.: 0.6511, Val. Loss: 2.1947, Val. Acc.: 0.4923
-
-Epoch 18
-Validation loss decreased. Saved checkpoint for step 19: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-15
-Time:  79.70s, ---- Loss: 0.9801, Acc.: 0.6547, Val. Loss: 2.1533, Val. Acc.: 0.5031
-
-Epoch 19
-Validation loss decreased. Saved checkpoint for step 20: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-16
-Time:  79.30s, ---- Loss: 0.9637, Acc.: 0.6588, Val. Loss: 2.1184, Val. Acc.: 0.5257
-
-Epoch 20
-Validation loss decreased. Saved checkpoint for step 21: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-17
-Time:  80.03s, ---- Loss: 0.9634, Acc.: 0.6619, Val. Loss: 2.0803, Val. Acc.: 0.5297
-
-Epoch 21
-Validation loss decreased. Saved checkpoint for step 22: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-18
-Time:  79.43s, ---- Loss: 0.9621, Acc.: 0.6640, Val. Loss: 2.0505, Val. Acc.: 0.5441
-
-Epoch 22
-Validation loss decreased. Saved checkpoint for step 23: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-19
-Time:  80.12s, ---- Loss: 0.9446, Acc.: 0.6642, Val. Loss: 1.9938, Val. Acc.: 0.5612
-
-Epoch 23
-Validation loss decreased. Saved checkpoint for step 24: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-20
-Time:  79.52s, ---- Loss: 0.9509, Acc.: 0.6659, Val. Loss: 1.9662, Val. Acc.: 0.5746
-
-Epoch 24
-Validation loss decreased. Saved checkpoint for step 25: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-21
-Time:  80.11s, ---- Loss: 0.9340, Acc.: 0.6698, Val. Loss: 1.9303, Val. Acc.: 0.5849
-
-Epoch 25
-Validation loss decreased. Saved checkpoint for step 26: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-22
-Time:  79.75s, ---- Loss: 0.9323, Acc.: 0.6714, Val. Loss: 1.8947, Val. Acc.: 0.5884
-
-Epoch 26
-Validation loss decreased. Saved checkpoint for step 27: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-23
-Time:  80.18s, ---- Loss: 0.9186, Acc.: 0.6713, Val. Loss: 1.8492, Val. Acc.: 0.6154
-
-Epoch 27
-Validation loss decreased. Saved checkpoint for step 28: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-24
-Time:  79.95s, ---- Loss: 0.9405, Acc.: 0.6751, Val. Loss: 1.8240, Val. Acc.: 0.6249
-
-Epoch 28
-Validation loss decreased. Saved checkpoint for step 29: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-25
-Time:  80.82s, ---- Loss: 0.9303, Acc.: 0.6743, Val. Loss: 1.7878, Val. Acc.: 0.6359
-
-Epoch 29
-Validation loss decreased. Saved checkpoint for step 30: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-26
-Time:  81.78s, ---- Loss: 0.9191, Acc.: 0.6735, Val. Loss: 1.7602, Val. Acc.: 0.6387
-
-Epoch 30
-Validation loss decreased. Saved checkpoint for step 31: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-27
-Time:  81.57s, ---- Loss: 0.9228, Acc.: 0.6777, Val. Loss: 1.7306, Val. Acc.: 0.6560
-
-Epoch 31
-Validation loss decreased. Saved checkpoint for step 32: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-28
-Time:  81.23s, ---- Loss: 0.9320, Acc.: 0.6785, Val. Loss: 1.7203, Val. Acc.: 0.6587
-
-Epoch 32
-Validation loss decreased. Saved checkpoint for step 33: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-29
-Time:  81.20s, ---- Loss: 0.8949, Acc.: 0.6821, Val. Loss: 1.7191, Val. Acc.: 0.6586
-
-Epoch 33
-Validation loss decreased. Saved checkpoint for step 34: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-30
-Time:  80.96s, ---- Loss: 0.8951, Acc.: 0.6836, Val. Loss: 1.7082, Val. Acc.: 0.6667
-
-Epoch 34
-Validation loss decreased. Saved checkpoint for step 35: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-31
-Time:  81.34s, ---- Loss: 0.8997, Acc.: 0.6826, Val. Loss: 1.6915, Val. Acc.: 0.6763
-
-Epoch 35
-Validation loss decreased. Saved checkpoint for step 36: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-32
-Time:  81.32s, ---- Loss: 0.9184, Acc.: 0.6845, Val. Loss: 1.6885, Val. Acc.: 0.6670
-
-Epoch 36
-Validation loss decreased. Saved checkpoint for step 37: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-33
-Time:  81.29s, ---- Loss: 0.9215, Acc.: 0.6862, Val. Loss: 1.6684, Val. Acc.: 0.6807
-
-Epoch 37
-Validation loss decreased. Saved checkpoint for step 38: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-34
-Time:  81.62s, ---- Loss: 0.8943, Acc.: 0.6872, Val. Loss: 1.6684, Val. Acc.: 0.6789
-
-Epoch 38
-Loss did not decrease. Count = 1
-Time:  81.59s, ---- Loss: 0.8881, Acc.: 0.6857, Val. Loss: 1.6695, Val. Acc.: 0.6800
-
-Epoch 39
-Validation loss decreased. Saved checkpoint for step 40: models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/tf_ckpts/ckpt-35
-Time:  81.21s, ---- Loss: 0.8833, Acc.: 0.6917, Val. Loss: 1.6437, Val. Acc.: 0.6889
-
-Epoch 40
-Loss did not decrease. Count = 1
-Time:  80.77s, ---- Loss: 0.9022, Acc.: 0.6858, Val. Loss: 1.6585, Val. Acc.: 0.6840
-
-Epoch 41
-Loss did not decrease. Count = 2
-Time:  80.59s, ---- Loss: 0.8854, Acc.: 0.6900, Val. Loss: 1.6686, Val. Acc.: 0.6782
-
-Epoch 42
-Loss did not decrease. Count = 3
-Time:  80.67s, ---- Loss: 0.9068, Acc.: 0.6882, Val. Loss: 1.6777, Val. Acc.: 0.6756
-
-Epoch 43
-Loss did not decrease. Count = 4
-Time:  80.70s, ---- Loss: 0.8922, Acc.: 0.6900, Val. Loss: 1.6527, Val. Acc.: 0.6850
-
-Epoch 44
-Loss did not decrease. Count = 5
-Time:  80.60s, ---- Loss: 0.8851, Acc.: 0.6920, Val. Loss: 1.6600, Val. Acc.: 0.6837
-
-Epoch 45
-Loss did not decrease. Count = 6
-Time:  80.81s, ---- Loss: 0.8876, Acc.: 0.6901, Val. Loss: 1.6653, Val. Acc.: 0.6817
-
-Epoch 46
-Loss did not decrease. Count = 7
-Time:  81.07s, ---- Loss: 0.8812, Acc.: 0.6917, Val. Loss: 1.6513, Val. Acc.: 0.6894
-
-Epoch 47
-Loss did not decrease. Count = 8
-Time:  81.01s, ---- Loss: 0.8946, Acc.: 0.6935, Val. Loss: 1.6633, Val. Acc.: 0.6844
-
-Epoch 48
-Loss did not decrease. Count = 9
-Time:  81.68s, ---- Loss: 0.8734, Acc.: 0.6906, Val. Loss: 1.6588, Val. Acc.: 0.6901
-
-Epoch 49
-Loss did not decrease. Count = 10
-Time:  81.80s, ---- Loss: 0.8796, Acc.: 0.6913, Val. Loss: 1.6605, Val. Acc.: 0.6838
-
-Saving at models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/hist.png
-Done in 4110.96s
+Adding Not classified label
+Saved confusion matrix at models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/cm_sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0__frozen_weights.pdf
+Saved confusion matrix values at models/sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0_/cm_sixlabel_1000_EE2_LCDM-randoms_kmin-0.0_kmax-5.0__frozen_weights_values.txt
