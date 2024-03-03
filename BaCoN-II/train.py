@@ -636,7 +636,7 @@ def main():
     if FLAGS.TPU:
         try:
             tpu_resolver = tf.distribute.cluster_resolver.TPUClusterResolver()  # Automatically detects the TPU
-            tf.config.connect_to_cluster(tpu_resolver)  # Connects to the TPU cluster
+            tf.config.experimental_connect_to_cluster(tpu_resolver)  # Connects to the TPU cluster
             tf.tpu.initialize_tpu_system(tpu_resolver)  # Initializes the TPU for use
             strategy = tf.distribute.TPUStrategy(tpu_resolver)
             tpu_device = tpu_resolver.master()  # Retrieves the TPU device URI
