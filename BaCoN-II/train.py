@@ -418,7 +418,9 @@ def main():
     # Uncomment the parts below to redirect output to file. 
     # Does not work on Google Colab
     ###
-        
+
+    os.makedirs(out_path, exist_ok=True)
+
     if not os.path.exists(out_path):
         print('Creating directory %s' %out_path)
         tf.io.gfile.makedirs(out_path)
