@@ -336,7 +336,7 @@ def main():
     FLAGS.c_1.sort()
     FLAGS.c_0.sort()
 
-    if Flags.TPU and Flags.GPU:
+    if FLAGS.TPU and FLAGS.GPU:
             raise Exception("Both --GPU and --TPU are true, only one must be true")
 
     #if not FLAGS.fine_tune:
