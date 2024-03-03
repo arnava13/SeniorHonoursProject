@@ -856,7 +856,7 @@ def create_test_generator(FLAGS):
           'n_noisy_samples':n_noisy_samples, 
           'fine_tune':FLAGS.fine_tune,
           'add_shot':FLAGS.add_shot, 'add_sys':FLAGS.add_sys,'add_cosvar':FLAGS.add_cosvar,
-          'k_max':FLAGS.k_max, 'i_max':FLAGS.i_max, 'k_min':FLAGS.k_min, 'i_min':FLAGS.i_min, 'sigma_sys':sigma_sys,
+          'k_max':FLAGS.k_max, 'i_max':FLAGS.i_max, 'k_min':FLAGS.k_min, 'i_min':FLAGS.i_min, 'sigma_sys':FLAGS.sigma_sys,
           'swap_axes':FLAGS.swap_axes,
           'z_bins':FLAGS.z_bins,
           'test_mode':FLAGS.test_mode,
