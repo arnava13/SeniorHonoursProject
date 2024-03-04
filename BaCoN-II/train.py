@@ -4,7 +4,7 @@
 Created on Wed Jun 17 13:21:14 2020
 
 @author: Michi
-@editor: Linus, Feb 2023, add norm_data_name
+@editor: Arnav, March 2023, add TPU support
 """
 import argparse
 import os
@@ -72,7 +72,7 @@ def my_train(model, optimizer, loss,
              epochs, 
              train_generator, 
              val_generator, manager, ckpt,            
-             train_acc_metric, val_acc_metric, TPU, stategy=None,
+             train_acc_metric, val_acc_metric, TPU, strategy=None,
              restore=False, patience=100,
              bayesian=False, save_ckpt=False, decayed_lr_value=None,
               ):
