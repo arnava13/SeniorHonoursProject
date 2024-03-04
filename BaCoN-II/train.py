@@ -22,7 +22,7 @@ import time
 
 
 @tf.function
-def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=False, n_train_example=60000):
+def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=False, n_train_example=60000, TPU=False):
     #print('train_on_batch call')
     with tf.GradientTape() as tape:
         tape.watch(model.trainable_variables) 
@@ -138,16 +138,8 @@ def my_train(model, optimizer, loss,
     start_time = time.time()
 
     # Run train loop
-    
-    if TPU:
-        with strategy.scope():
-            for batch_idx, batch in enumerate(train_generator):
-                x_batch_train, y_batch_train = batch
-                loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example)
-    else:
-        for batch_idx, batch in enumerate(train_generator):
-            x_batch_train, y_batch_train = batch #train_generator[batch_idx]
-            loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example)
+    x_batch_train, y_batch_train = batch #train_generator[batch_idx]
+    loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU)
  
     # Run  validation loop
     val_loss_value = 0.
