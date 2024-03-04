@@ -56,13 +56,16 @@ def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10
 
 
 @tf.function
-def my_loss(y, logits):
-    loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
+def my_loss(y, logits, TPU=False):
+    if TPU:
+        loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.SUM) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
+    else:
+        loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
     return loss_f(y, logits) 
 
 
 @tf.function
-def ELBO(y, logits, kl):
+def ELBO(y, logits, kl, TPU=False):
     neg_log_likelihood = my_loss(y, logits)   
     return neg_log_likelihood + kl
 
@@ -225,14 +228,14 @@ def my_train(model, optimizer, loss,
   return model, history
 
 
-def compute_loss(generator, model, bayesian=False):
+def compute_loss(generator, model, bayesian=False, TPU=False):
     x_batch_train, y_batch_train = generator[0]
     logits = model(x_batch_train, training=False)
     if bayesian:
             kl = sum(model.losses)/generator.batch_size/generator.n_batches
-            loss_0 = ELBO(y_batch_train, logits, kl)
+            loss_0 = ELBO(y_batch_train, logits, kl, TPU=TPU)
     else:
-            loss_0 = my_loss(y_batch_train, logits)
+            loss_0 = my_loss(y_batch_train, logits, TPU=TPU)
     return loss_0
 
 
@@ -551,7 +554,7 @@ def main():
     print(model.summary())
     
     if FLAGS.fine_tune:
-        loss_0 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
+        loss_0 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU)
         print('Loss before loading weights/ %s\n' %loss_0.numpy())
     
     if FLAGS.decay is not None:
@@ -606,9 +609,9 @@ def main():
         
         if FLAGS.TPU:
             with strategy.scope():
-                loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
+                loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU)
         else:
-            loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
+            loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU)
         print('Loss after loading weights/ %s\n' %loss_1.numpy())
         if FLAGS.add_FT_dense:
             if not FLAGS.swap_axes:
