@@ -324,9 +324,6 @@ def main():
     parser.add_argument("--decay", default=0.95, type=float, required=False)
     parser.add_argument("--BatchNorm", default=True, type=str2bool, required=False)
 
-    if FLAGS.TPU and FLAGS.GPU:
-            raise Exception("Both --GPU and --TPU are true, only one must be true")    
-
     FLAGS = parser.parse_args()
     
     FLAGS.z_bins = [int(z) for z in FLAGS.z_bins]
@@ -337,6 +334,9 @@ def main():
     FLAGS.strides_pooling = [int(z) for z in FLAGS.strides_pooling]
     FLAGS.c_1.sort()
     FLAGS.c_0.sort()
+
+    if FLAGS.TPU and FLAGS.GPU:
+            raise Exception("Both --GPU and --TPU are true, only one must be true")   
                   
     #if not FLAGS.fine_tune:
     #    if not FLAGS.dataset_balanced and FLAGS.one_vs_all:
