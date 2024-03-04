@@ -31,9 +31,9 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
         logits=x
         if bayesian:
              kl = sum(model.losses)/n_train_example
-             loss_value = loss(y, logits, kl)
+             loss_value = loss(y, logits, kl, TPU=TPU)
         else:
-            loss_value = loss(y, logits)
+            loss_value = loss(y, logits, TPU=TPU)
     grads = tape.gradient(loss_value, model.trainable_weights)
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
     proba = tf.nn.softmax(logits)
@@ -42,13 +42,13 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
     return loss_value
 
 @tf.function
-def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10000):
+def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10000, TPU=False):
     val_logits = model(x, training=False)
     if bayesian:
        val_kl = sum(model.losses)/n_val_example
-       val_loss_value = loss(y, val_logits, val_kl)
+       val_loss_value = loss(y, val_logits, val_kl, TPU=TPU)
     else:
-         val_loss_value = loss(y, val_logits)
+         val_loss_value = loss(y, val_logits, TPU=TPU)
     val_proba = tf.nn.softmax(val_logits)
     val_prediction = tf.argmax(val_proba, axis=1)
     val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
@@ -146,11 +146,7 @@ def my_train(model, optimizer, loss,
     val_loss_value = 0.
     for val_batch_idx, val_batch in enumerate(val_generator):      
         x_batch_val, y_batch_val = val_batch #val_generator[val_batch_idx]
-        if TPU:
-            with strategy.scope():
-                lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example)/ float(val_generator.n_batches)
-        else:
-            lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example)/ float(val_generator.n_batches)
+        lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU)/ float(val_generator.n_batches)
         val_loss_value += lv
             
     
@@ -600,11 +596,8 @@ def main():
         ckpt.optimizer.learning_rate = FLAGS.lr
         print('Learning rate set to %s' %ckpt.optimizer.learning_rate)
         
-        if FLAGS.TPU:
-            with strategy.scope():
-                loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU)
-        else:
-            loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU)
+        
+        loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU)
         print('Loss after loading weights/ %s\n' %loss_1.numpy())
         if FLAGS.add_FT_dense:
             if not FLAGS.swap_axes:
@@ -693,24 +686,14 @@ def main():
     #print('Model n_classes : %s ' %n_classes)
     print('Features shape: %s' %str(training_generator[0][0].shape))
     print('Labels shape: %s' %str(training_generator[0][1].shape))     
-    if FLAGS.TPU:
-        model, history = my_train(model, optimizer, loss,
-                    FLAGS.n_epochs, 
-                    training_generator, 
-                    validation_generator, manager, ckpt,
-                    train_acc_metric, val_acc_metric, FLAGS.TPU,
-                    strategy=strategy, patience=FLAGS.patience, restore=FLAGS.restore, 
-                    bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None #not(FLAGS.test_mode)
-                )
-    else:
-        model, history = my_train(model, optimizer, loss,
-                    FLAGS.n_epochs, 
-                    training_generator, 
-                    validation_generator, manager, ckpt,
-                    train_acc_metric, val_acc_metric, FLAGS.TPU,
-                    patience=FLAGS.patience, restore=FLAGS.restore, 
-                    bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None #not(FLAGS.test_mode)
-                )
+    model, history = my_train(model, optimizer, loss,
+                FLAGS.n_epochs, 
+                training_generator, 
+                validation_generator, manager, ckpt,
+                train_acc_metric, val_acc_metric, FLAGS.TPU,
+                strategy=strategy, patience=FLAGS.patience, restore=FLAGS.restore, 
+                bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None #not(FLAGS.test_mode)
+            )
     hist_path =  out_path+'/hist.png'
     if FLAGS.fine_tune:
         if FLAGS.test_mode:
