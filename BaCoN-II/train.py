@@ -72,7 +72,7 @@ def my_train(model, optimizer, loss,
              epochs, 
              train_generator, 
              val_generator, manager, ckpt,            
-             train_acc_metric, val_acc_metric,
+             train_acc_metric, val_acc_metric, TPU, stategy=None,
              restore=False, patience=100,
              bayesian=False, save_ckpt=False, decayed_lr_value=None,
               ):
@@ -93,6 +93,11 @@ def my_train(model, optimizer, loss,
       
       #optimizer.iterations # this is to fix bug in restoring optimizer. See https://gist.github.com/yoshihikoueno/4ff0694339f88d579bb3d9b07e609122
       print('Restoring ckpt...')
+      if TPU:
+            with strategy.scope():
+                ckpt.restore(manager.latest_checkpoint)
+      else:
+          ckpt.restore(manager.latest_checkpoint)
       ckpt.restore(manager.latest_checkpoint)
       print('ckpt step: %s' %ckpt.step)
       hist_start=int(ckpt.step)
@@ -131,16 +136,25 @@ def my_train(model, optimizer, loss,
 
     # Run train loop
     
-    for batch_idx, batch in enumerate(train_generator):
-        x_batch_train, y_batch_train = batch #train_generator[batch_idx]
-        loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example)
+    if TPU:
+        with strategy.scope():
+            for batch_idx, batch in enumerate(train_generator):
+                x_batch_train, y_batch_train = batch
+                loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example)
+    else:
+        for batch_idx, batch in enumerate(train_generator):
+            x_batch_train, y_batch_train = batch #train_generator[batch_idx]
+            loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example)
  
-    
     # Run  validation loop
     val_loss_value = 0.
     for val_batch_idx, val_batch in enumerate(val_generator):      
         x_batch_val, y_batch_val = val_batch #val_generator[val_batch_idx]
-        lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example)/ float(val_generator.n_batches)
+        if TPU:
+            with strategy.scope():
+                lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example)/ float(val_generator.n_batches)
+        else:
+            lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example)/ float(val_generator.n_batches)
         val_loss_value += lv
             
     
@@ -656,9 +670,13 @@ def main():
                                          max_to_keep=2, 
                                          checkpoint_name=ckpt_name)
     
-    
-    train_acc_metric = tf.keras.metrics.Accuracy()
-    val_acc_metric = tf.keras.metrics.Accuracy()
+    if FLAGS.TPU:
+        with strategy.scope():
+            train_acc_metric = tf.keras.metrics.Accuracy()
+            val_acc_metric = tf.keras.metrics.Accuracy()
+    else:
+        train_acc_metric = tf.keras.metrics.Accuracy()
+        val_acc_metric = tf.keras.metrics.Accuracy()
     
     
     if FLAGS.GPU:
@@ -678,26 +696,25 @@ def main():
     
     #print('Model n_classes : %s ' %n_classes)
     print('Features shape: %s' %str(training_generator[0][0].shape))
-    print('Labels shape: %s' %str(training_generator[0][1].shape)) 
+    print('Labels shape: %s' %str(training_generator[0][1].shape))     
     if FLAGS.TPU:
-        with strategy.scope: 
-            model, history = my_train(model, optimizer, loss,
+        model, history = my_train(model, optimizer, loss,
                     FLAGS.n_epochs, 
                     training_generator, 
                     validation_generator, manager, ckpt,
-                    train_acc_metric, val_acc_metric,
-                    patience=FLAGS.patience, restore=FLAGS.restore, 
+                    train_acc_metric, val_acc_metric, FLAGS.TPU,
+                    strategy=strategy, patience=FLAGS.patience, restore=FLAGS.restore, 
                     bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None #not(FLAGS.test_mode)
-                    )
+                )
     else:
         model, history = my_train(model, optimizer, loss,
                     FLAGS.n_epochs, 
                     training_generator, 
                     validation_generator, manager, ckpt,
-                    train_acc_metric, val_acc_metric,
+                    train_acc_metric, val_acc_metric, FLAGS.TPU,
                     patience=FLAGS.patience, restore=FLAGS.restore, 
                     bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None #not(FLAGS.test_mode)
-                    )
+                )
     hist_path =  out_path+'/hist.png'
     if FLAGS.fine_tune:
         if FLAGS.test_mode:
