@@ -18,7 +18,6 @@ def sigma(k, z, k_values):
         V = 0.283e9
     else:
         raise(ValueError('z must be 1.5, 0.785, 0.478, or 0.1'))
-        return
     constsquared = 4*np.pi**2 / V
     k_index = np.where(k_values == k)[0][0]
     delta_k = np.abs(k_values[k_index] - k_values[k_index - 1])
@@ -42,7 +41,7 @@ def main():
         k_values = example_spectrum.iloc[:, 0].to_numpy()
     
     if theoryerror_mode == 'single':
-        if theoryerr_dir.endswidth(".txt"):
+        if theoryerr_dir.endswith(".txt"):
             with open(theoryerr_dir) as theory_err:
                 theoryerr = pd.read_csv(theory_err, sep=r'\s+', header=None, engine='python')
                 theoryerr.rename(columns={0: 'k', 1: '1.5', 2: '0.783', 3: '0.478', 4: '0.1'}, inplace=True)
@@ -68,6 +67,7 @@ def main():
 
     plt.figure(1)
     plt.xlabel('k')
+    plt.xscale('log')
     plt.ylabel('Theory Error (Scaled)')
     plt.title('Theory Error for Different Redshifts')
 
@@ -79,7 +79,8 @@ def main():
 
     plt.figure(3)
     plt.xlabel('k')
-    plt.xlim(0,0.1)
+    plt.xscale('log')
+    plt.xlim(0.01,3.0)
     plt.ylabel('Total Noise')
     plt.title('Total Noise for Different Redshifts')
 
@@ -103,7 +104,7 @@ def main():
         plt.plot(k_values, cosmicvariance_forz, label=f'z={z}')
 
         plt.figure(3)
-        plt.plot(k_values, noise, label=f'z={z}')
+        plt.plot(k_values, theoryerror_forz + cosmicvariance_forz, label=f'z={z}')
 
     plt.figure(1)
     plt.legend()
