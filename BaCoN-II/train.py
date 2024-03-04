@@ -66,7 +66,7 @@ def my_loss(y, logits, TPU=False):
 
 @tf.function
 def ELBO(y, logits, kl, TPU=False):
-    neg_log_likelihood = my_loss(y, logits)   
+    neg_log_likelihood = my_loss(y, logits, TPU=TPU)   
     return neg_log_likelihood + kl
 
 
