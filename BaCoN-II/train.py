@@ -138,8 +138,9 @@ def my_train(model, optimizer, loss,
     start_time = time.time()
 
     # Run train loop
-    x_batch_train, y_batch_train = batch #train_generator[batch_idx]
-    loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU)
+    for batch_idx, batch in enumerate(train_generator):
+        x_batch_train, y_batch_train = batch #train_generator[batch_idx]
+        loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU)
  
     # Run  validation loop
     val_loss_value = 0.
