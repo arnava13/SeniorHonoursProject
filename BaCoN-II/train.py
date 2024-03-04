@@ -320,9 +320,12 @@ def main():
     parser.add_argument("--batch_size", default=2500, type=int, required=False)
     parser.add_argument("--patience", default=100, type=int, required=False)
     parser.add_argument("--GPU", default=True, type=str2bool, required=False)
+    parser.add_argument("--TPU", default=False, type=str2bool, required=False)
     parser.add_argument("--decay", default=0.95, type=float, required=False)
     parser.add_argument("--BatchNorm", default=True, type=str2bool, required=False)
-    
+
+    if FLAGS.TPU and FLAGS.GPU:
+            raise Exception("Both --GPU and --TPU are true, only one must be true")    
 
     FLAGS = parser.parse_args()
     
@@ -484,8 +487,17 @@ def main():
             print(' ####  FLAGS.BatchNorm not found! #### \n Probably loading an older model. Using BatchNorm=True')
             BatchNorm=True
         filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense
-
-    model=make_model(     model_name=model_name,
+    
+    if FLAGS.TPU:
+        try:
+            tpu_resolver = tf.distribute.cluster_resolver.TPUClusterResolver()  # Automatically detects the TPU
+            tf.config.experimental_connect_to_cluster(tpu_resolver)  # Connects to the TPU cluster
+            tf.tpu.experimental.initialize_tpu_system(tpu_resolver)  # Initializes the TPU system
+            strategy = tf.distribute.TPUStrategy(tpu_resolver)
+            tpu_device = tpu_resolver.master()  # Retrieves the TPU device URI
+            print('Found TPU at: {}'.format(tpu_device))
+            with strategy.scope():
+                model=make_model(     model_name=model_name,
                          drop=drop, 
                           n_labels=n_classes, 
                           input_shape=input_shape, 
@@ -499,9 +511,29 @@ def main():
                           bayesian=bayesian, 
                           n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
                              )
-    
-    
-    model.build(input_shape=input_shape)
+
+                model.build(input_shape=input_shape)
+        except ValueError as e:
+            print('TPU device not found. Make sure TensorFlow version is compatible with TPU and the environment is correctly set up.')
+            print(e)
+    else:
+        model=make_model(     model_name=model_name,
+                         drop=drop, 
+                          n_labels=n_classes, 
+                          input_shape=input_shape, 
+                          padding='valid', 
+                          filters=filters,
+                          kernel_sizes=kernel_sizes,
+                          strides=strides,
+                          pool_sizes=pool_sizes,
+                          strides_pooling=strides_pooling,
+                          activation=tf.nn.leaky_relu,
+                          bayesian=bayesian, 
+                          n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
+                             )
+
+        model.build(input_shape=input_shape)
+
     print(model.summary())
     
     if FLAGS.fine_tune:
@@ -509,10 +541,19 @@ def main():
         print('Loss before loading weights/ %s\n' %loss_0.numpy())
     
     if FLAGS.decay is not None:
-        lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_generator), FLAGS.decay)
-        optimizer = tf.keras.optimizers.Adam(lr_fn)
+        if FLAGS.TPU:
+            with strategy.scope():
+                lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_generator), FLAGS.decay)
+                optimizer = tf.keras.optimizers.Adam(lr_fn)
+        else:
+            lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_generator), FLAGS.decay)
+            optimizer = tf.keras.optimizers.Adam(lr_fn)
     else:
-        optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
+        if FLAGS.TPU:
+            with strategy.scope():
+                optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
+        else:
+            optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
     
     if FLAGS.restore and FLAGS.decay is not None:
         decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / len(training_generator))
@@ -527,7 +568,11 @@ def main():
     else:
         ckpts_path=out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name_base_unfreezing+'/'
     ckpt_name = 'ckpt'
-    ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model) 
+    if FLAGS.TPU:
+        with strategy.scope():
+            ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
+    else:
+        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model) 
     
     if FLAGS.fine_tune:
         print('Loading ckpt from %s' %ckpts_path)
@@ -545,7 +590,11 @@ def main():
         ckpt.optimizer.learning_rate = FLAGS.lr
         print('Learning rate set to %s' %ckpt.optimizer.learning_rate)
         
-        loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
+        if FLAGS.TPU:
+            with strategy.scope():
+                loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
+        else:
+            loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian)
         print('Loss after loading weights/ %s\n' %loss_1.numpy())
         if FLAGS.add_FT_dense:
             if not FLAGS.swap_axes:
@@ -556,21 +605,43 @@ def main():
             dense_dim=0
         
         if not FLAGS.unfreeze:
-            model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
+            if FLAGS.TPU:
+                with strategy.scope():
+                    model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
+                                       n_out_labels=training_generator.n_classes_out,
+                                       dense_dim= dense_dim, bayesian=bayesian, 
+                                       trainable=FLAGS.trainable, 
+                                       drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
+            else:
+                model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
                                        n_out_labels=training_generator.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        trainable=FLAGS.trainable, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
         else:
-            model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
+            if FLAGS.TPU:
+                with strategy.scope():
+                    model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
                                        n_out_labels=training_generator.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm)
-            
-        model.build(input_shape=input_shape)
+            else: 
+                model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
+                                       n_out_labels=training_generator.n_classes_out,
+                                       dense_dim= dense_dim, bayesian=bayesian, 
+                                       drop=drop,  BatchNorm=FLAGS.BatchNorm)
+        if FLAGS.TPU:
+            with strategy.scope():
+                model.build(input_shape=input_shape)
+        else:
+            model.build(input_shape=input_shape)
         print(model.summary())
     
-        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)     
+        if FLAGS.TPU:
+            with strategy.scope():
+                ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)     
+        else: 
+            ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
     elif FLAGS.one_vs_all:
         if not FLAGS.test_mode:
             ckpts_path = out_path+'/tf_ckpts'+add_ckpt_name+'/'
@@ -607,15 +678,26 @@ def main():
     
     #print('Model n_classes : %s ' %n_classes)
     print('Features shape: %s' %str(training_generator[0][0].shape))
-    print('Labels shape: %s' %str(training_generator[0][1].shape))   
-    model, history = my_train(model, optimizer, loss,
-             FLAGS.n_epochs, 
-             training_generator, 
-             validation_generator, manager, ckpt,
-             train_acc_metric, val_acc_metric,
-             patience=FLAGS.patience, restore=FLAGS.restore, 
-             bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None #not(FLAGS.test_mode)
-)
+    print('Labels shape: %s' %str(training_generator[0][1].shape)) 
+    if FLAGS.TPU:
+        with strategy.scope: 
+            model, history = my_train(model, optimizer, loss,
+                    FLAGS.n_epochs, 
+                    training_generator, 
+                    validation_generator, manager, ckpt,
+                    train_acc_metric, val_acc_metric,
+                    patience=FLAGS.patience, restore=FLAGS.restore, 
+                    bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None #not(FLAGS.test_mode)
+                    )
+    else:
+        model, history = my_train(model, optimizer, loss,
+                    FLAGS.n_epochs, 
+                    training_generator, 
+                    validation_generator, manager, ckpt,
+                    train_acc_metric, val_acc_metric,
+                    patience=FLAGS.patience, restore=FLAGS.restore, 
+                    bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None #not(FLAGS.test_mode)
+                    )
     hist_path =  out_path+'/hist.png'
     if FLAGS.fine_tune:
         if FLAGS.test_mode:
