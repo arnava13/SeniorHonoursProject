@@ -537,7 +537,7 @@ def main():
                           bayesian=bayesian, 
                           n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
                              )
-
+        strategy = None
         model.build(input_shape=input_shape)
 
     print(model.summary())
