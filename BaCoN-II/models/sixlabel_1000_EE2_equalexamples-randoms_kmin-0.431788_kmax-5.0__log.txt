@@ -1,0 +1,380 @@
+err: 2024-03-10 21:02:28.343859: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:9261] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+err: 2024-03-10 21:02:28.343903: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:607] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+err: 2024-03-10 21:02:28.345326: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1515] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+err: 2024-03-10 21:02:29.306911: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+err: /usr/local/lib/python3.10/dist-packages/tensorflow_probability/python/layers/util.py:98: UserWarning: `layer.add_variable` is deprecated and will be removed in a future version. Please use the `layer.add_weight()` method instead.
+err: loc = add_variable_fn(
+err: 2024-03-10 21:02:32.300231: W tensorflow/core/common_runtime/gpu/gpu_bfc_allocator.cc:47] Overriding orig_value setting because the TF_FORCE_GPU_ALLOW_GROWTH environment variable is set. Original config value was 0.
+err: /usr/local/lib/python3.10/dist-packages/tensorflow_probability/python/layers/util.py:108: UserWarning: `layer.add_variable` is deprecated and will be removed in a future version. Please use the `layer.add_weight()` method instead.
+err: untransformed_scale = add_variable_fn(
+err: WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+err: I0000 00:00:1710104570.374777    8250 device_compiler.h:186] Compiled cluster using XLA!  This line is logged at most once for the lifetime of the process.
+out: Creating directory models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_
+out: Logger creating log file: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0__log.txt
+out: -------- Parameters:
+out: bayesian True
+out: test_mode False
+out: n_test_idx 2
+out: seed 1312
+out: fine_tune False
+out: one_vs_all False
+out: c_0 ['lcdm']
+out: c_1 ['True', 'dgp', 'ds', 'fR', 'rand--save_ckpt', 'wcdm']
+out: dataset_balanced False
+out: include_last False
+out: log_path models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0__log.txt
+out: restore False
+out: fname sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_
+out: model_name custom
+out: my_path None
+out: DIR data/ds_ee2_train_1k_equal_examples_rands
+out: TEST_DIR data/test_data/
+out: models_dir models/
+out: save_ckpt True
+out: out_path_overwrite False
+out: curves_folder data/curve_files_sys/theory_error
+out: save_processed_spectra False
+out: im_depth 500
+out: im_width 1
+out: im_channels 4
+out: swap_axes True
+out: sort_labels True
+out: norm_data_name /planck_ee2.txt
+out: normalization stdcosmo
+out: sample_pace 4
+out: k_max 5.0
+out: k_min 0.431788
+out: i_max None
+out: i_min None
+out: add_noise True
+out: n_noisy_samples 10
+out: add_shot False
+out: add_sys True
+out: add_cosvar True
+out: sigma_sys None
+out: sys_scaled None
+out: sys_factor None
+out: sys_max None
+out: sigma_curves 0.05
+out: sigma_curves_default 0.05
+out: rescale_curves uniform
+out: z_bins [0, 1, 2, 3]
+out: n_dense 1
+out: filters [8, 16, 32]
+out: kernel_sizes [10, 5, 2]
+out: strides [2, 2, 1]
+out: pool_sizes [2, 2, 0]
+out: strides_pooling [2, 1, 0]
+out: add_FT_dense False
+out: trainable False
+out: unfreeze False
+out: lr 0.01
+out: drop 0.5
+out: n_epochs 50
+out: val_size 0.15
+out: test_size 0.0
+out: batch_size 3000
+out: patience 50
+out: GPU True
+out: TPU False
+out: decay 0.95
+out: BatchNorm True
+out: ------------ CREATING DATA GENERATORS ------------
+out: labels : ['dgp', 'ds', 'fr', 'lcdm', 'rand', 'wcdm']
+out: Labels encoding:
+out: {'dgp': 0, 'ds': 1, 'fr': 2, 'lcdm': 3, 'rand': 4, 'wcdm': 5}
+out: n_labels : 6
+out: dgp - 1000 training examples
+out: ds - 1000 training examples
+out: fr - 1000 training examples
+out: lcdm - 1000 training examples
+out: rand - 1000 training examples
+out: wcdm - 1000 training examples
+out: N. of data files: 1000
+out: get_all_indexes labels dict: {'dgp': 0, 'ds': 1, 'fr': 2, 'lcdm': 3, 'rand': 4, 'wcdm': 5}
+out: create_generators n_labels: 6
+out: create_generators n_labels_eff: 6
+out: create_generators len_c1: 1
+out: Check for no duplicates in test: (0=ok):
+out: 0.0
+out: Check for no duplicates in val: (0=ok):
+out: 0
+out: N of files in training set: 850
+out: N of files in validation set: 150
+out: N of files in test set: 0
+out: Check - total: 1000
+out: --create_generators, train indexes
+out: batch_size: 3000
+out: - Cut sample
+out: bs: 3000
+out: N_labels: 6
+out: N_noise: 10
+out: len_c1: 1
+out: Train index length: 850
+out: --create_generators, validation indexes
+out: - Cut sample
+out: bs: 3000
+out: N_labels: 6
+out: N_noise: 10
+out: len_c1: 1
+out: Val index length: 150
+out: len(train_index_1), batch_size, n_labels_eff, n_noisy_samples = 850, 3000, 6, 10
+out: --DataGenerator Train
+out: Data Generator Initialization
+out: Using z bins [0, 1, 2, 3]
+out: Normalisation file is /planck_ee2.txt
+out: Specified k_max is 5.0
+out: Corresponding i_max is 112
+out: Closest k to k_max is 4.936132
+out: Specified k_min is 0.431788
+out: Corresponding i_min is 68
+out: Closest k to k_min is 0.431788
+out: New data dim: (44, 1)
+out: Final i_max used is 112
+out: Final i_min used is 68
+out: one_vs_all: False
+out: dataset_balanced: False
+out: base_case_dataset: True
+out: N. classes: 6
+out: N. n_classes in output: 6
+out: LABELS: ['dgp', 'ds', 'fr', 'lcdm', 'rand', 'wcdm']
+out: list_IDs length: 850
+out: n_indexes (n of file IDs read for each batch): 50
+out: batch size: 3000
+out: n_batches : 17
+out: For each batch we read 50 file IDs
+out: For each file ID we have 6 labels
+out: For each ID, label we have 10 realizations of noise
+out: In total, for each batch we have 3000 training examples
+out: Input batch size: 3000
+out: N of batches to cover all file IDs: 17
+out: --DataGenerator Validation
+out: Data Generator Initialization
+out: Using z bins [0, 1, 2, 3]
+out: Normalisation file is /planck_ee2.txt
+out: Specified k_max is 5.0
+out: Corresponding i_max is 112
+out: Closest k to k_max is 4.936132
+out: Specified k_min is 0.431788
+out: Corresponding i_min is 68
+out: Closest k to k_min is 0.431788
+out: New data dim: (44, 1)
+out: Final i_max used is 112
+out: Final i_min used is 68
+out: one_vs_all: False
+out: dataset_balanced: False
+out: base_case_dataset: True
+out: N. classes: 6
+out: N. n_classes in output: 6
+out: LABELS: ['dgp', 'ds', 'fr', 'lcdm', 'rand', 'wcdm']
+out: list_IDs length: 150
+out: n_indexes (n of file IDs read for each batch): 50
+out: batch size: 3000
+out: n_batches : 3
+out: For each batch we read 50 file IDs
+out: For each file ID we have 6 labels
+out: For each ID, label we have 10 realizations of noise
+out: In total, for each batch we have 3000 training examples
+out: Input batch size: 3000
+out: N of batches to cover all file IDs: 3
+out: ------------ DONE ------------
+out: ------------ BUILDING MODEL ------------
+out: Input shape (44, 4)
+out: using 1D layers and 4 channels
+out: Expected output dimension of layer conv1d_flipout: 18.0
+out: Expected output dimension of layer max_pooling1d: 9.0
+out: Expected output dimension of layer conv1d_flipout_1: 3.0
+out: Expected output dimension of layer max_pooling1d_1: 2.0
+out: Expected output dimension of layer conv1d_flipout_2: 1.0
+out: Model: "model"
+out: _________________________________________________________________
+out: Layer (type)                Output Shape              Param #
+out: =================================================================
+out: input_1 (InputLayer)        [(None, 44, 4)]           0
+out: conv1d_flipout (Conv1DFlip  (None, 18, 8)             648
+out: out)
+out: max_pooling1d (MaxPooling1  (None, 9, 8)              0
+out: D)
+out: batch_normalization (Batch  (None, 9, 8)              32
+out: Normalization)
+out: conv1d_flipout_1 (Conv1DFl  (None, 3, 16)             1296
+out: ipout)
+out: max_pooling1d_1 (MaxPoolin  (None, 2, 16)             0
+out: g1D)
+out: batch_normalization_1 (Bat  (None, 2, 16)             64
+out: chNormalization)
+out: conv1d_flipout_2 (Conv1DFl  (None, 1, 32)             2080
+out: ipout)
+out: batch_normalization_2 (Bat  (None, 1, 32)             128
+out: chNormalization)
+out: global_average_pooling1d (  (None, 32)                0
+out: GlobalAveragePooling1D)
+out: dense_flipout (DenseFlipou  (None, 32)                2080
+out: t)
+out: batch_normalization_3 (Bat  (None, 32)                128
+out: chNormalization)
+out: dense_flipout_1 (DenseFlip  (None, 6)                 390
+out: out)
+out: =================================================================
+out: Total params: 6846 (26.74 KB)
+out: Trainable params: 6670 (26.05 KB)
+out: Non-trainable params: 176 (704.00 Byte)
+out: _________________________________________________________________
+out: None
+out: Found GPU at: /device:GPU:0
+out: ------------ TRAINING ------------
+out: Features shape: (3000, 44, 4)
+out: Labels shape: (3000, 6)
+out: Initializing checkpoint from scratch.
+out: Epoch 0
+out: Validation loss decreased. Saved checkpoint for step 1: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-1
+out: Time:  84.65s, ---- Loss: 1.8331, Acc.: 0.2395, Val. Loss: 2.6863, Val. Acc.: 0.1787
+out: Epoch 1
+out: Validation loss decreased. Saved checkpoint for step 2: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-2
+out: Time:  75.40s, ---- Loss: 1.6717, Acc.: 0.3525, Val. Loss: 2.6674, Val. Acc.: 0.2191
+out: Epoch 2
+out: Validation loss decreased. Saved checkpoint for step 3: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-3
+out: Time:  75.46s, ---- Loss: 1.5890, Acc.: 0.4175, Val. Loss: 2.6192, Val. Acc.: 0.2188
+out: Epoch 3
+out: Validation loss decreased. Saved checkpoint for step 4: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-4
+out: Time:  75.50s, ---- Loss: 1.4922, Acc.: 0.4567, Val. Loss: 2.6051, Val. Acc.: 0.1828
+out: Epoch 4
+out: Validation loss decreased. Saved checkpoint for step 5: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-5
+out: Time:  76.70s, ---- Loss: 1.4432, Acc.: 0.4769, Val. Loss: 2.5845, Val. Acc.: 0.2003
+out: Epoch 5
+out: Validation loss decreased. Saved checkpoint for step 6: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-6
+out: Time:  76.35s, ---- Loss: 1.4419, Acc.: 0.4882, Val. Loss: 2.4984, Val. Acc.: 0.2827
+out: Epoch 6
+out: Validation loss decreased. Saved checkpoint for step 7: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-7
+out: Time:  77.17s, ---- Loss: 1.3931, Acc.: 0.5039, Val. Loss: 2.4460, Val. Acc.: 0.3574
+out: Epoch 7
+out: Validation loss decreased. Saved checkpoint for step 8: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-8
+out: Time:  77.31s, ---- Loss: 1.3758, Acc.: 0.5155, Val. Loss: 2.4247, Val. Acc.: 0.3683
+out: Epoch 8
+out: Validation loss decreased. Saved checkpoint for step 9: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-9
+out: Time:  76.33s, ---- Loss: 1.3588, Acc.: 0.5262, Val. Loss: 2.3638, Val. Acc.: 0.4020
+out: Epoch 9
+out: Validation loss decreased. Saved checkpoint for step 10: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-10
+out: Time:  75.73s, ---- Loss: 1.3318, Acc.: 0.5335, Val. Loss: 2.3618, Val. Acc.: 0.4053
+out: Epoch 10
+out: Validation loss decreased. Saved checkpoint for step 11: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-11
+out: Time:  76.81s, ---- Loss: 1.2928, Acc.: 0.5393, Val. Loss: 2.3166, Val. Acc.: 0.4229
+out: Epoch 11
+out: Loss did not decrease. Count = 1
+out: Time:  76.87s, ---- Loss: 1.3118, Acc.: 0.5488, Val. Loss: 2.3291, Val. Acc.: 0.4219
+out: Epoch 12
+out: Validation loss decreased. Saved checkpoint for step 13: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-12
+out: Time:  74.99s, ---- Loss: 1.3090, Acc.: 0.5507, Val. Loss: 2.2941, Val. Acc.: 0.4387
+out: Epoch 13
+out: Validation loss decreased. Saved checkpoint for step 14: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-13
+out: Time:  73.76s, ---- Loss: 1.2851, Acc.: 0.5535, Val. Loss: 2.2681, Val. Acc.: 0.4427
+out: Epoch 14
+out: Validation loss decreased. Saved checkpoint for step 15: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-14
+out: Time:  74.34s, ---- Loss: 1.2844, Acc.: 0.5641, Val. Loss: 2.2444, Val. Acc.: 0.4560
+out: Epoch 15
+out: Validation loss decreased. Saved checkpoint for step 16: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-15
+out: Time:  75.02s, ---- Loss: 1.2505, Acc.: 0.5673, Val. Loss: 2.2214, Val. Acc.: 0.4667
+out: Epoch 16
+out: Validation loss decreased. Saved checkpoint for step 17: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-16
+out: Time:  74.84s, ---- Loss: 1.2421, Acc.: 0.5706, Val. Loss: 2.1786, Val. Acc.: 0.4823
+out: Epoch 17
+out: Validation loss decreased. Saved checkpoint for step 18: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-17
+out: Time:  73.93s, ---- Loss: 1.2385, Acc.: 0.5767, Val. Loss: 2.1514, Val. Acc.: 0.4956
+out: Epoch 18
+out: Validation loss decreased. Saved checkpoint for step 19: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-18
+out: Time:  73.97s, ---- Loss: 1.2159, Acc.: 0.5750, Val. Loss: 2.1246, Val. Acc.: 0.4967
+out: Epoch 19
+out: Validation loss decreased. Saved checkpoint for step 20: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-19
+out: Time:  75.42s, ---- Loss: 1.2295, Acc.: 0.5811, Val. Loss: 2.0967, Val. Acc.: 0.5161
+out: Epoch 20
+out: Validation loss decreased. Saved checkpoint for step 21: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-20
+out: Time:  74.54s, ---- Loss: 1.2241, Acc.: 0.5831, Val. Loss: 2.0844, Val. Acc.: 0.5181
+out: Epoch 21
+out: Validation loss decreased. Saved checkpoint for step 22: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-21
+out: Time:  76.89s, ---- Loss: 1.2173, Acc.: 0.5844, Val. Loss: 2.0512, Val. Acc.: 0.5304
+out: Epoch 22
+out: Validation loss decreased. Saved checkpoint for step 23: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-22
+out: Time:  75.62s, ---- Loss: 1.2049, Acc.: 0.5859, Val. Loss: 2.0255, Val. Acc.: 0.5404
+out: Epoch 23
+out: Validation loss decreased. Saved checkpoint for step 24: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-23
+out: Time:  75.66s, ---- Loss: 1.2168, Acc.: 0.5879, Val. Loss: 2.0170, Val. Acc.: 0.5471
+out: Epoch 24
+out: Validation loss decreased. Saved checkpoint for step 25: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-24
+out: Time:  75.70s, ---- Loss: 1.2472, Acc.: 0.5908, Val. Loss: 1.9978, Val. Acc.: 0.5509
+out: Epoch 25
+out: Validation loss decreased. Saved checkpoint for step 26: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-25
+out: Time:  75.69s, ---- Loss: 1.1945, Acc.: 0.5950, Val. Loss: 1.9785, Val. Acc.: 0.5573
+out: Epoch 26
+out: Validation loss decreased. Saved checkpoint for step 27: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-26
+out: Time:  75.46s, ---- Loss: 1.1986, Acc.: 0.5961, Val. Loss: 1.9646, Val. Acc.: 0.5658
+out: Epoch 27
+out: Loss did not decrease. Count = 1
+out: Time:  75.79s, ---- Loss: 1.2183, Acc.: 0.5942, Val. Loss: 1.9679, Val. Acc.: 0.5611
+out: Epoch 28
+out: Loss did not decrease. Count = 2
+out: Time:  75.64s, ---- Loss: 1.1691, Acc.: 0.5982, Val. Loss: 1.9652, Val. Acc.: 0.5671
+out: Epoch 29
+out: Validation loss decreased. Saved checkpoint for step 30: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-27
+out: Time:  75.11s, ---- Loss: 1.1708, Acc.: 0.5995, Val. Loss: 1.9504, Val. Acc.: 0.5708
+out: Epoch 30
+out: Loss did not decrease. Count = 1
+out: Time:  75.33s, ---- Loss: 1.2030, Acc.: 0.5992, Val. Loss: 1.9712, Val. Acc.: 0.5652
+out: Epoch 31
+out: Validation loss decreased. Saved checkpoint for step 32: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-28
+out: Time:  75.31s, ---- Loss: 1.2280, Acc.: 0.6009, Val. Loss: 1.9396, Val. Acc.: 0.5774
+out: Epoch 32
+out: Validation loss decreased. Saved checkpoint for step 33: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-29
+out: Time:  73.45s, ---- Loss: 1.1802, Acc.: 0.6037, Val. Loss: 1.9115, Val. Acc.: 0.5881
+out: Epoch 33
+out: Loss did not decrease. Count = 1
+out: Time:  72.81s, ---- Loss: 1.1669, Acc.: 0.6059, Val. Loss: 1.9154, Val. Acc.: 0.5876
+out: Epoch 34
+out: Validation loss decreased. Saved checkpoint for step 35: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-30
+out: Time:  73.67s, ---- Loss: 1.1533, Acc.: 0.6055, Val. Loss: 1.9102, Val. Acc.: 0.5837
+out: Epoch 35
+out: Validation loss decreased. Saved checkpoint for step 36: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-31
+out: Time:  73.79s, ---- Loss: 1.1713, Acc.: 0.6065, Val. Loss: 1.9051, Val. Acc.: 0.5911
+out: Epoch 36
+out: Loss did not decrease. Count = 1
+out: Time:  73.77s, ---- Loss: 1.1639, Acc.: 0.6101, Val. Loss: 1.9131, Val. Acc.: 0.5830
+out: Epoch 37
+out: Validation loss decreased. Saved checkpoint for step 38: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-32
+out: Time:  74.31s, ---- Loss: 1.1687, Acc.: 0.6071, Val. Loss: 1.8949, Val. Acc.: 0.5868
+out: Epoch 38
+out: Loss did not decrease. Count = 1
+out: Time:  74.08s, ---- Loss: 1.1446, Acc.: 0.6088, Val. Loss: 1.8996, Val. Acc.: 0.5947
+out: Epoch 39
+out: Validation loss decreased. Saved checkpoint for step 40: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-33
+out: Time:  74.30s, ---- Loss: 1.1651, Acc.: 0.6086, Val. Loss: 1.8894, Val. Acc.: 0.5957
+out: Epoch 40
+out: Loss did not decrease. Count = 1
+out: Time:  73.57s, ---- Loss: 1.1643, Acc.: 0.6127, Val. Loss: 1.9004, Val. Acc.: 0.5838
+out: Epoch 41
+out: Loss did not decrease. Count = 2
+out: Time:  73.48s, ---- Loss: 1.1524, Acc.: 0.6141, Val. Loss: 1.8926, Val. Acc.: 0.5906
+out: Epoch 42
+out: Loss did not decrease. Count = 3
+out: Time:  73.07s, ---- Loss: 1.1528, Acc.: 0.6120, Val. Loss: 1.8987, Val. Acc.: 0.5894
+out: Epoch 43
+out: Validation loss decreased. Saved checkpoint for step 44: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-34
+out: Time:  72.46s, ---- Loss: 1.1445, Acc.: 0.6120, Val. Loss: 1.8674, Val. Acc.: 0.6014
+out: Epoch 44
+out: Loss did not decrease. Count = 1
+out: Time:  72.45s, ---- Loss: 1.1502, Acc.: 0.6146, Val. Loss: 1.8784, Val. Acc.: 0.5994
+out: Epoch 45
+out: Validation loss decreased. Saved checkpoint for step 46: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-35
+out: Time:  72.82s, ---- Loss: 1.1617, Acc.: 0.6137, Val. Loss: 1.8660, Val. Acc.: 0.6051
+out: Epoch 46
+out: Validation loss decreased. Saved checkpoint for step 47: models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-36
+out: Time:  72.86s, ---- Loss: 1.1495, Acc.: 0.6137, Val. Loss: 1.8567, Val. Acc.: 0.6062
+out: Epoch 47
+out: Loss did not decrease. Count = 1
+out: Time:  72.68s, ---- Loss: 1.1575, Acc.: 0.6129, Val. Loss: 1.8814, Val. Acc.: 0.5966
+out: Epoch 48
+out: Loss did not decrease. Count = 2
+out: Time:  73.61s, ---- Loss: 1.1294, Acc.: 0.6144, Val. Loss: 1.8741, Val. Acc.: 0.6002
+out: Epoch 49
+out: Loss did not decrease. Count = 3
+out: Time:  72.58s, ---- Loss: 1.1645, Acc.: 0.6133, Val. Loss: 1.8784, Val. Acc.: 0.5997
+out: Saving at models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/hist.png
+out: Done in 3757.01s

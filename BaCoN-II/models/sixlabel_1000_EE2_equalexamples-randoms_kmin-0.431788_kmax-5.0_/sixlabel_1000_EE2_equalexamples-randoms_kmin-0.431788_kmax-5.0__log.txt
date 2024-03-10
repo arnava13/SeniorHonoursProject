@@ -1,0 +1,251 @@
+
+ -------- Parameters:
+bayesian True
+test_mode False
+n_test_idx 2
+seed 1312
+fine_tune False
+one_vs_all False
+c_0 ['lcdm']
+c_1 ['True', 'dgp', 'ds', 'fR', 'rand--save_ckpt', 'wcdm']
+dataset_balanced False
+include_last False
+log_path 
+restore False
+fname sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_
+model_name custom
+my_path None
+DIR data/ds_ee2_train_1k_equal_examples_rands
+TEST_DIR data/ds_ee2_test_1k_equal_examples_rands
+models_dir models/
+save_ckpt True
+out_path_overwrite False
+curves_folder data/curve_files_sys/theory_error
+save_processed_spectra False
+im_depth 500
+im_width 1
+im_channels 4
+swap_axes True
+sort_labels True
+norm_data_name /planck_ee2.txt
+normalization stdcosmo
+sample_pace 4
+k_max 5.0
+k_min 0.431788
+i_max None
+i_min None
+add_noise True
+n_noisy_samples 10
+add_shot False
+add_sys True
+add_cosvar True
+sigma_sys None
+sys_scaled None
+sys_factor None
+sys_max None
+sigma_curves 0.05
+sigma_curves_default 0.05
+rescale_curves uniform
+z_bins [0, 1, 2, 3]
+n_dense 1
+filters [8, 16, 32]
+kernel_sizes [10, 5, 2]
+strides [2, 2, 1]
+pool_sizes [2, 2, 0]
+strides_pooling [2, 1, 0]
+add_FT_dense False
+trainable False
+unfreeze False
+lr 0.01
+drop 0.5
+n_epochs 50
+val_size 0.15
+test_size 0.0
+batch_size 3000
+patience 50
+GPU True
+TPU False
+decay 0.95
+BatchNorm True
+group_lab_dict {'True': 'non_lcdm', 'dgp': 'non_lcdm', 'ds': 'non_lcdm', 'fR': 'non_lcdm', 'rand--save_ckpt': 'non_lcdm', 'wcdm': 'non_lcdm', 'lcdm': 'lcdm'}
+save_indexes False
+------------ CREATING DATA GENERATORS ------------
+
+labels : ['dgp', 'ds', 'fr', 'lcdm', 'rand', 'wcdm']
+Labels encoding: 
+{'dgp': 0, 'ds': 1, 'fr': 2, 'lcdm': 3, 'rand': 4, 'wcdm': 5}
+n_labels : 6
+dgp - 1000 training examples
+ds - 1000 training examples
+fr - 1000 training examples
+lcdm - 1000 training examples
+rand - 1000 training examples
+wcdm - 1000 training examples
+
+N. of data files: 1000
+get_all_indexes labels dict: {'dgp': 0, 'ds': 1, 'fr': 2, 'lcdm': 3, 'rand': 4, 'wcdm': 5}
+create_generators n_labels_eff: 6
+create_generators len_c1: 1
+--Train
+batch_size: 3000
+- Cut sample
+bs: 3000
+N_labels: 6
+N_noise: 10
+len_c1: 1
+Indexes length: 1000
+n_keep: 1000
+Sampling
+New length: 1000
+N batches: 20.0
+ len_C1: 1
+N indexes: 50.0
+Ok.
+N. of test files used: 1000
+Data Generator Initialization
+Using z bins [0, 1, 2, 3]
+Normalisation file is /planck_ee2.txt
+Specified k_max is 5.0
+Corresponding i_max is 112
+Closest k to k_max is 4.936132
+Specified k_min is 0.431788
+Corresponding i_min is 68
+Closest k to k_min is 0.431788
+New data dim: (44, 1)
+Final i_max used is 112
+Final i_min used is 68
+one_vs_all: False
+dataset_balanced: False
+base_case_dataset: True
+N. classes: 6
+N. n_classes in output: 6
+LABELS: ['dgp', 'ds', 'fr', 'lcdm', 'rand', 'wcdm']
+list_IDs length: 1000
+n_indexes (n of file IDs read for each batch): 50
+batch size: 3000
+n_batches : 20
+For each batch we read 50 file IDs
+For each file ID we have 6 labels
+For each ID, label we have 10 realizations of noise
+In total, for each batch we have 3000 training examples
+Input batch size: 3000
+N of batches to cover all file IDs: 20
+------------ DONE ------------
+
+Input shape (44, 4)
+------------ BUILDING MODEL ------------
+
+Model n_classes : 6 
+Features shape: (3000, 44, 4)
+Labels shape: (3000, 6)
+using 1D layers and 4 channels
+Expected output dimension of layer conv1d_flipout: 18.0
+Expected output dimension of layer max_pooling1d: 9.0
+Expected output dimension of layer conv1d_flipout_1: 3.0
+Expected output dimension of layer max_pooling1d_1: 2.0
+Expected output dimension of layer conv1d_flipout_2: 1.0
+Model: "model"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ input_1 (InputLayer)        [(None, 44, 4)]           0         
+                                                                 
+ conv1d_flipout (Conv1DFlip  (None, 18, 8)             648       
+ out)                                                            
+                                                                 
+ max_pooling1d (MaxPooling1  (None, 9, 8)              0         
+ D)                                                              
+                                                                 
+ batch_normalization (Batch  (None, 9, 8)              32        
+ Normalization)                                                  
+                                                                 
+ conv1d_flipout_1 (Conv1DFl  (None, 3, 16)             1296      
+ ipout)                                                          
+                                                                 
+ max_pooling1d_1 (MaxPoolin  (None, 2, 16)             0         
+ g1D)                                                            
+                                                                 
+ batch_normalization_1 (Bat  (None, 2, 16)             64        
+ chNormalization)                                                
+                                                                 
+ conv1d_flipout_2 (Conv1DFl  (None, 1, 32)             2080      
+ ipout)                                                          
+                                                                 
+ batch_normalization_2 (Bat  (None, 1, 32)             128       
+ chNormalization)                                                
+                                                                 
+ global_average_pooling1d (  (None, 32)                0         
+ GlobalAveragePooling1D)                                         
+                                                                 
+ dense_flipout (DenseFlipou  (None, 32)                2080      
+ t)                                                              
+                                                                 
+ batch_normalization_3 (Bat  (None, 32)                128       
+ chNormalization)                                                
+                                                                 
+ dense_flipout_1 (DenseFlip  (None, 6)                 390       
+ out)                                                            
+                                                                 
+=================================================================
+Total params: 6846 (26.74 KB)
+Trainable params: 6670 (26.05 KB)
+Non-trainable params: 176 (704.00 Byte)
+_________________________________________________________________
+None
+Computing loss for randomly initialized model...
+Loss before loading weights/ 1.9278263
+
+------------ RESTORING CHECKPOINT ------------
+
+Looking for ckpt in models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/
+Restoring checkpoint from models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/tf_ckpts/ckpt-36
+Loss after loading weights/ 1.0363587
+
+Threshold probability for classification: 0.5 
+Accuracy on 0 batch using median of sampled probabilities: 0.49266666 %
+Accuracy on 0 batch using median of sampled probabilities, not considering unclassified examples: 0.83314544 %
+Accuracy on 1 batch using median of sampled probabilities: 0.429 %
+Accuracy on 1 batch using median of sampled probabilities, not considering unclassified examples: 0.80943394 %
+Accuracy on 2 batch using median of sampled probabilities: 0.44666666 %
+Accuracy on 2 batch using median of sampled probabilities, not considering unclassified examples: 0.7900943 %
+Accuracy on 3 batch using median of sampled probabilities: 0.461 %
+Accuracy on 3 batch using median of sampled probabilities, not considering unclassified examples: 0.81785923 %
+Accuracy on 4 batch using median of sampled probabilities: 0.444 %
+Accuracy on 4 batch using median of sampled probabilities, not considering unclassified examples: 0.8176796 %
+Accuracy on 5 batch using median of sampled probabilities: 0.44533333 %
+Accuracy on 5 batch using median of sampled probabilities, not considering unclassified examples: 0.7877358 %
+Accuracy on 6 batch using median of sampled probabilities: 0.45433334 %
+Accuracy on 6 batch using median of sampled probabilities, not considering unclassified examples: 0.81227654 %
+Accuracy on 7 batch using median of sampled probabilities: 0.42966667 %
+Accuracy on 7 batch using median of sampled probabilities, not considering unclassified examples: 0.7951881 %
+Accuracy on 8 batch using median of sampled probabilities: 0.46133333 %
+Accuracy on 8 batch using median of sampled probabilities, not considering unclassified examples: 0.80699706 %
+Accuracy on 9 batch using median of sampled probabilities: 0.42133334 %
+Accuracy on 9 batch using median of sampled probabilities, not considering unclassified examples: 0.7745098 %
+Accuracy on 10 batch using median of sampled probabilities: 0.464 %
+Accuracy on 10 batch using median of sampled probabilities, not considering unclassified examples: 0.8270945 %
+Accuracy on 11 batch using median of sampled probabilities: 0.42666668 %
+Accuracy on 11 batch using median of sampled probabilities, not considering unclassified examples: 0.8173691 %
+Accuracy on 12 batch using median of sampled probabilities: 0.43966666 %
+Accuracy on 12 batch using median of sampled probabilities, not considering unclassified examples: 0.80182374 %
+Accuracy on 13 batch using median of sampled probabilities: 0.47133332 %
+Accuracy on 13 batch using median of sampled probabilities, not considering unclassified examples: 0.81357884 %
+Accuracy on 14 batch using median of sampled probabilities: 0.44533333 %
+Accuracy on 14 batch using median of sampled probabilities, not considering unclassified examples: 0.82929856 %
+Accuracy on 15 batch using median of sampled probabilities: 0.43266666 %
+Accuracy on 15 batch using median of sampled probabilities, not considering unclassified examples: 0.802225 %
+Accuracy on 16 batch using median of sampled probabilities: 0.43233332 %
+Accuracy on 16 batch using median of sampled probabilities, not considering unclassified examples: 0.81829655 %
+Accuracy on 17 batch using median of sampled probabilities: 0.45533332 %
+Accuracy on 17 batch using median of sampled probabilities, not considering unclassified examples: 0.7787913 %
+Accuracy on 18 batch using median of sampled probabilities: 0.45233333 %
+Accuracy on 18 batch using median of sampled probabilities, not considering unclassified examples: 0.7807825 %
+Accuracy on 19 batch using median of sampled probabilities: 0.43566668 %
+Accuracy on 19 batch using median of sampled probabilities, not considering unclassified examples: 0.8057953 %
+-- Accuracy on test set using median of sampled probabilities: 0.4470334 % 
+
+-- Accuracy on test set using median of sampled probabilities, not considering unclassified examples: 0.8059987 % 
+
+Adding Not classified label
+Saved confusion matrix at models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/cm_sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0__frozen_weights.pdf
+Saved confusion matrix values at models/sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0_/cm_sixlabel_1000_EE2_equalexamples-randoms_kmin-0.431788_kmax-5.0__frozen_weights_values.txt
