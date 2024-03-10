@@ -30,11 +30,13 @@ def main():
     parser.add_argument('--sigma_curves', type=float, default=0.05, help='The scale factor for the theory error curves used in training.')
     parser.add_argument('spectrum_dir', type=str, help='Path to the data file')
     parser.add_argument('theoryerr_dir', type=str, help='Path to the directory containing the theory error curves')
+    parser.add_argument('fracnoisediff', type=float, help='The minimum ratio of variation in theory error to cosmic variance desired for k > k_min')
     args = parser.parse_args()
     spectrum_dir = args.spectrum_dir
     theoryerr_dir = args.theoryerr_dir
     theoryerror_mode = args.theoryerr_mode
     sigma_curves = args.sigma_curves
+    fracnoisediff = args.fracnoisediff
 
     with open(spectrum_dir) as example_spectrum:
         example_spectrum = pd.read_csv(example_spectrum, sep=r'\s+', header=None, engine='python')
@@ -47,12 +49,10 @@ def main():
                 theoryerr.rename(columns={0: 'k', 1: '1.5', 2: '0.783', 3: '0.478', 4: '0.1'}, inplace=True)
         else:
             raise Exception('In single curve mode, a specific .txt file must be provided for the theory error.')
-            sys.exit(1)
 
     if theoryerror_mode == 'averaged':
         if theoryerr_dir.endswith(".txt"):
             raise Exception('In averaged curve mode, a directory must be provided containing the theory error curves')
-            sys.exit(1)
         else:
             files = [f for f in os.listdir(theoryerr_dir) if f.endswith('.txt')]
             df_list = []
@@ -65,38 +65,49 @@ def main():
     
     theoryerr.rename(columns={0: 'k', 1: '1.5', 2: '0.783', 3: '0.478', 4: '0.1'}, inplace=True)
 
-    plt.figure(1)
+    plt.figure(1, figsize=(7, 5))
     plt.xlabel('k')
+    plt.xlim(0.01,5.0)
     plt.xscale('log')
     plt.ylabel('Theory Error (Scaled)')
-    plt.title('Theory Error for Different Redshifts')
+    plt.title('Theory Error Across Redshifts')
 
-    plt.figure(2)
-    plt.xlabel('k')
-    plt.xlim(0,0.1)
-    plt.ylabel('Cosmic Variance')
-    plt.title('Cosmic Variance for Different Redshifts')
-
-    plt.figure(3)
+    plt.figure(2, figsize=(7, 5))
     plt.xlabel('k')
     plt.xscale('log')
-    plt.xlim(0.01,3.0)
-    plt.ylabel('Total Noise')
-    plt.title('Total Noise for Different Redshifts')
+    plt.xlim(0.01,5.0)
+    plt.ylabel('Cosmic Variance')
+    plt.title('Cosmic Variance Across Redshifts')
 
-    for z in [1.5, 0.783, 0.478, 0.1]:
+    plt.figure(3, figsize=(7, 5))
+    plt.xlabel('k')
+    plt.xscale('log')
+    plt.ylabel('Total Noise')
+    plt.title('Total Noise Across Redshifts')
+
+    k_min_forzs = np.zeros(4)
+    max_y_var_forzs = np.zeros(4)
+    fracvar_forzs = np.zeros(4)
+    for j, z in enumerate([1.5, 0.783, 0.478, 0.1]):
         theoryerror_forz = np.array([])
         cosmicvariance_forz = np.array([])
         noise = np.array([])
-        for k in k_values:
-            k_index = np.where(k_values == k)[0][0]
+        for i, k in enumerate(k_values):
             sig = sigma(k, z, k_values)
-            theoryerr_ind = sigma_curves * theoryerr[str(z)].iloc[k_index]
+            theoryerr_ind = sigma_curves * theoryerr[str(z)].iloc[i]
             cosmicvariance_forz = np.append(cosmicvariance_forz, sig)
             theoryerror_forz = np.append(theoryerror_forz, theoryerr_ind)
-            indnoise = sig + theoryerr_ind
-            noise = np.append(noise, indnoise)
-
+        for i, k in enumerate(k_values):
+            theoryerr_range = np.max(theoryerror_forz[i:]) - np.min(theoryerror_forz[i:])
+            cosmicvar_range = np.max(cosmicvariance_forz[i:]) - np.min(cosmicvariance_forz[i:])
+            fracvar = theoryerr_range / cosmicvar_range
+            if fracvar >= fracnoisediff:
+                k_min_forzs[j] = k
+                max_y_var_forzs[j] = np.max([cosmicvar_range, theoryerr_range])
+                fracvar_forzs[j] = fracvar
+                k_min = k
+                break
+    
         plt.figure(1)
         plt.plot(k_values, theoryerror_forz, label=f'z={z}')
 
@@ -106,6 +117,11 @@ def main():
         plt.figure(3)
         plt.plot(k_values, theoryerror_forz + cosmicvariance_forz, label=f'z={z}')
 
+    k_min = np.max(k_min_forzs)
+    z_index = np.where(k_min_forzs == k_min)[0][0]
+    y_var = max_y_var_forzs[z_index]
+    fracvar = np.max(fracvar_forzs)
+
     plt.figure(1)
     plt.legend()
 
@@ -113,10 +129,14 @@ def main():
     plt.legend()
 
     plt.figure(3)
+    plt.xlim(k_min, 5.0)
+    plt.ylim(0.05, 0.05 + y_var)
     plt.legend()
 
+    print(f'Minimum k for variation in theory error to be >{np.round(fracnoisediff * 100, 2)}% of variation in cosmic variance across all redshift bins: {k_min}')
+    print(f'Variation of theory_error across redshift bins for k > {k_min} is at least {np.round(fracvar *100,2)}% of the variation in cosmic variance')
+
     plt.show()
-    
             
     
 if __name__ == "__main__":
