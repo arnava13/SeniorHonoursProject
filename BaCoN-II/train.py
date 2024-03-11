@@ -495,33 +495,34 @@ def main():
         filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense
     
     if FLAGS.TPU:
-        try:
-            tpu_resolver = tf.distribute.cluster_resolver.TPUClusterResolver()  # Automatically detects the TPU
-            tf.config.experimental_connect_to_cluster(tpu_resolver)  # Connects to the TPU cluster
-            tf.tpu.experimental.initialize_tpu_system(tpu_resolver)  # Initializes the TPU system
-            strategy = tf.distribute.TPUStrategy(tpu_resolver)
-            tpu_device = tpu_resolver.master()  # Retrieves the TPU device URI
-            print('Found TPU at: {}'.format(tpu_device))
-            with strategy.scope():
-                model=make_model(     model_name=model_name,
-                         drop=drop, 
-                          n_labels=n_classes, 
-                          input_shape=input_shape, 
-                          padding='valid', 
-                          filters=filters,
-                          kernel_sizes=kernel_sizes,
-                          strides=strides,
-                          pool_sizes=pool_sizes,
-                          strides_pooling=strides_pooling,
-                          activation=tf.nn.leaky_relu,
-                          bayesian=bayesian, 
-                          n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
-                             )
+        tpu_resolver = tf.distribute.cluster_resolver.TPUClusterResolver()  # Automatically detects the TPU
+        tf.config.experimental_connect_to_cluster(tpu_resolver)  # Connects to the TPU cluster
+        tf.tpu.experimental.initialize_tpu_system(tpu_resolver)  # Initializes the TPU system
+        strategy = tf.distribute.TPUStrategy(tpu_resolver)
+        tpu_device = tpu_resolver.master()  # Retrieves the TPU device URI
 
-                model.build(input_shape=input_shape)
-        except ValueError as e:
-            print('TPU device not found. Make sure TensorFlow version is compatible with TPU and the environment is correctly set up.')
-            print(e)
+        if not tpu_device:
+            print('Error: No TPU found.')
+        else:
+            print('Found TPU at: {}'.format(tpu_device))
+        print('Found TPU at: {}'.format(tpu_device))
+        with strategy.scope():
+            model=make_model(     model_name=model_name,
+                        drop=drop, 
+                        n_labels=n_classes, 
+                        input_shape=input_shape, 
+                        padding='valid', 
+                        filters=filters,
+                        kernel_sizes=kernel_sizes,
+                        strides=strides,
+                        pool_sizes=pool_sizes,
+                        strides_pooling=strides_pooling,
+                        activation=tf.nn.leaky_relu,
+                        bayesian=bayesian, 
+                        n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
+                            )
+
+            model.build(input_shape=input_shape)
     else:
         model=make_model(     model_name=model_name,
                          drop=drop, 
