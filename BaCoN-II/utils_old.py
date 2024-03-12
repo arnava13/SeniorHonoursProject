@@ -10,7 +10,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import argparse
-import tensorflow.compat.v2 as tf
 
 
 

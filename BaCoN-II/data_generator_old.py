@@ -127,20 +127,21 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         self.norm_data_path = self.data_root+norm_data_name
         print('Normalisation file is %s' %norm_data_name)
 
+        # Select points up to k_max or i_max
         self.all_ks = np.loadtxt(self.norm_data_path)[:, 0]
         if self.sample_pace !=1:
                 self.all_ks = np.loadtxt(self.norm_data_path)[0::sample_pace, 0]
-
-        # Select points from k_max or i_max
-
+        
+        #print('Data Gen using k max %s' %str(self.k_max))
         if self.k_max is not None:
             print('Specified k_max is %s' %self.k_max)
-            self.i_max, k_max_res = find_nearest(self.all_ks, self.k_max) 
+            self.i_max, k_max_res = find_nearest(self.all_ks, self.k_max) # self.all_ks[self.all_ks==self.k_max]
             print('Corresponding i_max is %s' %self.i_max)
             print('Closest k to k_max is %s' %k_max_res)
+            #print('Selecting ks up to k_max=%s, or index %s for input k_max=%s' %(self.ind_max, k_max_res, self.k_max))
 
         elif self.i_max is not None:
-            self.k_max = tf.gather(self.all_ks, self.i_max)
+            self.k_max = self.all_ks[self.i_max]
             print('Specified i_max is %s' %self.i_max)
             print('Corresponding k_max is %s' %self.k_max)
             
@@ -150,21 +151,26 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             
             i_max, k_max = find_nearest(self.all_ks, self.k_max)
             assert(i_max==self.i_max)
-
+        
         else:
             self.i_max = -1
-            print('No max in k. Using all ks . k_max=%s' %tf.gather(self.all_ks, self.i_max))
+            print('No max in k. Using all ks . k_max=%s' %self.all_ks[self.i_max])
 
         # Select points from k_min or i_min
-
+        self.all_ks = np.loadtxt(self.norm_data_path)[:, 0]
+        if self.sample_pace !=1:
+                self.all_ks = np.loadtxt(self.norm_data_path)[0::sample_pace, 0]
+        
+        #print('Data Gen using k min %s' %str(self.k_min))
         if self.k_min is not None:
             print('Specified k_min is %s' %self.k_min)
-            self.i_min, k_min_res = find_nearest(self.all_ks, self.k_min) 
+            self.i_min, k_min_res = find_nearest(self.all_ks, self.k_min) # self.all_ks[self.all_ks==self.k_min]
             print('Corresponding i_min is %s' %self.i_min)
             print('Closest k to k_min is %s' %k_min_res)
+            #print('Selecting ks up to k_min=%s, or index %s for input k_min=%s' %(self.ind_max, k_min_res, self.k_min))
 
         elif self.i_min is not None:
-            self.k_min = tf.gather(self.all_ks, self.i_min)
+            self.k_min = self.all_ks[self.i_min]
             print('Specified i_min is %s' %self.i_min)
             print('Corresponding k_min is %s' %self.k_min)
             
@@ -174,17 +180,17 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             
             i_min, k_min = find_nearest(self.all_ks, self.k_min)
             assert(i_min==self.i_min)
-
+        
         else:
             self.i_min = 0
-            print('No min in k. Using all ks . k_min=%s' %tf.gather(self.all_ks, self.i_min))
-
+            print('No min in k. Using all ks . k_min=%s' %self.all_ks[self.i_min])
+        
+            
         self.all_ks = self.all_ks[self.i_min:self.i_max]
         self.dim = (self.all_ks.shape[0], self.dim[1])
         print('New data dim: %s' %str(self.dim) )
         print('Final i_max used is %s' %self.i_max)
         print('Final i_min used is %s' %self.i_min)
-        self.all_ks = tf.convert_to_tensor(self.all_ks)
             
         
             
@@ -237,6 +243,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
           if self.sample_pace !=1:
             self.norm_data = self.norm_data[0::self.sample_pace, :]
           self.norm_data = self.norm_data[self.i_min:self.i_max]
+              
         
         self.idx_file_name = idx_file_name
         self.models_dir = models_dir
@@ -406,11 +413,12 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
               loaded_all = np.loadtxt(fname)
               P_original, k = loaded_all[:, 1:], loaded_all[:, 0]
 
+
               if self.sample_pace!=1:
                 P_original = P_original[0::self.sample_pace, :]
                 k = k[0::self.sample_pace]
               P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
-
+              #print('P_original.shape ',P_original.shape)
               if self.Verbose:
                 print('Dimension of original data: %s' %str(P_original.shape))
               
@@ -418,7 +426,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                     print('dimension P_original: %s' %str(P_original.shape))    
                     print('P_original first 10:') 
                     print(P_original[10])
-
+              
               # Add noise
               for i_noise in range(self.n_noisy_samples):
                 if self.add_noise:
@@ -534,6 +542,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                     print('axes not swapped')
                     print('Dimension of NORM data: %s' %str(self.norm_data[None, :,:,None].shape))
         
+        # save the noisy spectra as a file in the model folder, only for first batch
         if self.save_processed_spectra:
             if self.batch_idx==0:
                 name_spectra_folder = os.path.join(self.models_dir,self.fname,'processed_spectra') 
@@ -576,11 +585,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             
         if self.swap_axes:# 
             X = X[:,:,0,:] 
-        
-        X = tf.convert_to_tensor(X, dtype=tf.float32)
-        y = tf.convert_to_tensor(y, dtype=tf.int32)
 
-        return X, tf.one_hot(y, depth=self.n_classes_out)
+        return X, tf.keras.utils.to_categorical(y, num_classes=self.n_classes_out)
     
 
 
