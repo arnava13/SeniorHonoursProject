@@ -146,7 +146,7 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
     n_keep = a - (a % (bs//(n_labels*n_noise)))
     if Verbose:
         print('n_keep: %s' %n_keep)
-    if n_keep<a or not tf.math.is_integer(n_keep/n_labels/n_noise):   
+    if n_keep<a or not tf.equal(tf.math.floormod(n_keep/n_labels/n_noise, 1), 0):   
         if Verbose:
             print('Sampling')
         idxs_new = tf.random.shuffle(indexes)[:int(a)]
