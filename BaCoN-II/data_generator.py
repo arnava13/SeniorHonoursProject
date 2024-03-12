@@ -129,9 +129,11 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         print('Normalisation file is %s' %norm_data_name)
 
         # Select points up to k_max or i_max
-        self.all_ks = tf.io.read_file(self.norm_data_path)
-        self.all_ks = tf.strings.split(self.all_ks, '\n')
-        self.all_ks = tf.strings.to_number(self.all_ks, out_type=tf.float32)
+        with open(self.norm_data_path, 'r') as file:
+            self.all_ks = file.read().split('\n')
+
+        # Convert to TensorFlow tensor
+        self.all_ks = tf.convert_to_tensor(self.all_ks, dtype=tf.float32))
 
         if self.sample_pace !=1:
             self.all_ks = tf.strided_slice(self.all_ks, [0], [tf.size(self.all_ks)], [sample_pace])
@@ -651,7 +653,7 @@ def create_generators(FLAGS):
     train_index = tf.sparse.to_dense(train_index)[0]
 
     print('Check for no duplicates in test: (0=ok):')
-    print(tf.reduce_sum(tf.cast(tf.map_fn(lambda el: tf.reduce_any(tf.equal(el, train_index)), test_index, dtype=tf.bool), tf.int32)))
+    print(tf.reduce_sum(tf.cast(tf.map_fn(lambda el: tf.reduce_any(tf.equal(el, train_index)), test_index), tf.int32)))
     print('Check for no duplicates in val: (0=ok):')
     print(tf.reduce_sum(tf.cast(tf.map_fn(lambda el: tf.reduce_any(tf.equal(el, train_index)), val_index, dtype=tf.bool), tf.int32)))
 
