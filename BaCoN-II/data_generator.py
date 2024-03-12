@@ -639,12 +639,18 @@ def create_generators(FLAGS):
 
     
     # SPLIT TRAIN/VALIDATION /(TEST)
-    val_index = tf.random.shuffle(all_index)[:int(tf.floor(val_size*n_samples))]
-    train_index_temp = tf.sparse.to_dense(tf.sets.difference(all_index[None, :], val_index[None, :]))[0]
-    test_size_eff = float(FLAGS.test_size/(tf.shape(train_index_temp)[0]/n_samples))
-    test_index = tf.random.shuffle(train_index_temp)[:tf.cast(tf.floor(test_size_eff * tf.cast(tf.shape(train_index_temp)[0], tf.float32)), tf.int32)]
-    train_index = tf.sparse.to_dense(tf.sets.difference(train_index_temp[None, :], test_index[None, :]))[0]
-
+    # Convert 'all_index' to a TensorFlow constant
+    all_index = tf.constant(all_index, dtype=tf.int32)
+    num_val_samples = tf.cast(tf.floor(val_size * n_samples), tf.int32)
+    val_index = tf.random.shuffle(all_index)[:num_val_samples]
+    train_index_temp = tf.sets.difference(all_index[None, :], val_index[None, :])
+    train_index_temp = tf.sparse.to_dense(train_index_temp)[0]
+    test_size_eff = FLAGS.test_size / (tf.shape(train_index_temp)[0] / n_samples)
+    num_test_samples = tf.cast(tf.floor(test_size_eff * tf.cast(tf.shape(train_index_temp)[0], tf.float32)), tf.int32)
+    test_index = tf.random.shuffle(train_index_temp)[:num_test_samples]
+    train_index = tf.sets.difference(train_index_temp[None, :], test_index[None, :])
+    train_index = tf.sparse.to_dense(train_index)[0]
+    
     print('Check for no duplicates in test: (0=ok):')
     print(tf.reduce_sum(tf.cast(tf.map_fn(lambda el: tf.reduce_any(tf.equal(el, train_index)), test_index), tf.int32)))
     print('Check for no duplicates in val: (0=ok):')
