@@ -409,9 +409,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
               #try:
               loaded_all = np.loadtxt(fname)
               P_original, k = loaded_all[:, 1:], loaded_all[:, 0]
-              P_original = tf.convert_to_tensor(P_original, dtype=tf.float32)
-              k = tf.convert_to_tensor(k, dtype=tf.float32)
-
 
               if self.sample_pace!=1:
                 P_original = P_original[0::self.sample_pace, :]
@@ -436,7 +433,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                     # add noise if selected
                     if self.add_cosvar:
                         noise_cosVar = tf.random.normal(shape=[], mean=0, stddev=tf.cast(generate_noise(k,tf.gather(self.norm_data, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=True, add_sys=False, add_shot=False,sigma_sys=self.sigma_sys), tf.float32), dtype=tf.float32)
-                        P_noisy = P_noisy + noise_cosVar
+                        P_noisy = tf.cast(P_noisy, tf.float32) + noise_cosVar
 
                     if self.add_sys:
                         curve_random_nr = tf.random.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
