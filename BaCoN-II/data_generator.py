@@ -133,7 +133,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             self.all_ks = file.read().split('\n')
 
         # Convert to TensorFlow tensor
-        self.all_ks = tf.convert_to_tensor(self.all_ks, dtype=tf.float32))
+        self.all_ks = tf.convert_to_tensor(self.all_ks, dtype=tf.float32)
 
         if self.sample_pace !=1:
             self.all_ks = tf.strided_slice(self.all_ks, [0], [tf.size(self.all_ks)], [sample_pace])
