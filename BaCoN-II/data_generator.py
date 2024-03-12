@@ -180,11 +180,11 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             print('No min in k. Using all ks . k_min=%s' %tf.gather(self.all_ks, self.i_min))
 
         self.all_ks = self.all_ks[self.i_min:self.i_max]
-        self.all_ks = tf.convert_to_tensor(self.all_ks)
-        self.dim = (tf.shape(self.all_ks)[0], self.dim[1])
+        self.dim = (self.all_ks.shape[0], self.dim[1])
         print('New data dim: %s' %str(self.dim) )
         print('Final i_max used is %s' %self.i_max)
         print('Final i_min used is %s' %self.i_min)
+        self.all_ks = tf.convert_to_tensor(self.all_ks)
             
         
             

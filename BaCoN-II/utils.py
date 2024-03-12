@@ -459,9 +459,9 @@ def get_all_indexes(FLAGS, Test=False):
 
 
 def find_nearest(array, value):
-    array = tf.convert_to_tensor(array)
-    idx = tf.argmin(tf.abs(array - value), axis=0)
-    return idx, tf.gather(array, idx)
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return idx, array[idx]
 
 
 
