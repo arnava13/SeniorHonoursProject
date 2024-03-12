@@ -133,6 +133,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             self.all_ks = file.read().split('\n')
 
         # Convert to TensorFlow tensor
+        self.all_ks = [[float(value) for value in ks_string.split()] for ks_string in self.all_ks]
         self.all_ks = tf.convert_to_tensor(self.all_ks, dtype=tf.float32)
 
         if self.sample_pace !=1:
