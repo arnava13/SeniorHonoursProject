@@ -392,6 +392,7 @@ def main():
     parser.add_argument("--TPU", default=False, type=str2bool, required=False)
     parser.add_argument("--decay", default=0.95, type=float, required=False)
     parser.add_argument("--BatchNorm", default=True, type=str2bool, required=False)
+    parser.add_argument("--padding", default='valid', type=str, required=False)
 
     FLAGS = parser.parse_args()
     
@@ -560,14 +561,14 @@ def main():
                 print(' ####  FLAGS.BatchNorm not found! #### \n Probably loading an older model. Using BatchNorm=True')
                 BatchNorm=True
 
-        filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense= FLAGS_ORIGINAL.filters, FLAGS_ORIGINAL.kernel_sizes, FLAGS_ORIGINAL.strides, FLAGS_ORIGINAL.pool_sizes, FLAGS_ORIGINAL.strides_pooling, FLAGS_ORIGINAL.n_dense
+        filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense, padding= FLAGS_ORIGINAL.filters, FLAGS_ORIGINAL.kernel_sizes, FLAGS_ORIGINAL.strides, FLAGS_ORIGINAL.pool_sizes, FLAGS_ORIGINAL.strides_pooling, FLAGS_ORIGINAL.n_dense, FLAGS_ORIGINAL.padding
     else:
         try:
             BatchNorm=FLAGS.BatchNorm
         except AttributeError:
             print(' ####  FLAGS.BatchNorm not found! #### \n Probably loading an older model. Using BatchNorm=True')
             BatchNorm=True
-        filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense
+        filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense, padding = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense, FLAGS.padding
     
     if FLAGS.TPU:
         with strategy.scope():
@@ -575,7 +576,7 @@ def main():
                         drop=drop, 
                         n_labels=n_classes, 
                         input_shape=input_shape, 
-                        padding='valid', 
+                        padding=padding, 
                         filters=filters,
                         kernel_sizes=kernel_sizes,
                         strides=strides,
@@ -592,7 +593,7 @@ def main():
                          drop=drop, 
                           n_labels=n_classes, 
                           input_shape=input_shape, 
-                          padding='valid', 
+                          padding=padding, 
                           filters=filters,
                           kernel_sizes=kernel_sizes,
                           strides=strides,
