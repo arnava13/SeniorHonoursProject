@@ -181,7 +181,7 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
         if Verbose:
             print('len(idxs_new)/n_indexes=%s'%(tf.shape(idxs_new)[0]/n_indexes))
             print(case_dict[case])
-    if tf.logical_not(tf.equal(tf.cast(tf.cast(tf.shape(idxs_new)[0] * n_noise * n_labels / bs, tf.int32), tf.float32), tf.shape(idxs_new)[0] * n_noise * n_labels / bs))
+    if tf.logical_not(tf.equal(tf.cast(tf.cast(tf.shape(idxs_new)[0] * n_noise * n_labels / bs, tf.int32), tf.float32), tf.shape(idxs_new)[0] * n_noise * n_labels / bs)):
         case=3
         if Verbose:
             print('len(idxs_new)x n_labels x n_noise /bs =%s'%((tf.shape(idxs_new)[0]*n_noise*n_labels/(bs))) )
