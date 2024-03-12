@@ -238,7 +238,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
           if self.sample_pace !=1:
             self.norm_data = self.norm_data[0::self.sample_pace, :]
           self.norm_data = self.norm_data[self.i_min:self.i_max]
-        self.norm_data = tf.convert_to_tensor(self.norm_data)
         
         self.idx_file_name = idx_file_name
         self.models_dir = models_dir
