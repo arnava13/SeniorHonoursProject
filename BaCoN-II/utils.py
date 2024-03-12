@@ -154,7 +154,7 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
         if Verbose:
             print('Not sampling')
         idxs_new = indexes
-    check_val=int(tf.shape(idxs_new)[0]%(bs/(n_labels*n_noise)))
+    check_val=int(tf.shape(idxs_new)[0] % (bs // (n_labels * n_noise)))
     if Verbose:
         print('New length: %s' %tf.shape(idxs_new)[0])
     case_dict={ 0: 'Ok.',
