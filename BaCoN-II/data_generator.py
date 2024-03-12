@@ -651,9 +651,9 @@ def create_generators(FLAGS):
     train_index = tf.sparse.to_dense(train_index)[0]
 
     print('Check for no duplicates in test: (0=ok):')
-    print(tf.reduce_sum(tf.cast(tf.map_fn(lambda el: tf.reduce_any(tf.equal(el, train_index)), test_index), tf.int32)))
+    print(tf.reduce_sum(tf.cast(tf.map_fn(lambda el: tf.reduce_any(tf.equal(el, train_index)), test_index, dtype=tf.bool), tf.int32)))
     print('Check for no duplicates in val: (0=ok):')
-    print(tf.reduce_sum(tf.cast(tf.map_fn(lambda el: tf.reduce_any(tf.equal(el, train_index)), val_index), tf.int32)))
+    print(tf.reduce_sum(tf.cast(tf.map_fn(lambda el: tf.reduce_any(tf.equal(el, train_index)), val_index, dtype=tf.bool), tf.int32)))
 
     print('N of files in training set: %s' %tf.shape(train_index)[0])
     print('N of files in validation set: %s' %tf.shape(val_index)[0])
