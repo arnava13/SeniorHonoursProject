@@ -335,31 +335,37 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         return((len(self.list_IDs), self.dim[0]/self.sample_pace, self.dim[1] ))
 
  
-    def __getitem__(self, index, TPU=False):
+    def __getitem__(self, index):
         'Generate one batch of data'
         self.batch_idx = index
-
+        
+        
         # Generate indexes of the batch
-        indexes = tf.slice(self.indexes, [index*self.n_indexes], [(index+1)*self.n_indexes - index*self.n_indexes])
-        indexes_dict = {self.labels[i]: tf.slice(self.indexes_dict[self.labels[i]], [index*self.n_indexes], [(index+1)*self.n_indexes - index*self.n_indexes]) for i, label in enumerate(self.labels)}
+        indexes = self.indexes[index*self.n_indexes:(index+1)*self.n_indexes]
+        indexes_dict = {self.labels[i]:self.indexes_dict[self.labels[i]][index*self.n_indexes:(index+1)*self.n_indexes] for i, label in enumerate(self.labels)}
+        #print('Indexes: %s' %indexes)
 
         # Find list of IDs
-        list_IDs_temp = tf.gather(self.list_IDs, indexes)
-        list_IDs_temp_dict = { self.labels[i]: tf.gather(self.list_IDs_dict[self.labels[i]], indexes_dict[self.labels[i]]) for i,label in enumerate(self.labels)}
+        list_IDs_temp = [self.list_IDs[k] for k in indexes]
+        #print('getitem len(list_IDs_temp): %s' %len(list_IDs_temp))
+        list_IDs_temp_dict = { self.labels[i]:[self.list_IDs_dict[self.labels[i]][k] for k in indexes_dict[self.labels[i]]] for i,label in enumerate(self.labels)}
+
+        #print('List_IDs: %s' %list_IDs_temp)
 
         # Generate data
+        #X, y = self.__data_generation(list_IDs_temp)
         X, y = self.__data_generation(list_IDs_temp, list_IDs_temp_dict)
         return  X, y
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
-        self.indexes = tf.range(len(self.list_IDs))
-        self.indexes_dict = {self.labels[i]: tf.range(len(self.list_IDs_dict[self.labels[i]])) for i,label in enumerate(self.labels)}
+        self.indexes = np.arange(len(self.list_IDs))
+        self.indexes_dict = {self.labels[i]:np.arange(len(self.list_IDs_dict[self.labels[i]] )) for i,label in enumerate(self.labels)}
         #print('--- Epoch ended')
         if self.shuffle == True:
-            self.indexes = tf.random.shuffle(self.indexes)
+            np.random.shuffle(self.indexes)
             for label in self.labels:
-                self.indexes_dict[label] = tf.random.shuffle(self.indexes_dict[label])
+                np.random.shuffle(self.indexes_dict[label])
 
  
 
@@ -371,11 +377,10 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             print(list_IDs_temp_dict)
         
         # Initialization
-        """
         X = np.empty((self.batch_size, *self.dim, self.n_channels))
-        y = np.empty((self.batch_size), dtype=int)"""
-        X = tf.Variable(tf.zeros([self.batch_size, *self.dim, self.n_channels], dtype=tf.float32))
-        y = tf.Variable(tf.zeros([self.batch_size], dtype=tf.int32))
+        y = np.empty((self.batch_size), dtype=int)
+        X = tf.convert_to_tensor(X, dtype=tf.float32)
+        y = tf.convert_to_tensor(y, dtype=tf.int32)
         i_ind = 0
         if self.Verbose:
             print('Dim of X: %s' %str(X.shape))
@@ -404,6 +409,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
               #try:
               loaded_all = np.loadtxt(fname)
               P_original, k = loaded_all[:, 1:], loaded_all[:, 0]
+              P_original = tf.convert_to_tensor(P_original, dtype=tf.float32)
+              k = tf.convert_to_tensor(k, dtype=tf.float32)
 
 
               if self.sample_pace!=1:
@@ -411,16 +418,15 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                 k = k[0::self.sample_pace]
               P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
 
-              P_original = tf.convert_to_tensor(P_original, dtype=tf.float32)
-              k = tf.convert_to_tensor(k, dtype=tf.float32)
-
               if self.Verbose:
-                print('Dimension of original data: %s' %str(P_original))
-                print('dimension P_original: %s' %str(P_original))    
-                print('P_original first 10:') 
-                for value in P_original.take(10):
-                    print(value.numpy())
-
+                print('Dimension of original data: %s' %str(P_original.shape))
+              
+              if self.Verbose:
+                    print('dimension P_original: %s' %str(P_original.shape))    
+                    print('P_original first 10:') 
+                    print(P_original[10])
+              P_original = tf.convert_to_tensor(P_original, dtype=tf.float32)
+              k = tf.convert_to_tensor(k, dtype=tf.float32)              
               # Add noise
               for i_noise in range(self.n_noisy_samples):
                 if self.add_noise:
@@ -588,14 +594,14 @@ def read_partition(FLAGS):
     base_path = out_path+'/tf_ckpts/'
     fname_idxs_train=base_path+'idxs_train.txt'
     fname_idxs_val=base_path+'idxs_val.txt'
-
+    
     print('Reading train indexes from %s ...' %fname_idxs_train)
-    train_idxs = tf.data.TextLineDataset(fname_idxs_train).map(lambda x: tf.strings.to_number(tf.strings.split(x), out_type=tf.int32))
-    print('Train indexes length: %s' %str(train_idxs.cardinality().numpy()))
+    train_idxs=np.array(np.loadtxt(fname_idxs_train).tolist()).astype(int)
+    print('Train indexes length: %s' %str(len(train_idxs)))
     print('Reading val indexes from %s ...' %fname_idxs_val)
-    val_idxs = tf.data.TextLineDataset(fname_idxs_val).map(lambda x: tf.strings.to_number(tf.strings.split(x), out_type=tf.int32))
-    print('Val indexes length: %s' %str(val_idxs.cardinality().numpy()))
-
+    val_idxs=np.array(np.loadtxt(fname_idxs_val).tolist()).astype(int)
+    print('Val indexes length: %s' %str(len(val_idxs)))
+    
     partition = {'train': train_idxs , 'validation': val_idxs }
     return partition
     
