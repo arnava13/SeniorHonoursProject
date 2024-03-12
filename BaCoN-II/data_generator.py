@@ -23,32 +23,32 @@ def generate_noise(k, P,
                    sys_scaled=False,
                    sys_factor=0.03,
                    sys_max=False,
-                   V=tf.constant([10.43, 6.27, 3.34, 0.283]), 
-                   nbar=tf.constant([0.000358, 0.000828, 0.00103, 0.00128]),
+                   V=np.array([10.43, 6.27, 3.34, 0.283]), 
+                   nbar=np.array([0.000358, 0.000828, 0.00103, 0.00128]),
                    delta_k = 0.055,  sigma_sys=15, quadrature=True):
   
-  sigma_noise = tf.zeros(P.shape)
-  sigma_hat_noise = (2*tf.constant(np.pi)/((tf.expand_dims(k, axis=-1))*tf.sqrt(V*(1e3)**3*delta_k)))
+  sigma_noise = np.zeros(P.shape)
+  sigma_hat_noise = (2*np.pi/((k[:, None])*np.sqrt(V*(1e3)**3*delta_k)))
   if add_cosvar:
-      sigma_noise = tf.abs(P*sigma_hat_noise)
+      sigma_noise = np.abs(P*sigma_hat_noise)
       
   if add_shot:
-      sigma_noise_shot=(sigma_hat_noise/tf.constant(nbar))
+      sigma_noise_shot=(sigma_hat_noise/np.array(nbar))
       sigma_noise = sigma_noise+sigma_noise_shot
   if add_sys:
       if sys_scaled:
         if quadrature:
-          sigma_noise = tf.sqrt(sigma_noise**2+(P*sys_factor)**2)
+          sigma_noise = np.sqrt(sigma_noise**2+(P*sys_factor)**2)
         else:
-          sigma_noise = sigma_noise+tf.abs(P*sys_factor)
+          sigma_noise = sigma_noise+np.abs(P*sys_factor)
       elif sys_max:
-        sigma_noise = tf.maximum(sigma_noise, tf.abs(P*sys_factor))
+        sigma_noise = np.maximum(sigma_noise, np.abs(P*sys_factor))
       else:
         if quadrature:
-          sigma_noise =tf.sqrt(sigma_noise**2+sigma_sys**2 )
+          sigma_noise =np.sqrt(sigma_noise**2+sigma_sys**2 )
         else:
           sigma_noise =sigma_noise+sigma_sys
-  sigma_noise = tf.cast(sigma_noise, tf.float32)   
+     
   return sigma_noise
 
 
@@ -75,8 +75,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                 fine_tune = False, 
                 c_0=None, c_1=None, group_lab_dict=None, 
                 z_bins=[0, 1, 2, 3], swap_axes=False,
-                dataset_balanced=False, test_mode=False, one_vs_all=False, TPU=False):
-                
+                dataset_balanced=False, test_mode=False, one_vs_all=False,
+                ):
       
         print('Data Generator Initialization')
         
@@ -107,7 +107,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         self.k_min=k_min
         self.i_max=i_max
         self.i_min=i_min
-        self.TPU=TPU
         self.sample_pace=sample_pace
         if sample_pace ==1:
           self.dim = dim
@@ -131,7 +130,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         self.all_ks = np.loadtxt(self.norm_data_path)[:, 0]
         if self.sample_pace !=1:
                 self.all_ks = np.loadtxt(self.norm_data_path)[0::sample_pace, 0]
-        self.all_ks = tf.convert_to_tensor(self.all_ks)
 
         # Select points from k_max or i_max
 
@@ -182,6 +180,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             print('No min in k. Using all ks . k_min=%s' %tf.gather(self.all_ks, self.i_min))
 
         self.all_ks = self.all_ks[self.i_min:self.i_max]
+        self.all_ks = tf.convert_to_tensor(self.all_ks)
         self.dim = (tf.shape(self.all_ks)[0], self.dim[1])
         print('New data dim: %s' %str(self.dim) )
         print('Final i_max used is %s' %self.i_max)
@@ -748,7 +747,6 @@ def create_generators(FLAGS):
           'sigma_curves_default':FLAGS.sigma_curves_default,
           'save_processed_spectra':FLAGS.save_processed_spectra,
           'rescale_curves':FLAGS.rescale_curves,
-          'TPU':FLAGS.TPU
           }
     
     if FLAGS.fine_tune  or FLAGS.one_vs_all:
@@ -867,7 +865,6 @@ def create_test_generator(FLAGS):
           'sigma_curves_default':FLAGS.sigma_curves_default,
           'save_processed_spectra':FLAGS.save_processed_spectra,
           'rescale_curves':FLAGS.rescale_curves,
-          'TPU':FLAGS.TPU
           }
     
     if FLAGS.fine_tune or FLAGS.one_vs_all:
