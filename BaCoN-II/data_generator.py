@@ -402,18 +402,17 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
               if self.Verbose:
                 print('Loading file %s' %fname)
               #try:
-              """
               loaded_all = np.loadtxt(fname)
-              P_original, k = loaded_all[:, 1:], loaded_all[:, 0]"""
-              loaded_all = tf.data.TextLineDataset(fname)
-              loaded_all = loaded_all.map(lambda x: tf.strings.to_number(tf.strings.split(x), out_type=tf.float32))
-              P_original, k = loaded_all.map(lambda x: x[1:]), loaded_all.map(lambda x: x[0])
+              P_original, k = loaded_all[:, 1:], loaded_all[:, 0]
 
-              if self.sample_pace != 1:
-                P_original = P_original.window(self.sample_pace, shift=self.sample_pace, drop_remainder=True)
-                k = k.window(self.sample_pace, shift=self.sample_pace, drop_remainder=True)
 
-              P_original, k = P_original.skip(self.i_min).take(self.i_max - self.i_min), k.skip(self.i_min).take(self.i_max - self.i_min)
+              if self.sample_pace!=1:
+                P_original = P_original[0::self.sample_pace, :]
+                k = k[0::self.sample_pace]
+              P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
+
+              P_original = tf.convert_to_tensor(P_original, dtype=tf.float32)
+              k = tf.convert_to_tensor(k, dtype=tf.float32)
 
               if self.Verbose:
                 print('Dimension of original data: %s' %str(P_original))
