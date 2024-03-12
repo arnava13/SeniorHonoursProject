@@ -166,6 +166,7 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
                 6: 'N of indexes in not multiple of number of noisy samples'}
     n_batches=(tf.shape(idxs_new)[0]*n_noise*n_labels/(bs))
     n_indexes=len_c1*bs/(n_labels*n_noise)
+    n_indexes = tf.constant(n_indexes, dtype=tf.int32)
     if Verbose:
         print('N batches: %s' %n_batches)
         print(' len_C1: %s' %len_c1)
@@ -176,12 +177,12 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
         if Verbose:
             print('idxs_new.shape0 mod  bs/ n_labels x n_noise : %s' %check_val )
             print(case_dict[case])
-    if not tf.equal(tf.math.floormod(tf.shape(idxs_new)[0]/n_indexes, 1), 0):
+    if not tf.equal(tf.math.floormod(tf.shape(idxs_new)[0], n_indexes), 0):
         case=2
         if Verbose:
             print('len(idxs_new)/n_indexes=%s'%(tf.shape(idxs_new)[0]/n_indexes))
             print(case_dict[case])
-    if not tf.equal(tf.math.floormod(tf.shape(idxs_new)[0]*n_noise*n_labels/(bs), 1), 0):
+    if not tf.equal(tf.math.floormod(tf.shape(idxs_new)[0]*n_noise*n_labels, bs), 0):
         case=3
         if Verbose:
             print('len(idxs_new)x n_labels x n_noise /bs =%s'%((tf.shape(idxs_new)[0]*n_noise*n_labels/(bs))) )
@@ -190,7 +191,7 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
         if Verbose:
             print('len(idxs_new)x n_labels x n_noise /bs =%s'%((tf.shape(idxs_new)[0]*n_noise*n_labels/(bs))) )
             print(case_dict[case])
-    if not tf.equal(tf.math.floormod(tf.shape(idxs_new)[0]/(n_noise*n_labels, 1), 0)):
+    if not tf.equal(tf.math.floormod(tf.shape(idxs_new)[0], (n_noise*n_labels)), 0):
         case=5
         if Verbose:
             print(' idxs_new.shape[0]/ n_noise x n_labels : %s' %(tf.shape(idxs_new)[0]/(n_noise*n_labels)) )
