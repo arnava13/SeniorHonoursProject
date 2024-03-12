@@ -432,7 +432,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                         print('Noise realization %s' %i_noise)
                     # add noise if selected
                     if self.add_cosvar:
-                        noise_cosVar = tf.random.normal(shape=[], mean=0, stddev=tf.cast(generate_noise(k,tf.gather(self.norm_data, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=True, add_sys=False, add_shot=False,sigma_sys=self.sigma_sys), tf.float32), dtype=tf.float32)
+                        noise_cosVar = tf.random.normal(shape=[], mean=0, stddev=tf.cast(generate_noise(k,tf.gather(self.norm_data, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=True, add_sys=False, add_shot=False,sigma_sys=self.sigma_sys), tf.float64), dtype=tf.float32)
                         P_noisy = tf.cast(P_noisy, tf.float32) + noise_cosVar
 
                     if self.add_sys:
