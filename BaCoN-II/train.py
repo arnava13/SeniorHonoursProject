@@ -22,25 +22,36 @@ import time
 
 
 @tf.function
-def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=False, n_train_example=60000, TPU=False, strategy=None, batch_size=2500):
-    #print('train_on_batch call')
+def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=False, n_train_example=60000, TPU=False, strategy=None):
     if TPU:
         with strategy.scope():
-            with tf.GradientTape() as tape:
-                tape.watch(model.trainable_variables) 
-                for layer in model.layers:  # In order to support frozen weights
-                    x = layer(x, training=layer.trainable)
-                logits=x
-                if bayesian:
-                    kl = sum(model.losses)/n_train_example
-                    loss_value = loss(y, logits, kl, TPU=TPU, strategy=strategy, batch_size=batch_size)
-                else:
-                    loss_value = loss(y, logits, TPU=TPU, strategy=strategy, batch_size = batch_size)
-            grads = tape.gradient(loss_value, model.trainable_weights)
-            optimizer.apply_gradients(zip(grads, model.trainable_weights))
-            proba = tf.nn.softmax(logits)
-            prediction = tf.argmax(proba, axis=1)
-            train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
+            def step_fn(x, y):
+                with tf.GradientTape() as tape:
+                    tape.watch(model.trainable_variables)
+                    for layer in model.layers:  # Supports frozen weights
+                        x = layer(x, training=layer.trainable)
+                    logits = x
+                    if bayesian:
+                        # Assuming model.losses are appropriately scaled
+                        kl = sum(model.losses) / n_train_example
+                        loss_value = loss(y, logits, kl, TPU=TPU, strategy=strategy)
+                    else:
+                        loss_value = loss(y, logits, TPU=TPU, strategy=strategy)
+
+                grads = tape.gradient(loss_value, model.trainable_weights)
+                optimizer.apply_gradients(zip(grads, model.trainable_weights))
+                
+                # Compute accuracy
+                proba = tf.nn.softmax(logits)
+                prediction = tf.argmax(proba, axis=1)
+                train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
+
+                return loss_value
+
+            # Distribute the computation to the replicas
+            per_replica_losses = strategy.run(step_fn, args=(x, y))
+            # Reduce the loss across replicas for reporting or further use
+            loss_value = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
     else:
         with tf.GradientTape() as tape:
             tape.watch(model.trainable_variables) 
@@ -89,10 +100,6 @@ def my_loss(y, logits, TPU=False, strategy=None, batch_size=None):
     if TPU:
         # Use the strategy to reduce the loss across replicas
         loss = tf.nn.compute_average_loss(loss_per_example, global_batch_size=batch_size)
-    else:
-        # For non-TPU, simply average the loss across the batch
-        loss = tf.reduce_mean(loss_per_example)
-    
     return loss
 
 
@@ -101,7 +108,7 @@ def ELBO(y, logits, kl, TPU=False, strategy=None, batch_size=None):
     neg_log_likelihood = my_loss(y, logits, TPU=TPU, strategy=strategy, batch_size=batch_size)
     elbo_loss = neg_log_likelihood + kl
     if TPU:
-        elbo_loss = tf.nn.compute_average_loss(elbo_loss)
+        elbo_loss = tf.nn.compute_average_loss(elbo_loss, global_batch_size=batch_size)
     return elbo_loss
 
 
