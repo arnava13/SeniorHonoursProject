@@ -129,7 +129,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         print('Normalisation file is %s' %norm_data_name)
 
         with open(self.norm_data_path, 'r') as file:
-        self.all_ks = [line.split()[0] for line in file]
+            self.all_ks = [line.split()[0] for line in file]
 
         # Convert to TensorFlow tensor
         self.all_ks = [float(value) for value in self.all_ks]
