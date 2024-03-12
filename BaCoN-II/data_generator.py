@@ -128,13 +128,14 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         self.norm_data_path = self.data_root+norm_data_name
         print('Normalisation file is %s' %norm_data_name)
 
-        # Select points up to k_max or i_max
         with open(self.norm_data_path, 'r') as file:
-            self.all_ks = file.read().split('\n')
+        self.all_ks = [line.split()[0] for line in file]
 
         # Convert to TensorFlow tensor
-        self.all_ks = [[float(value) for value in ks_string.split()] for ks_string in self.all_ks]
+        self.all_ks = [float(value) for value in self.all_ks]
         self.all_ks = tf.convert_to_tensor(self.all_ks, dtype=tf.float32)
+
+        # Select points up to k_max or i_max
 
         if self.sample_pace !=1:
             self.all_ks = tf.strided_slice(self.all_ks, [0], [tf.size(self.all_ks)], [sample_pace])
