@@ -639,12 +639,11 @@ def create_generators(FLAGS):
 
     
     # SPLIT TRAIN/VALIDATION /(TEST)
-    val_index = np.random.choice(all_index, size=int(np.floor(val_size*n_samples)), replace=False)
     val_index = tf.random.shuffle(all_index)[:int(tf.floor(val_size*n_samples))]
-    train_index_temp = tf.setdiff1d(all_index, val_index)[0]
+    train_index_temp = tf.sparse.to_dense(tf.sets.difference(all_index[None, :], val_index[None, :]))[0]
     test_size_eff = FLAGS.test_size/(tf.shape(train_index_temp)[0]/n_samples)
     test_index = tf.random.shuffle(train_index_temp)[:int(tf.floor(test_size_eff*tf.shape(train_index_temp)[0]))]
-    train_index = tf.setdiff1d(train_index_temp, test_index)[0]
+    train_index = tf.sparse.to_dense(tf.sets.difference(train_index_temp[None, :], test_index[None, :]))[0]
 
     print('Check for no duplicates in test: (0=ok):')
     print(tf.reduce_sum(tf.cast(tf.map_fn(lambda el: tf.reduce_any(tf.equal(el, train_index)), test_index), tf.int32)))
