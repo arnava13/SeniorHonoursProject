@@ -146,7 +146,7 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
     n_keep = a - (a % (bs//(n_labels*n_noise)))
     if Verbose:
         print('n_keep: %s' %n_keep)
-    if tf.logical_or(tf.less(n_keep, a), tf.logical_not(tf.equal(n_keep / n_labels / n_noise, tf.cast(tf.cast(n_keep / n_labels / n_noise, tf.int32), tf.float32)))):   
+    if n_keep<a or not tf.math.is_integer(n_keep/n_labels/n_noise):   
         if Verbose:
             print('Sampling')
         idxs_new = tf.random.shuffle(indexes)[:int(a)]
@@ -176,22 +176,21 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
         if Verbose:
             print('idxs_new.shape0 mod  bs/ n_labels x n_noise : %s' %check_val )
             print(case_dict[case])
-    if tf.logical_not(tf.equal(tf.cast(tf.shape(idxs_new)[0] / n_indexes, tf.int32), tf.cast(tf.shape(idxs_new)[0], tf.int32) / n_indexes)):
+    if not tf.equal(tf.math.floormod(tf.shape(idxs_new)[0]/n_indexes, 1), 0):
         case=2
         if Verbose:
             print('len(idxs_new)/n_indexes=%s'%(tf.shape(idxs_new)[0]/n_indexes))
             print(case_dict[case])
-    if tf.logical_not(tf.equal(tf.cast(tf.cast(tf.shape(idxs_new)[0] * n_noise * n_labels / bs, tf.int32), tf.float32), tf.shape(idxs_new)[0] * n_noise * n_labels / bs)):
+    if not tf.equal(tf.math.floormod(tf.shape(idxs_new)[0]*n_noise*n_labels/(bs), 1), 0):
         case=3
         if Verbose:
             print('len(idxs_new)x n_labels x n_noise /bs =%s'%((tf.shape(idxs_new)[0]*n_noise*n_labels/(bs))) )
-            print(case_dict[case])
-    if  tf.logical_not(tf.equal(tf.cast(n_batches, tf.int32), n_batches)):
+    if  not tf.equal(tf.math.floormod(n_batches, 1), 0):
         case=4
         if Verbose:
             print('len(idxs_new)x n_labels x n_noise /bs =%s'%((tf.shape(idxs_new)[0]*n_noise*n_labels/(bs))) )
             print(case_dict[case])
-    if tf.logical_not(tf.equal(tf.cast(tf.shape(idxs_new)[0] / (n_noise * n_labels), tf.int32), tf.shape(idxs_new)[0] / (n_noise * n_labels))):  
+    if not tf.equal(tf.math.floormod(tf.shape(idxs_new)[0]/(n_noise*n_labels, 1), 0)):
         case=5
         if Verbose:
             print(' idxs_new.shape[0]/ n_noise x n_labels : %s' %(tf.shape(idxs_new)[0]/(n_noise*n_labels)) )
