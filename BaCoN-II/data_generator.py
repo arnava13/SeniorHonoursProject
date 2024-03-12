@@ -131,6 +131,10 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         with open(self.norm_data_path, 'r') as file:
             self.all_ks = [line.split()[0] for line in file]
 
+        # Apply sample pace
+        if self.sample_pace != 1:
+            self.all_ks = self.all_ks[::self.sample_pace]
+
         # Convert to TensorFlow tensor
         self.all_ks = [float(value) for value in self.all_ks]
         self.all_ks = tf.convert_to_tensor(self.all_ks, dtype=tf.float32)
@@ -188,7 +192,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             self.i_min = 0
             print('No min in k. Using all ks . k_min=%s' %tf.gather(self.all_ks, self.i_min))
 
-        self.all_ks = tf.slice(self.all_ks, [self.i_min], [self.i_max - self.i_min])
+        self.all_ks = self.all_ks[self.i_min:self.i_max]
         self.dim = (tf.shape(self.all_ks)[0], self.dim[1])
         print('New data dim: %s' %str(self.dim) )
         print('Final i_max used is %s' %self.i_max)

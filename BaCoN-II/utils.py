@@ -206,8 +206,8 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
         if nRec>10:
             Verbose=False
         return cut_sample(tf.random.shuffle(indexes)[:int(a-1)], bs, n_labels=n_labels, n_noise=n_noise, Verbose=Verbose, len_c1=len_c1, nRec= nRec)
-    """if tf.shape(tf.unique(idxs_new).y)[0]==0:
-        raise ValueError('Adjust batch size, number of noise realizations, or validation set size')"""
+    if tf.size(tf.unique(idxs_new).y) == 0:
+        raise ValueError('Adjust batch size, number of noise realizations, or validation set size')
     return tf.unique(idxs_new).y
   
 
