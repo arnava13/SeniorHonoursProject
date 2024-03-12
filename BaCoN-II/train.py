@@ -22,7 +22,7 @@ import time
 
 
 @tf.function
-def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=False, n_train_example=60000, TPU=False, strategy=None):
+def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=False, n_train_example=60000, TPU=False, strategy=None, batch_size=2500):
     if TPU:
         with strategy.scope():
             def step_fn(x, y):
@@ -34,9 +34,9 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
                     if bayesian:
                         # Assuming model.losses are appropriately scaled
                         kl = sum(model.losses) / n_train_example
-                        loss_value = loss(y, logits, kl, TPU=TPU, strategy=strategy)
+                        loss_value = loss(y, logits, kl, TPU=TPU, strategy=strategy, batch_size=batch_size)
                     else:
-                        loss_value = loss(y, logits, TPU=TPU, strategy=strategy)
+                        loss_value = loss(y, logits, TPU=TPU, strategy=strategy, batch_size=batch_size)
 
                 grads = tape.gradient(loss_value, model.trainable_weights)
                 optimizer.apply_gradients(zip(grads, model.trainable_weights))
