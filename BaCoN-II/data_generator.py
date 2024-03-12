@@ -128,21 +128,12 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         self.norm_data_path = self.data_root+norm_data_name
         print('Normalisation file is %s' %norm_data_name)
 
-        with open(self.norm_data_path, 'r') as file:
-            self.all_ks = [line.split()[0] for line in file]
-
-        # Apply sample pace
-        if self.sample_pace != 1:
-            self.all_ks = self.all_ks[::self.sample_pace]
-
-        # Convert to TensorFlow tensor
-        self.all_ks = [float(value) for value in self.all_ks]
-        self.all_ks = tf.convert_to_tensor(self.all_ks, dtype=tf.float32)
-
-        # Select points up to k_max or i_max
-
+        self.all_ks = np.loadtxt(self.norm_data_path)[:, 0]
         if self.sample_pace !=1:
-            self.all_ks = tf.strided_slice(self.all_ks, [0], [tf.size(self.all_ks)], [sample_pace])
+                self.all_ks = np.loadtxt(self.norm_data_path)[0::sample_pace, 0]
+        self.all_ks = tf.convert_to_tensor(self.all_ks)
+
+        # Select points from k_max or i_max
 
         if self.k_max is not None:
             print('Specified k_max is %s' %self.k_max)
@@ -167,8 +158,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             print('No max in k. Using all ks . k_max=%s' %tf.gather(self.all_ks, self.i_max))
 
         # Select points from k_min or i_min
-        if self.sample_pace !=1:
-            self.all_ks = self.all_ks[::sample_pace]
 
         if self.k_min is not None:
             print('Specified k_min is %s' %self.k_min)
@@ -245,11 +234,11 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         self.normalization=normalization
         
         if self.normalization=='stdcosmo':
-            self.norm_data = tf.data.TextLineDataset(self.norm_data_path).map(lambda x: tf.strings.to_number(tf.strings.split(x), out_type=tf.float32))[:, 1:]
-            if self.sample_pace !=1:
-                self.norm_data = self.norm_data.window(self.sample_pace, shift=self.sample_pace, drop_remainder=True)
-            self.norm_data = self.norm_data.skip(self.i_min).take(self.i_max - self.i_min)
-              
+          self.norm_data = np.loadtxt(self.norm_data_path)[:, 1:]
+          if self.sample_pace !=1:
+            self.norm_data = self.norm_data[0::self.sample_pace, :]
+          self.norm_data = self.norm_data[self.i_min:self.i_max]
+        self.norm_data = tf.convert_to_tensor(self.norm_data)
         
         self.idx_file_name = idx_file_name
         self.models_dir = models_dir
@@ -647,27 +636,22 @@ def create_generators(FLAGS):
 
     
     # SPLIT TRAIN/VALIDATION /(TEST)
-    all_index = tf.constant(all_index, dtype=tf.int32)
-    num_val_samples = tf.cast(tf.floor(val_size * n_samples), tf.int32)
-    num_test_samples = tf.cast(tf.floor(FLAGS.test_size * n_samples), tf.int32)  # Adjusted for clarity
-    val_index = tf.random.shuffle(all_index)[:num_val_samples]
-    train_index_temp = tf.sets.difference(all_index[None, :], val_index[None, :])
-    train_index_temp = tf.sparse.to_dense(train_index_temp)[0]
-    test_size_eff = FLAGS.test_size / (tf.shape(train_index_temp)[0] / n_samples)
-    test_index = tf.random.shuffle(train_index_temp)[:num_test_samples]
-    train_index = tf.sets.difference(train_index_temp[None, :], test_index[None, :])
-    train_index = tf.sparse.to_dense(train_index)[0]
+    val_index = np.random.choice(all_index, size=int(np.floor(val_size*n_samples)), replace=False)
+    train_index_temp =  np.setdiff1d(all_index, val_index) #np.delete(all_index, val_index-1)
+    test_size_eff = FLAGS.test_size/(train_index_temp.shape[0]/n_samples)
+    test_index = np.random.choice(train_index_temp, size=int(np.floor(test_size_eff*train_index_temp.shape[0])), replace=False)
+    train_index =  np.setdiff1d(train_index_temp, test_index)
 
     print('Check for no duplicates in test: (0=ok):')
-    print(tf.reduce_sum(tf.cast(tf.map_fn(lambda el: tf.reduce_any(tf.equal(el, train_index)), test_index), tf.int32)))
+    print(np.array([np.isin(el, train_index) for el in test_index]).sum())
     print('Check for no duplicates in val: (0=ok):')
-    print(tf.reduce_sum(tf.cast(tf.map_fn(lambda el: tf.reduce_any(tf.equal(el, train_index)), val_index, dtype=tf.bool), tf.int32)))
+    print(np.array([np.isin(el, train_index) for el in val_index]).sum())
 
-    print('N of files in training set: %s' %tf.shape(train_index)[0])
-    print('N of files in validation set: %s' %tf.shape(val_index)[0])
-    print('N of files in test set: %s' %tf.shape(test_index)[0])
+    print('N of files in training set: %s' %train_index.shape[0])
+    print('N of files in validation set: %s' %val_index.shape[0])
+    print('N of files in test set: %s' %test_index.shape[0])
 
-    print('Check - total: %s' %(tf.shape(val_index)[0]+tf.shape(test_index)[0]+tf.shape(train_index)[0]))
+    print('Check - total: %s' %(val_index.shape[0]+test_index.shape[0]+train_index.shape[0]))
     
     if FLAGS.add_noise:
         n_noisy_samples = FLAGS.n_noisy_samples
