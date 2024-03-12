@@ -166,7 +166,7 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
                 6: 'N of indexes in not multiple of number of noisy samples'}
     n_batches=(tf.shape(idxs_new)[0]*n_noise*n_labels/(bs))
     n_indexes=len_c1*bs/(n_labels*n_noise)
-    n_indexes = tf.constant(n_indexes, dtype=tf.int32)
+    n_indexes = tf.constant(int(n_indexes), dtype=tf.int32)
     if Verbose:
         print('N batches: %s' %n_batches)
         print(' len_C1: %s' %len_c1)
