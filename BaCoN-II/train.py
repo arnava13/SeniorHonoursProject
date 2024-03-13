@@ -22,25 +22,36 @@ import time
 
 
 @tf.function
-def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=False, n_train_example=60000, TPU=False, strategy=None):
-    #print('train_on_batch call')
+def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=False, n_train_example=60000, TPU=False, strategy=None, batch_size=2500):
     if TPU:
         with strategy.scope():
-            with tf.GradientTape() as tape:
-                tape.watch(model.trainable_variables) 
-                for layer in model.layers:  # In order to support frozen weights
-                    x = layer(x, training=layer.trainable)
-                logits=x
-                if bayesian:
-                    kl = sum(model.losses)/n_train_example
-                    loss_value = loss(y, logits, kl, TPU=TPU, strategy=strategy)
-                else:
-                    loss_value = loss(y, logits, TPU=TPU, strategy=strategy)
-            grads = tape.gradient(loss_value, model.trainable_weights)
-            optimizer.apply_gradients(zip(grads, model.trainable_weights))
-            proba = tf.nn.softmax(logits)
-            prediction = tf.argmax(proba, axis=1)
-            train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
+            def step_fn(x, y):
+                with tf.GradientTape() as tape:
+                    tape.watch(model.trainable_variables)
+                    for layer in model.layers:  # Supports frozen weights
+                        x = layer(x, training=layer.trainable)
+                    logits = x
+                    if bayesian:
+                        # Assuming model.losses are appropriately scaled
+                        kl = sum(model.losses) / n_train_example
+                        loss_value = loss(y, logits, kl, TPU=TPU, strategy=strategy, batch_size=batch_size)
+                    else:
+                        loss_value = loss(y, logits, TPU=TPU, strategy=strategy, batch_size=batch_size)
+
+                grads = tape.gradient(loss_value, model.trainable_weights)
+                optimizer.apply_gradients(zip(grads, model.trainable_weights))
+                
+                # Compute accuracy
+                proba = tf.nn.softmax(logits)
+                prediction = tf.argmax(proba, axis=1)
+                train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
+
+                return loss_value
+
+            # Distribute the computation to the replicas
+            per_replica_losses = strategy.run(step_fn, args=(x, y))
+            # Reduce the loss across replicas for reporting or further use
+            loss_value = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
     else:
         with tf.GradientTape() as tape:
             tape.watch(model.trainable_variables) 
@@ -49,9 +60,9 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
             logits=x
             if bayesian:
                 kl = sum(model.losses)/n_train_example
-                loss_value = loss(y, logits, kl, TPU=TPU, strategy=strategy)
+                loss_value = loss(y, logits, kl, TPU=TPU, strategy=strategy, batch_size = batch_size)
             else:
-                loss_value = loss(y, logits, TPU=TPU, strategy=strategy)
+                loss_value = loss(y, logits, TPU=TPU, strategy=strategy, batch_size = batch_size)
         grads = tape.gradient(loss_value, model.trainable_weights)
         optimizer.apply_gradients(zip(grads, model.trainable_weights))
         proba = tf.nn.softmax(logits)
@@ -60,13 +71,13 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
     return loss_value
 
 @tf.function
-def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10000, TPU=False, strategy=None):
+def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10000, TPU=False, strategy=None, batch_size=2500):
     val_logits = model(x, training=False)
     if bayesian:
        val_kl = sum(model.losses)/n_val_example
-       val_loss_value = loss(y, val_logits, val_kl, TPU=TPU, strategy=strategy)
+       val_loss_value = loss(y, val_logits, val_kl, TPU=TPU, strategy=strategy, batch_size = batch_size)
     else:
-         val_loss_value = loss(y, val_logits, TPU=TPU, strategy=strategy)
+         val_loss_value = loss(y, val_logits, TPU=TPU, strategy=strategy, batch_size = batch_size)
     val_proba = tf.nn.softmax(val_logits)
     val_prediction = tf.argmax(val_proba, axis=1)
     if TPU:
@@ -78,19 +89,30 @@ def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10
 
 
 @tf.function
-def my_loss(y, logits, TPU=False, strategy=None):
+def my_loss(y, logits, TPU=False, strategy=None, batch_size=None):
     if TPU:
         with strategy.scope():
-            loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.SUM) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
+            loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
     else:
         loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
-    return loss_f(y, logits) 
+    loss_per_example = loss_f(y, logits)
+    
+    if TPU:
+        # Use the strategy to reduce the loss across replicas
+        loss = tf.nn.compute_average_loss(loss_per_example, global_batch_size=batch_size)
+    else:
+        loss = loss_per_example
+
+    return loss
 
 
 @tf.function
-def ELBO(y, logits, kl, TPU=False, strategy=None):
-    neg_log_likelihood = my_loss(y, logits, TPU=TPU, strategy=strategy)   
-    return neg_log_likelihood + kl
+def ELBO(y, logits, kl, TPU=False, strategy=None, batch_size=None):
+    neg_log_likelihood = my_loss(y, logits, TPU=TPU, strategy=strategy, batch_size=batch_size)
+    elbo_loss = neg_log_likelihood + kl
+    if TPU:
+        elbo_loss = tf.nn.compute_average_loss(elbo_loss, global_batch_size=batch_size)
+    return elbo_loss
 
 
 
@@ -98,7 +120,7 @@ def my_train(model, optimizer, loss,
              epochs, 
              train_generator, 
              val_generator, manager, ckpt,            
-             train_acc_metric, val_acc_metric, TPU, strategy=None,
+             train_acc_metric, val_acc_metric, TPU=False, strategy=None,
              restore=False, patience=100,
              bayesian=False, save_ckpt=False, decayed_lr_value=None,
               ):
@@ -160,16 +182,35 @@ def my_train(model, optimizer, loss,
     start_time = time.time()
 
     # Run train loop
-    for batch_idx, batch in enumerate(train_generator):
-        x_batch_train, y_batch_train = batch #train_generator[batch_idx]
-        loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy)
- 
-    # Run  validation loop
+    for batch_idx, (x_batch_train, y_batch_train) in enumerate(train_generator):
+        if TPU:
+            train_dataset = tf.data.Dataset.from_tensor_slices((x_batch_train, y_batch_train))
+            train_dataset = train_dataset.batch(train_generator.batch_size)
+            train_dataset = train_dataset.cache()  # Cache the dataset after batching for better performance
+            train_dataset = train_dataset.prefetch(tf.data.AUTOTUNE)
+            
+            # Execute training using the TPU strategy
+            for x_batch, y_batch in train_dataset:
+                loss_value = train_on_batch(x_batch, y_batch, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy, batch_size=train_generator.batch_size)
+        else:
+            loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy, batch_size=train_generator.batch_size)
+
+    # Run validation loop
     val_loss_value = 0.
-    for val_batch_idx, val_batch in enumerate(val_generator):      
-        x_batch_val, y_batch_val = val_batch #val_generator[val_batch_idx]
-        lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)/ float(val_generator.n_batches)
-        val_loss_value += lv
+    for val_batch_idx, (x_batch_val, y_batch_val) in enumerate(val_generator):
+        if TPU:
+            val_dataset = tf.data.Dataset.from_tensor_slices((x_batch_val, y_batch_val))
+            val_dataset = val_dataset.batch(val_generator.batch_size)
+            val_dataset = val_dataset.cache()  # Cache the dataset after batching for better performance
+            val_dataset = val_dataset.prefetch(tf.data.AUTOTUNE)
+            
+            # Execute validation using the TPU strategy
+            for x_val_batch, y_val_batch in val_dataset:
+                lv = val_step(x_val_batch, y_val_batch, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy, batch_size=val_generator.batch_size) / float(val_generator.n_batches)
+                val_loss_value += lv
+        else:
+            lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy, batch_size=val_generator.batch_size) / float(val_generator.n_batches)
+            val_loss_value += lv
             
     
     if val_loss_value.numpy()<best_loss: #int(ckpt.step) % 10 == 0:
@@ -244,9 +285,9 @@ def compute_loss(generator, model, bayesian=False, TPU=False, strategy=None):
     logits = model(x_batch_train, training=False)
     if bayesian:
             kl = sum(model.losses)/generator.batch_size/generator.n_batches
-            loss_0 = ELBO(y_batch_train, logits, kl, TPU=TPU, strategy=strategy)
+            loss_0 = ELBO(y_batch_train, logits, kl, TPU=TPU, strategy=strategy, batch_size=generator.batch_size)
     else:
-            loss_0 = my_loss(y_batch_train, logits, TPU=TPU, strategy=strategy)
+            loss_0 = my_loss(y_batch_train, logits, TPU=TPU, strategy=strategy, batch_size=generator.batch_size)
     return loss_0
 
 
@@ -351,6 +392,7 @@ def main():
     parser.add_argument("--TPU", default=False, type=str2bool, required=False)
     parser.add_argument("--decay", default=0.95, type=float, required=False)
     parser.add_argument("--BatchNorm", default=True, type=str2bool, required=False)
+    parser.add_argument("--padding", default='valid', type=str, required=False)
 
     FLAGS = parser.parse_args()
     
@@ -519,14 +561,14 @@ def main():
                 print(' ####  FLAGS.BatchNorm not found! #### \n Probably loading an older model. Using BatchNorm=True')
                 BatchNorm=True
 
-        filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense= FLAGS_ORIGINAL.filters, FLAGS_ORIGINAL.kernel_sizes, FLAGS_ORIGINAL.strides, FLAGS_ORIGINAL.pool_sizes, FLAGS_ORIGINAL.strides_pooling, FLAGS_ORIGINAL.n_dense
+        filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense, padding= FLAGS_ORIGINAL.filters, FLAGS_ORIGINAL.kernel_sizes, FLAGS_ORIGINAL.strides, FLAGS_ORIGINAL.pool_sizes, FLAGS_ORIGINAL.strides_pooling, FLAGS_ORIGINAL.n_dense, FLAGS_ORIGINAL.padding
     else:
         try:
             BatchNorm=FLAGS.BatchNorm
         except AttributeError:
             print(' ####  FLAGS.BatchNorm not found! #### \n Probably loading an older model. Using BatchNorm=True')
             BatchNorm=True
-        filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense
+        filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense, padding = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense, FLAGS.padding
     
     if FLAGS.TPU:
         with strategy.scope():
@@ -534,7 +576,7 @@ def main():
                         drop=drop, 
                         n_labels=n_classes, 
                         input_shape=input_shape, 
-                        padding='valid', 
+                        padding=padding, 
                         filters=filters,
                         kernel_sizes=kernel_sizes,
                         strides=strides,
@@ -551,7 +593,7 @@ def main():
                          drop=drop, 
                           n_labels=n_classes, 
                           input_shape=input_shape, 
-                          padding='valid', 
+                          padding=padding, 
                           filters=filters,
                           kernel_sizes=kernel_sizes,
                           strides=strides,
@@ -721,7 +763,7 @@ def main():
                 FLAGS.n_epochs, 
                 training_generator, 
                 validation_generator, manager, ckpt,
-                train_acc_metric, val_acc_metric, FLAGS.TPU,
+                train_acc_metric, val_acc_metric, TPU=FLAGS.TPU,
                 strategy=strategy, patience=FLAGS.patience, restore=FLAGS.restore, 
                 bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None #not(FLAGS.test_mode)
             )

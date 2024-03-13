@@ -130,85 +130,98 @@ def save_model(model, fname, params):
   
   
 def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec=0):
-    print('- Cut sample')
+
+  #if Verbose:
+  print('- Cut sample')
+  print('bs: %s' %bs)
+  print('N_labels: %s' %n_labels)
+  print('N_noise: %s' %n_noise)
+  print('len_c1: %s' %len_c1)
+  if bs/(n_labels*n_noise)<1:
     print('bs: %s' %bs)
     print('N_labels: %s' %n_labels)
     print('N_noise: %s' %n_noise)
-    print('len_c1: %s' %len_c1)
-    if bs/(n_labels*n_noise)<1:
-        print('bs: %s' %bs)
-        print('N_labels: %s' %n_labels)
-        print('N_noise: %s' %n_noise)
-        raise ValueError('Batch size must be larger to support this number of noise realizations')
-    a = tf.shape(indexes)[0]
+    raise ValueError('Batch size must be larger to support this number of noise realizations')
+  a = indexes.shape[0]
+  if Verbose:
+    print('Indexes length: %s' %a)
+  n_keep = a - (a % (bs//(n_labels*n_noise)))
+  if Verbose:
+    print('n_keep: %s' %n_keep)
+    
+  #print('len(n_keep)/n_labels/n_noise=%s'%(n_keep/n_labels/n_noise))
+  if n_keep<a or not((n_keep/n_labels/n_noise).is_integer()):   
     if Verbose:
-        print('Indexes length: %s' %a)
-    n_keep = a - (a % (bs//(n_labels*n_noise)))
+      print('Sampling')
+    idxs_new = np.random.choice(indexes, int(a), replace=False)
+  else:   
     if Verbose:
-        print('n_keep: %s' %n_keep)
-    if n_keep<a or not tf.math.is_integer(n_keep/n_labels/n_noise):   
-        if Verbose:
-            print('Sampling')
-        idxs_new = tf.random.shuffle(indexes)[:int(a)]
-    else:   
-        if Verbose:
-            print('Not sampling')
-        idxs_new = indexes
-    check_val=int(tf.shape(idxs_new)[0]%(bs/(n_labels*n_noise)))
+      print('Not sampling')
+    idxs_new = indexes
+  check_val=int(idxs_new.shape[0]%(bs/(n_labels*n_noise)))
+  if Verbose:
+    print('New length: %s' %idxs_new.shape[0])
+    
+    
+    #print('len(idxs_new)/n_labels x n_noise=%s'%((idxs_new.shape[0]/(n_labels*n_noise))) )
+  #if not ((idxs_new.shape[0]/(n_labels*n_noise)).is_integer()) or not check_val!=0:
+  
+  case_dict={ 0: 'Ok.',
+              1: 'N. of indexes is not multiple of number of examples to read for each label', 
+              2: 'N of indexes is not multiple of number of batches',
+              3: 'N of indexes is not multiple of minimum batch size',
+              4: 'N of batches is not integer',
+              5: 'N of indexes in not multiple of min batch size',
+              6: 'N of indexes in not multiple of number of noisy samples'}
+  
+  n_batches=(idxs_new.shape[0]*n_noise*n_labels/(bs))
+  n_indexes=len_c1*bs/(n_labels*n_noise)
+  if Verbose:
+      print('N batches: %s' %n_batches)
+      print(' len_C1: %s' %len_c1)
+      print('N indexes: %s' %n_indexes)
+  case=0
+  if check_val!=0:
+      case=1
+      if Verbose:
+        print('idxs_new.shape0 mod  bs/ n_labels x n_noise : %s' %check_val )
+        print(case_dict[case])
+  if not((idxs_new.shape[0]/n_indexes).is_integer()):
+      case=2
+      if Verbose:
+        print('len(idxs_new)/n_indexes=%s'%(idxs_new.shape[0]/n_indexes))
+        print(case_dict[case])
+  if not((idxs_new.shape[0]*n_noise*n_labels/(bs)).is_integer()):
+      case=3
+      if Verbose:
+        print('len(idxs_new)x n_labels x n_noise /bs =%s'%((idxs_new.shape[0]*n_noise*n_labels/(bs))) )
+        print(case_dict[case])
+  if  not(n_batches.is_integer()):
+      case=4
+      if Verbose:
+        print('len(idxs_new)x n_labels x n_noise /bs =%s'%((idxs_new.shape[0]*n_noise*n_labels/(bs))) )
+        print(case_dict[case])
+  if not((idxs_new.shape[0]/(n_noise*n_labels)).is_integer):  
+      case=5
+      if Verbose:
+        print(' idxs_new.shape[0]/ n_noise x n_labels : %s' %(idxs_new.shape[0]/(n_noise*n_labels)) )
+        print(case_dict[case])
+  
+  if case==0:
     if Verbose:
-        print('New length: %s' %tf.shape(idxs_new)[0])
-    case_dict={ 0: 'Ok.',
-                1: 'N. of indexes is not multiple of number of examples to read for each label', 
-                2: 'N of indexes is not multiple of number of batches',
-                3: 'N of indexes is not multiple of minimum batch size',
-                4: 'N of batches is not integer',
-                5: 'N of indexes in not multiple of min batch size',
-                6: 'N of indexes in not multiple of number of noisy samples'}
-    n_batches=(tf.shape(idxs_new)[0]*n_noise*n_labels/(bs))
-    n_indexes=len_c1*bs/(n_labels*n_noise)
+        print(case_dict[case])
+  else:# check_val!=0 or not((idxs_new.shape[0]/n_noise).is_integer()) or not((idxs_new.shape[0]/(n_labels*n_noise)).is_integer()): #(n_labels*n_noise)%idxs_new.shape[0] !=0:
     if Verbose:
-        print('N batches: %s' %n_batches)
-        print(' len_C1: %s' %len_c1)
-        print('N indexes: %s' %n_indexes)
-    case=0
-    if check_val!=0:
-        case=1
-        if Verbose:
-            print('idxs_new.shape0 mod  bs/ n_labels x n_noise : %s' %check_val )
-            print(case_dict[case])
-    if not tf.math.is_integer(tf.shape(idxs_new)[0]/n_indexes):
-        case=2
-        if Verbose:
-            print('len(idxs_new)/n_indexes=%s'%(tf.shape(idxs_new)[0]/n_indexes))
-            print(case_dict[case])
-    if not tf.math.is_integer(tf.shape(idxs_new)[0]*n_noise*n_labels/(bs)):
-        case=3
-        if Verbose:
-            print('len(idxs_new)x n_labels x n_noise /bs =%s'%((tf.shape(idxs_new)[0]*n_noise*n_labels/(bs))) )
-            print(case_dict[case])
-    if  not tf.math.is_integer(n_batches):
-        case=4
-        if Verbose:
-            print('len(idxs_new)x n_labels x n_noise /bs =%s'%((tf.shape(idxs_new)[0]*n_noise*n_labels/(bs))) )
-            print(case_dict[case])
-    if not tf.math.is_integer(tf.shape(idxs_new)[0]/(n_noise*n_labels)):  
-        case=5
-        if Verbose:
-            print(' idxs_new.shape[0]/ n_noise x n_labels : %s' %(tf.shape(idxs_new)[0]/(n_noise*n_labels)) )
-            print(case_dict[case])
-    if case==0:
-        if Verbose:
-            print(case_dict[case])
-    else:
-        if Verbose:
-            print('Recursive call N %s' %nRec)
-        nRec+=1
-        if nRec>10:
-            Verbose=False
-        return cut_sample(tf.random.shuffle(indexes)[:int(a-1)], bs, n_labels=n_labels, n_noise=n_noise, Verbose=Verbose, len_c1=len_c1, nRec= nRec)
-    if tf.shape(tf.unique(idxs_new).y)[0]==0:
-        raise ValueError('Adjust batch size, number of noise realizations, or validation set size')
-    return tf.unique(idxs_new).y
+      print('Recursive call N %s' %nRec)
+    nRec+=1
+    if nRec>10:
+      Verbose=False
+    return(cut_sample(np.random.choice(indexes, int(a-1), replace=False), bs, n_labels=n_labels, n_noise=n_noise, Verbose=Verbose, len_c1=len_c1, nRec= nRec))
+  if len(np.unique(idxs_new))==0:
+    #if Verbose:
+    #print(case_dict[case])
+    raise ValueError('Adjust batch size, number of noise realizations, or validation set size')
+  return np.unique(idxs_new)
   
 
 
@@ -446,9 +459,9 @@ def get_all_indexes(FLAGS, Test=False):
 
 
 def find_nearest(array, value):
-    array = tf.convert_to_tensor(array)
-    idx = tf.argmin(tf.abs(array - value), axis=0)
-    return idx, tf.gather(array, idx)
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return idx, array[idx]
 
 
 

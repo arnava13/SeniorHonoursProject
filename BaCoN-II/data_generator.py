@@ -23,29 +23,29 @@ def generate_noise(k, P,
                    sys_scaled=False,
                    sys_factor=0.03,
                    sys_max=False,
-                   V=tf.constant([10.43, 6.27, 3.34, 0.283]), 
-                   nbar=tf.constant([0.000358, 0.000828, 0.00103, 0.00128]),
+                   V=np.array([10.43, 6.27, 3.34, 0.283]), 
+                   nbar=np.array([0.000358, 0.000828, 0.00103, 0.00128]),
                    delta_k = 0.055,  sigma_sys=15, quadrature=True):
   
-  sigma_noise = tf.zeros(P.shape)
-  sigma_hat_noise = (2*tf.constant(np.pi)/((tf.expand_dims(k, axis=-1))*tf.sqrt(V*(1e3)**3*delta_k)))
+  sigma_noise = np.zeros(P.shape)
+  sigma_hat_noise = (2*np.pi/((k[:, None])*np.sqrt(V*(1e3)**3*delta_k)))
   if add_cosvar:
-      sigma_noise = tf.abs(P*sigma_hat_noise)
+      sigma_noise = np.abs(P*sigma_hat_noise)
       
   if add_shot:
-      sigma_noise_shot=(sigma_hat_noise/tf.constant(nbar))
+      sigma_noise_shot=(sigma_hat_noise/np.array(nbar))
       sigma_noise = sigma_noise+sigma_noise_shot
   if add_sys:
       if sys_scaled:
         if quadrature:
-          sigma_noise = tf.sqrt(sigma_noise**2+(P*sys_factor)**2)
+          sigma_noise = np.sqrt(sigma_noise**2+(P*sys_factor)**2)
         else:
-          sigma_noise = sigma_noise+tf.abs(P*sys_factor)
+          sigma_noise = sigma_noise+np.abs(P*sys_factor)
       elif sys_max:
-        sigma_noise = tf.maximum(sigma_noise, tf.abs(P*sys_factor))
+        sigma_noise = np.maximum(sigma_noise, np.abs(P*sys_factor))
       else:
         if quadrature:
-          sigma_noise =tf.sqrt(sigma_noise**2+sigma_sys**2 )
+          sigma_noise =np.sqrt(sigma_noise**2+sigma_sys**2 )
         else:
           sigma_noise =sigma_noise+sigma_sys
      
@@ -75,8 +75,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                 fine_tune = False, 
                 c_0=None, c_1=None, group_lab_dict=None, 
                 z_bins=[0, 1, 2, 3], swap_axes=False,
-                dataset_balanced=False, test_mode=False, one_vs_all=False, TPU=False):
-                
+                dataset_balanced=False, test_mode=False, one_vs_all=False,
+                ):
       
         print('Data Generator Initialization')
         
@@ -107,7 +107,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         self.k_min=k_min
         self.i_max=i_max
         self.i_min=i_min
-        self.TPU=TPU
         self.sample_pace=sample_pace
         if sample_pace ==1:
           self.dim = dim
@@ -128,13 +127,11 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         self.norm_data_path = self.data_root+norm_data_name
         print('Normalisation file is %s' %norm_data_name)
 
-        # Select points up to k_max or i_max
-        self.all_ks = tf.io.read_file(self.norm_data_path)
-        self.all_ks = tf.strings.split(self.all_ks, '\n')
-        self.all_ks = tf.strings.to_number(self.all_ks, out_type=tf.float32)
-
+        self.all_ks = np.loadtxt(self.norm_data_path)[:, 0]
         if self.sample_pace !=1:
-            self.all_ks = tf.strided_slice(self.all_ks, [0], [tf.size(self.all_ks)], [sample_pace])
+                self.all_ks = np.loadtxt(self.norm_data_path)[0::sample_pace, 0]
+
+        # Select points from k_max or i_max
 
         if self.k_max is not None:
             print('Specified k_max is %s' %self.k_max)
@@ -159,8 +156,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             print('No max in k. Using all ks . k_max=%s' %tf.gather(self.all_ks, self.i_max))
 
         # Select points from k_min or i_min
-        if self.sample_pace !=1:
-            self.all_ks = self.all_ks[::sample_pace]
 
         if self.k_min is not None:
             print('Specified k_min is %s' %self.k_min)
@@ -184,11 +179,12 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             self.i_min = 0
             print('No min in k. Using all ks . k_min=%s' %tf.gather(self.all_ks, self.i_min))
 
-        self.all_ks = tf.slice(self.all_ks, [self.i_min], [self.i_max - self.i_min])
-        self.dim = (tf.shape(self.all_ks)[0], self.dim[1])
+        self.all_ks = self.all_ks[self.i_min:self.i_max]
+        self.dim = (self.all_ks.shape[0], self.dim[1])
         print('New data dim: %s' %str(self.dim) )
         print('Final i_max used is %s' %self.i_max)
         print('Final i_min used is %s' %self.i_min)
+        self.all_ks = tf.convert_to_tensor(self.all_ks)
             
         
             
@@ -237,11 +233,10 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         self.normalization=normalization
         
         if self.normalization=='stdcosmo':
-            self.norm_data = tf.data.TextLineDataset(self.norm_data_path).map(lambda x: tf.strings.to_number(tf.strings.split(x), out_type=tf.float32))[:, 1:]
-            if self.sample_pace !=1:
-                self.norm_data = self.norm_data.window(self.sample_pace, shift=self.sample_pace, drop_remainder=True)
-            self.norm_data = self.norm_data.skip(self.i_min).take(self.i_max - self.i_min)
-              
+          self.norm_data = np.loadtxt(self.norm_data_path)[:, 1:]
+          if self.sample_pace !=1:
+            self.norm_data = self.norm_data[0::self.sample_pace, :]
+          self.norm_data = self.norm_data[self.i_min:self.i_max]
         
         self.idx_file_name = idx_file_name
         self.models_dir = models_dir
@@ -338,35 +333,41 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         return((len(self.list_IDs), self.dim[0]/self.sample_pace, self.dim[1] ))
 
  
-    def __getitem__(self, index, TPU=False):
+    def __getitem__(self, index):
         'Generate one batch of data'
         self.batch_idx = index
-
+        
+        
         # Generate indexes of the batch
-        indexes = tf.slice(self.indexes, [index*self.n_indexes], [(index+1)*self.n_indexes - index*self.n_indexes])
-        indexes_dict = {self.labels[i]: tf.slice(self.indexes_dict[self.labels[i]], [index*self.n_indexes], [(index+1)*self.n_indexes - index*self.n_indexes]) for i, label in enumerate(self.labels)}
+        indexes = self.indexes[index*self.n_indexes:(index+1)*self.n_indexes]
+        indexes_dict = {self.labels[i]:self.indexes_dict[self.labels[i]][index*self.n_indexes:(index+1)*self.n_indexes] for i, label in enumerate(self.labels)}
+        #print('Indexes: %s' %indexes)
 
         # Find list of IDs
-        list_IDs_temp = tf.gather(self.list_IDs, indexes)
-        list_IDs_temp_dict = { self.labels[i]: tf.gather(self.list_IDs_dict[self.labels[i]], indexes_dict[self.labels[i]]) for i,label in enumerate(self.labels)}
+        list_IDs_temp = [self.list_IDs[k] for k in indexes]
+        #print('getitem len(list_IDs_temp): %s' %len(list_IDs_temp))
+        list_IDs_temp_dict = { self.labels[i]:[self.list_IDs_dict[self.labels[i]][k] for k in indexes_dict[self.labels[i]]] for i,label in enumerate(self.labels)}
+
+        #print('List_IDs: %s' %list_IDs_temp)
 
         # Generate data
+        #X, y = self.__data_generation(list_IDs_temp)
         X, y = self.__data_generation(list_IDs_temp, list_IDs_temp_dict)
         return  X, y
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
-        self.indexes = tf.range(len(self.list_IDs))
-        self.indexes_dict = {self.labels[i]: tf.range(len(self.list_IDs_dict[self.labels[i]])) for i,label in enumerate(self.labels)}
+        self.indexes = np.arange(len(self.list_IDs))
+        self.indexes_dict = {self.labels[i]:np.arange(len(self.list_IDs_dict[self.labels[i]] )) for i,label in enumerate(self.labels)}
         #print('--- Epoch ended')
         if self.shuffle == True:
-            self.indexes = tf.random.shuffle(self.indexes)
+            np.random.shuffle(self.indexes)
             for label in self.labels:
-                self.indexes_dict[label] = tf.random.shuffle(self.indexes_dict[label])
+                np.random.shuffle(self.indexes_dict[label])
 
  
 
-    def __data_generation(self, list_IDs_temp, list_IDs_temp_dict, TPU=False):
+    def __data_generation(self, list_IDs_temp, list_IDs_temp_dict):
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
 
         if self.Verbose_2:
@@ -374,11 +375,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             print(list_IDs_temp_dict)
         
         # Initialization
-        """
         X = np.empty((self.batch_size, *self.dim, self.n_channels))
-        y = np.empty((self.batch_size), dtype=int)"""
-        X = tf.Variable(tf.zeros([self.batch_size, *self.dim, self.n_channels], dtype=tf.float32))
-        y = tf.Variable(tf.zeros([self.batch_size], dtype=tf.int32))
+        y = np.empty((self.batch_size), dtype=int)
         i_ind = 0
         if self.Verbose:
             print('Dim of X: %s' %str(X.shape))
@@ -405,75 +403,72 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
               if self.Verbose:
                 print('Loading file %s' %fname)
               #try:
-              """
               loaded_all = np.loadtxt(fname)
-              P_original, k = loaded_all[:, 1:], loaded_all[:, 0]"""
-              loaded_all = tf.data.TextLineDataset(fname)
-              loaded_all = loaded_all.map(lambda x: tf.strings.to_number(tf.strings.split(x), out_type=tf.float32))
-              P_original, k = loaded_all.map(lambda x: x[1:]), loaded_all.map(lambda x: x[0])
+              P_original, k = loaded_all[:, 1:], loaded_all[:, 0]
 
-              if self.sample_pace != 1:
-                P_original = P_original.window(self.sample_pace, shift=self.sample_pace, drop_remainder=True)
-                k = k.window(self.sample_pace, shift=self.sample_pace, drop_remainder=True)
-
-              P_original, k = P_original.skip(self.i_min).take(self.i_max - self.i_min), k.skip(self.i_min).take(self.i_max - self.i_min)
+              if self.sample_pace!=1:
+                P_original = P_original[0::self.sample_pace, :]
+                k = k[0::self.sample_pace]
+              P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
 
               if self.Verbose:
-                print('Dimension of original data: %s' %str(P_original))
-                print('dimension P_original: %s' %str(P_original))    
-                print('P_original first 10:') 
-                for value in P_original.take(10):
-                    print(value.numpy())
+                print('Dimension of original data: %s' %str(P_original.shape))
+              
+              if self.Verbose:
+                    print('dimension P_original: %s' %str(P_original.shape))    
+                    print('P_original first 10:') 
+                    print(P_original[10])
 
               # Add noise
               for i_noise in range(self.n_noisy_samples):
                 if self.add_noise:
-                    P_noisy = P_original
-                    if self.Verbose:
-                        print('Noise realization %s' %i_noise)
-                    # add noise if selected
-                    if self.add_cosvar:
-                        noise_cosVar = tf.random.normal(shape=[], mean=0, stddev=generate_noise(k,tf.gather(self.norm_data, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=True, add_sys=False, add_shot=False,sigma_sys=self.sigma_sys), dtype=tf.float32)
-                        P_noisy = P_noisy + noise_cosVar
+                  P_noisy = P_original
+                  if self.Verbose:
+                    print('Noise realization %s' %i_noise)
+                  # add noise if selected
+                  if self.add_cosvar:
+                    noise_cosVar = np.random.normal(loc=0, scale=generate_noise(k,self.norm_data[: , self.z_bins],sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=True, add_sys=False, add_shot=False,sigma_sys=self.sigma_sys))
+                    P_noisy = P_noisy + noise_cosVar
 
-                    if self.add_sys:
-                        curve_random_nr = tf.random.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-                        curve_file = tf.strings.join([self.curves_folder, '/', tf.strings.as_string(curve_random_nr), '.txt'])
-                        curves_loaded = tf.data.TextLineDataset(curve_file).map(lambda x: tf.strings.to_number(tf.strings.split(x), out_type=tf.float32))
-                        noise_sys, k_sys = curves_loaded.map(lambda x: x[1:]), curves_loaded.map(lambda x: x[0])
+                  if self.add_sys:
+                    curve_random_nr = random.randint(1,1000)
+                    curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
+                    curves_loaded = np.loadtxt(curve_file)
+                    noise_sys, k_sys = curves_loaded[:, 1:], curves_loaded[:, 0]
 
-                        if self.sample_pace!=1:
-                            noise_sys = noise_sys.window(self.sample_pace, shift=self.sample_pace, drop_remainder=True)
-                            k_sys = k_sys.window(self.sample_pace, shift=self.sample_pace, drop_remainder=True)
-                        noise_sys, k_sys = noise_sys.skip(self.i_min).take(self.i_max - self.i_min), k_sys.skip(self.i_min).take(self.i_max - self.i_min)
-                        if not tf.reduce_all(tf.equal(k, k_sys)):
-                            print('ERROR: k-values in spectrum and theory-error curve file not identical')
 
-                        # rescale noise_sys curves according to error (10% default from production curves), 
-                        # rescale by Gaussian with sigma = 1
-                        # multiply with normalisation spectrum
-                        noise_sys = (noise_sys - 1) * self.sigma_curves / self.sigma_curves_default * tf.gather(self.norm_data, self.z_bins, axis=1)
+                    if self.sample_pace!=1:
+                        noise_sys = noise_sys[0::self.sample_pace, :]
+                        k_sys = k_sys[0::self.sample_pace]
+                    noise_sys, k_sys = noise_sys[self.i_min:self.i_max], k_sys[self.i_min:self.i_max]
+                    if (k.all() != k_sys.all()):
+                        print('ERROR: k-values in spectrum and theory-error curve file not identical')
+
+                    # rescale noise_sys curves according to error (10% default from production curves), 
+                    # rescale by Gaussian with sigma = 1
+                    # multiply with normalisation spectrum
+                    noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * self.norm_data[:,self.z_bins]
 
                     if self.rescale_curves == 'uniform':
-                        noise_sys = noise_sys * tf.random.uniform(shape=[], minval=0, maxval=1, dtype=tf.float32)
+                        noise_sys = noise_sys * np.random.uniform(0,1)
                     if self.rescale_curves == 'gaussian':
-                        noise_sys = noise_sys * tf.random.normal(shape=[], mean=0, stddev=1, dtype=tf.float32)
+                        noise_sys = noise_sys * np.random.normal(loc=0, scale = 1)
 
                     P_noisy = P_noisy + noise_sys
 
 
-                    if self.add_shot:
-                        noise_shot = tf.random.normal(shape=[], mean=0, stddev=generate_noise(k,tf.gather(self.norm_data, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys), dtype=tf.float32)
-                        P_noisy = P_noisy + noise_shot
+                  if self.add_shot:
+                    noise_shot = np.random.normal(loc=0, scale=generate_noise(k,self.norm_data[: , self.z_bins],sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys))
+                    P_noisy = P_noisy + noise_shot
 
 
-                    expanded = tf.expand_dims(P_noisy, axis=2)
+                  expanded = np.expand_dims(P_noisy, axis=2)
 
 
                 else:
                   if self.Verbose:
                     print('No noise')
-                  expanded = tf.expand_dims(P_original, axis=2)
+                  expanded = np.expand_dims(P_original, axis=2) 
 
                 # Store sample
                 if self.Verbose:
@@ -483,17 +478,16 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                 if self.swap_axes:
                     if self.Verbose:
                         print('Reshaping')
-                    expanded = tf.transpose(expanded, perm=[0, 2, 1])
+                    expanded = np.swapaxes(expanded, 2, 1)
                     if self.Verbose:
                         print('New dimension of data: %s' %str(expanded.shape))
-                    expanded = tf.gather(expanded, self.z_bins, axis=2)
+                    expanded = expanded[:,:,self.z_bins]
                     if self.Verbose:
                         print('Final dimension of data: %s' %str(expanded.shape))
                         print('expanded first 10:') 
-                        for value in expanded[10].numpy():
-                            print(value)
+                        print(expanded[10])
                     # now shape of expanded is (1, n_data_points, 1, n_channels=3)
-                X[i_ind,].assign(expanded)  
+                X[i_ind,] = expanded  
 
                 if self.Verbose:
                     print('dimension of X: %s' %str(X.shape))
@@ -516,28 +510,29 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                     print('Label for this example: %s' %label)
                     print('Encoding: %s' % encoding)
                 
-                y[i_ind].assign(encoding)
+                y[i_ind] = encoding
                 i_ind += 1
         # finished all files in this batch
 
         if self.normalization=='batch':
-          mu_batch = tf.reduce_mean(X, axis=0)
-          std_batch = tf.math.reduce_std(X, axis=0)
-          X = (X - mu_batch) / std_batch
+          mu_batch = np.mean(X, axis=0)
+          std_batch = np.std(X, axis=0)
+          X = (X-mu_batch)/std_batch
         elif self.normalization=='stdcosmo':
             if self.swap_axes:
-                X = X / tf.gather(self.norm_data[None, :, None, :], self.z_bins, axis=3) - 1
-                if self.Verbose:
+                 X = X/self.norm_data[None, :, None, self.z_bins]-1
+                 if self.Verbose:
                     print('axes swapped')
                     print('NORM first 10:') 
-                    print(tf.gather(self.norm_data[None, :, None, :], self.z_bins, axis=3)[10])
-                    print('Dimension of NORM data expanded: %s' %str(tf.gather(self.norm_data[None, :, None, :], self.z_bins, axis=3).shape))
-                    print('Dimension of NORM data z_bins: %s' %str(tf.gather(self.norm_data, self.z_bins, axis=1).shape))
+                    print(self.norm_data[None, :, None, self.z_bins][10])
+                 if self.Verbose:
+                    print('Dimension of NORM data expanded: %s' %str(self.norm_data[None, :, None, self.z_bins].shape))
+                    print('Dimension of NORM data z_bins: %s' %str(self.norm_data[: , self.z_bins].shape))
             else:
-                X = X / tf.expand_dims(self.norm_data, axis=[0,3]) - 1
+                X = X/self.norm_data[None, :,:,None]-1
                 if self.Verbose:
                     print('axes not swapped')
-                    print('Dimension of NORM data: %s' %str(tf.expand_dims(self.norm_data, axis=[0,3]).shape))
+                    print('Dimension of NORM data: %s' %str(self.norm_data[None, :,:,None].shape))
         
         if self.save_processed_spectra:
             if self.batch_idx==0:
@@ -546,41 +541,44 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                     print('Creating directory %s' %  name_spectra_folder)
                     os.makedirs(name_spectra_folder)
                 # new matrix for spectra, first column is class_idx, first row is k-values
-                X_save = tf.Variable(tf.zeros((self.batch_size+1, len(k)+1)))
-                X_save = X_save[1:, :].assign(y[:, tf.newaxis])
-                X_save = X_save[0, 1:].assign(k[tf.newaxis, :])
+                X_save = np.empty((self.batch_size+1, len(k)+1))
+                X_save[1:,0] = y  
+                X_save[0,1:] = k 
                 for i_z in self.z_bins:
-                    X_save = X_save[1:, 1:].assign(X[:,:,0,i_z])
+                    X_save[1:,1:] = X[:,:,0,i_z]
                     spectra_file = os.path.join(name_spectra_folder, 'processed_spectra_zbin{}.txt'.format(i_z))
                     if not os.path.exists(spectra_file):
                         print('Saving processed (noisy and normalised) spectra in %s' % spectra_file)
                         with open(spectra_file, "a+") as myCurvefile:
-                            np.savetxt(myCurvefile, X_save.numpy(), delimiter=' ', newline='\r\n')
+                            np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
    
         # shuffle to avoid having always three examples with different label in a row
         if self.shuffle:
-            p = tf.random.shuffle(tf.range(X.shape[0]))
-            X = tf.gather(X, p, axis=0)
-            y = tf.gather(y, p)
-            if self.save_indexes:
-                fname_list_shuffled = tf.gather(fname_list, p)
+          p = np.random.permutation(X.shape[0])
+          X = X[p, :, :, :]
+          y = y[p]
+          if self.save_indexes:
+            fname_list_shuffled = fname_list[p]
           
         if self.save_indexes:  
-            if not os.path.exists(self.models_dir+'/idx_files/'):
-                print('Creating directory %s' %self.models_dir+'/idx_files/')
-                os.makedirs(self.models_dir+'/idx_files/')
-                
-            idx_file = self.models_dir+'/idx_files/idx_file_batch'+ str(self.batch_idx)+'.txt'                  
-            print('Saving indexes in  %s' %idx_file)
-            idx_list = [f.numpy().decode("utf-8").split('.')[0].split('/')[-2]+'/'+f.numpy().decode("utf-8").split('.')[0].split('/')[-1]  for f in fname_list_shuffled]
-            self.save_indexes_dict[self.batch_idx] = idx_list
-            with open(idx_file, 'w+') as file:
-                print('Opened %s' %idx_file)
-                for i, idx in enumerate(idx_list): #i in range(len(idx_list)):
-                    file.write(idx+'\n')
-                
-        if self.swap_axes: 
-            X = tf.transpose(X, perm=[0, 2, 3, 1])
+          if not os.path.exists(self.models_dir+'/idx_files/'):
+              print('Creating directory %s' %self.models_dir+'/idx_files/')
+              os.makedirs(self.models_dir+'/idx_files/')
+            
+          idx_file = self.models_dir+'/idx_files/idx_file_batch'+ str(self.batch_idx)+'.txt'                  
+          print('Saving indexes in  %s' %idx_file)
+          idx_list = [f.split('.')[0].split('/')[-2]+'/'+f.split('.')[0].split('/')[-1]  for f in fname_list_shuffled]
+          self.save_indexes_dict[self.batch_idx] = idx_list
+          with open(idx_file, 'w+') as file:
+              print('Opened %s' %idx_file)
+              for i, idx in enumerate(idx_list): #i in range(len(idx_list)):
+                  file.write(idx+'\n')
+            
+        if self.swap_axes:# 
+            X = X[:,:,0,:] 
+        
+        X = tf.convert_to_tensor(X, dtype=tf.float32)
+        y = tf.convert_to_tensor(y, dtype=tf.int32)
 
         return X, tf.one_hot(y, depth=self.n_classes_out)
     
@@ -592,14 +590,14 @@ def read_partition(FLAGS):
     base_path = out_path+'/tf_ckpts/'
     fname_idxs_train=base_path+'idxs_train.txt'
     fname_idxs_val=base_path+'idxs_val.txt'
-
+    
     print('Reading train indexes from %s ...' %fname_idxs_train)
-    train_idxs = tf.data.TextLineDataset(fname_idxs_train).map(lambda x: tf.strings.to_number(tf.strings.split(x), out_type=tf.int32))
-    print('Train indexes length: %s' %str(train_idxs.cardinality().numpy()))
+    train_idxs=np.array(np.loadtxt(fname_idxs_train).tolist()).astype(int)
+    print('Train indexes length: %s' %str(len(train_idxs)))
     print('Reading val indexes from %s ...' %fname_idxs_val)
-    val_idxs = tf.data.TextLineDataset(fname_idxs_val).map(lambda x: tf.strings.to_number(tf.strings.split(x), out_type=tf.int32))
-    print('Val indexes length: %s' %str(val_idxs.cardinality().numpy()))
-
+    val_idxs=np.array(np.loadtxt(fname_idxs_val).tolist()).astype(int)
+    print('Val indexes length: %s' %str(len(val_idxs)))
+    
     partition = {'train': train_idxs , 'validation': val_idxs }
     return partition
     
@@ -640,22 +638,21 @@ def create_generators(FLAGS):
     
     # SPLIT TRAIN/VALIDATION /(TEST)
     val_index = np.random.choice(all_index, size=int(np.floor(val_size*n_samples)), replace=False)
-    val_index = tf.random.shuffle(all_index)[:int(tf.floor(val_size*n_samples))]
-    train_index_temp = tf.setdiff1d(all_index, val_index)[0]
-    test_size_eff = FLAGS.test_size/(tf.shape(train_index_temp)[0]/n_samples)
-    test_index = tf.random.shuffle(train_index_temp)[:int(tf.floor(test_size_eff*tf.shape(train_index_temp)[0]))]
-    train_index = tf.setdiff1d(train_index_temp, test_index)[0]
+    train_index_temp =  np.setdiff1d(all_index, val_index) #np.delete(all_index, val_index-1)
+    test_size_eff = FLAGS.test_size/(train_index_temp.shape[0]/n_samples)
+    test_index = np.random.choice(train_index_temp, size=int(np.floor(test_size_eff*train_index_temp.shape[0])), replace=False)
+    train_index =  np.setdiff1d(train_index_temp, test_index)
 
     print('Check for no duplicates in test: (0=ok):')
-    print(tf.reduce_sum(tf.cast(tf.map_fn(lambda el: tf.reduce_any(tf.equal(el, train_index)), test_index), tf.int32)))
+    print(np.array([np.isin(el, train_index) for el in test_index]).sum())
     print('Check for no duplicates in val: (0=ok):')
-    print(tf.reduce_sum(tf.cast(tf.map_fn(lambda el: tf.reduce_any(tf.equal(el, train_index)), val_index), tf.int32)))
+    print(np.array([np.isin(el, train_index) for el in val_index]).sum())
 
-    print('N of files in training set: %s' %tf.shape(train_index)[0])
-    print('N of files in validation set: %s' %tf.shape(val_index)[0])
-    print('N of files in test set: %s' %tf.shape(test_index)[0])
+    print('N of files in training set: %s' %train_index.shape[0])
+    print('N of files in validation set: %s' %val_index.shape[0])
+    print('N of files in test set: %s' %test_index.shape[0])
 
-    print('Check - total: %s' %(tf.shape(val_index)[0]+tf.shape(test_index)[0]+tf.shape(train_index)[0]))
+    print('Check - total: %s' %(val_index.shape[0]+test_index.shape[0]+train_index.shape[0]))
     
     if FLAGS.add_noise:
         n_noisy_samples = FLAGS.n_noisy_samples
@@ -750,7 +747,6 @@ def create_generators(FLAGS):
           'sigma_curves_default':FLAGS.sigma_curves_default,
           'save_processed_spectra':FLAGS.save_processed_spectra,
           'rescale_curves':FLAGS.rescale_curves,
-          'TPU':FLAGS.TPU
           }
     
     if FLAGS.fine_tune  or FLAGS.one_vs_all:
@@ -869,7 +865,6 @@ def create_test_generator(FLAGS):
           'sigma_curves_default':FLAGS.sigma_curves_default,
           'save_processed_spectra':FLAGS.save_processed_spectra,
           'rescale_curves':FLAGS.rescale_curves,
-          'TPU':FLAGS.TPU
           }
     
     if FLAGS.fine_tune or FLAGS.one_vs_all:
