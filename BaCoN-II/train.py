@@ -183,36 +183,17 @@ def my_train(model, optimizer, loss,
     print("Epoch %d" % (epoch,))
     start_time = time.time()
 
-    # Run train loop
-    for batch_idx, (x_batch_train, y_batch_train) in enumerate(train_generator):
-        if TPU:
-            train_dataset = tf.data.Dataset.from_tensor_slices((x_batch_train, y_batch_train))
-            train_dataset = train_dataset.batch(train_generator.batch_size)
-            train_dataset = train_dataset.cache()  # Cache the dataset after batching for better performance
-            train_dataset = train_dataset.prefetch(tf.data.AUTOTUNE)
-            
-            # Execute training using the TPU strategy
-            for x_batch, y_batch in train_dataset:
-                loss_value = train_on_batch(x_batch, y_batch, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy, batch_size=train_generator.batch_size)
-        else:
-            loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy, batch_size=train_generator.batch_size)
-
-    # Run validation loop
+    for batch_idx, batch in enumerate(train_generator):
+        x_batch_train, y_batch_train = batch #train_generator[batch_idx]
+        loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy, batch_size=train_generator.batch_size)
+ 
+    
+    # Run  validation loop
     val_loss_value = 0.
-    for val_batch_idx, (x_batch_val, y_batch_val) in enumerate(val_generator):
-        if TPU:
-            val_dataset = tf.data.Dataset.from_tensor_slices((x_batch_val, y_batch_val))
-            val_dataset = val_dataset.batch(val_generator.batch_size)
-            val_dataset = val_dataset.cache()  # Cache the dataset after batching for better performance
-            val_dataset = val_dataset.prefetch(tf.data.AUTOTUNE)
-            
-            # Execute validation using the TPU strategy
-            for x_val_batch, y_val_batch in val_dataset:
-                lv = val_step(x_val_batch, y_val_batch, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy, batch_size=val_generator.batch_size) / float(val_generator.n_batches)
-                val_loss_value += lv
-        else:
-            lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy, batch_size=val_generator.batch_size) / float(val_generator.n_batches)
-            val_loss_value += lv
+    for val_batch_idx, val_batch in enumerate(val_generator):      
+        x_batch_val, y_batch_val = val_batch #val_generator[val_batch_idx]
+        lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy, batch_size=val_generator.batch_size)/ float(val_generator.n_batches)
+        val_loss_value += lv
             
     
     if val_loss_value.numpy()<best_loss: #int(ckpt.step) % 10 == 0:
