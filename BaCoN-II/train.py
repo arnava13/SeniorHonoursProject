@@ -193,7 +193,7 @@ def my_train(model, optimizer, loss,
             
     
     if val_loss_value.numpy()<best_loss: #int(ckpt.step) % 10 == 0:
-        if save_ckpt:
+        if save_ckpt and not TPU:
             save_path = manager.save()
             print("Validation loss decreased. Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
         else:
@@ -385,7 +385,12 @@ def main():
     FLAGS.c_0.sort()
 
     if FLAGS.TPU and FLAGS.GPU:
-            raise Exception("Both --GPU and --TPU are true, only one must be true")   
+        print('Cannot use both TPU and GPU. Using GPU only ')
+        FLAGS.TPU=False
+    
+    if FLAGS.TPU and FLAGS.save_ckpt:
+        print("Cannot save checkpoints in TPU training mode, proceeding without saving checkpoints.")
+        FLAGS.save_ckpt=False
     
     if FLAGS.TPU:
         try:
@@ -567,21 +572,6 @@ def main():
                             )
 
             model.build(input_shape=input_shape)
-        cpu_model=make_model(     model_name=model_name,
-                        drop=drop, 
-                        n_labels=n_classes, 
-                        input_shape=input_shape, 
-                        padding=padding, 
-                        filters=filters,
-                        kernel_sizes=kernel_sizes,
-                        strides=strides,
-                        pool_sizes=pool_sizes,
-                        strides_pooling=strides_pooling,
-                        activation=tf.nn.leaky_relu,
-                        bayesian=bayesian, 
-                        n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
-                            )
-        cpu_model.build(input_shape=input_shape)
     else:
         model=make_model(     model_name=model_name,
                          drop=drop, 
@@ -614,9 +604,6 @@ def main():
             with strategy.scope():
                 lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_generator), FLAGS.decay)
                 optimizer = tf.keras.optimizers.Adam(lr_fn)
-            lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_generator), FLAGS.decay)
-            with tf.device('/CPU:0'):
-                cpu_optimizer = tf.keras.optimizers.Adam(lr_fn)
         else:
             lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_generator), FLAGS.decay)
             optimizer = tf.keras.optimizers.Adam(lr_fn)
@@ -624,8 +611,6 @@ def main():
         if FLAGS.TPU:
             with strategy.scope():
                 optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
-            with tf.device('/CPU:0'):
-                cpu_optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
         else:
             optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
     
@@ -642,15 +627,7 @@ def main():
     else:
         ckpts_path=out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name_base_unfreezing+'/'
     ckpt_name = 'ckpt'
-    model_weights = model.get_weights()
-    optimizer_weights = [w.numpy() for w in optimizer.variables()]
-    if FLAGS.TPU:
-        with tf.device('/CPU:0'):
-            cpu_model.set_weights(model_weights)
-            cpu_optimizer.set_weights(optimizer_weights)
-            ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=cpu_optimizer, net=cpu_model)
-    else:
-        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
+    ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
     
     if FLAGS.fine_tune:
         print('Loading ckpt from %s' %ckpts_path)
@@ -691,12 +668,6 @@ def main():
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        trainable=FLAGS.trainable, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
-                with tf.device('/CPU:0'):
-                    cpu_model = make_fine_tuning_model(base_model=cpu_model, input_shape=input_shape,
-                                            n_out_labels=training_generator.n_classes_out,
-                                            dense_dim= dense_dim, bayesian=bayesian, 
-                                            trainable=FLAGS.trainable, 
-                                            drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
             else:
                 model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
                                        n_out_labels=training_generator.n_classes_out,
@@ -710,33 +681,15 @@ def main():
                                        n_out_labels=training_generator.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm)
-                with tf.device('/CPU:0'):
-                    cpu_model = make_unfreeze_model(base_model=cpu_model, input_shape=input_shape,
-                                            n_out_labels=training_generator.n_classes_out,
-                                            dense_dim= dense_dim, bayesian=bayesian, 
-                                            drop=drop,  BatchNorm=FLAGS.BatchNorm)
             else: 
                 model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
                                        n_out_labels=training_generator.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm)
-        if FLAGS.TPU:
-            with strategy.scope():
-                model.build(input_shape=input_shape)
-            cpu_model.build(input_shape=input_shape)
-        else:
-            model.build(input_shape=input_shape)
+        model.build(input_shape=input_shape)
         print(model.summary())
 
-        model_weights = model.get_weights()
-        optimizer_weights = [w.numpy() for w in optimizer.variables()]
-        if FLAGS.TPU:
-            with tf.device('/CPU:0'):
-                cpu_model.set_weights(model_weights)
-                cpu_optimizer.set_weights(optimizer_weights)
-                ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=cpu_optimizer, net=cpu_model)
-        else:
-            ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
+        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
     elif FLAGS.one_vs_all:
         if not FLAGS.test_mode:
             ckpts_path = out_path+'/tf_ckpts'+add_ckpt_name+'/'
