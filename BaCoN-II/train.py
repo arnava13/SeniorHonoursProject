@@ -20,7 +20,7 @@ import sys
 import time
 
 @tf.function
-def step_fn(x, y, model, batch_size, n_train_example, loss, TPU, train_acc_metric, bayesian):
+def step_fn(x, y):
     with tf.GradientTape() as tape:
         tape.watch(model.trainable_variables)
         for layer in model.layers:  # Supports frozen weights
@@ -48,7 +48,7 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
     if TPU:
         with strategy.scope():
             # Distribute the computation to the replicas
-            per_replica_losses = strategy.run(step_fn, args=(x, y, model, batch_size, n_train_example, loss, TPU, train_acc_metric, bayesian))
+            per_replica_losses = strategy.run(step_fn, args=(x, y))
             # Reduce the loss across replicas for reporting or further use
             loss_value = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
     else:
