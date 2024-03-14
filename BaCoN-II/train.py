@@ -4,7 +4,7 @@
 Created on Wed Jun 17 13:21:14 2020
 
 @author: Michi
-@editor: Arnav, March 2023, add TPU support
+@editor: Arnav, March 2024, add TPU support
 """
 import argparse
 import os
@@ -642,7 +642,7 @@ def main():
         ckpts_path=out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name_base_unfreezing+'/'
     ckpt_name = 'ckpt'
     model_weights = model.get_weights()
-    optimizer_weights = [w.numpy() for w in optimizer.weights]
+    optimizer_weights = [w.numpy() for w in optimizer.variables()]
     if FLAGS.TPU:
         with tf.device('/CPU:0'):
             cpu_model.set_weights(model_weights)
@@ -727,7 +727,7 @@ def main():
         print(model.summary())
 
         model_weights = model.get_weights()
-        optimizer_weights = [w.numpy() for w in optimizer.weights]
+        optimizer_weights = [w.numpy() for w in optimizer.variables()]
         if FLAGS.TPU:
             with tf.device('/CPU:0'):
                 cpu_model.set_weights(model_weights)
