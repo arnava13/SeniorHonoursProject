@@ -642,11 +642,11 @@ def main():
         ckpts_path=out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name_base_unfreezing+'/'
     ckpt_name = 'ckpt'
     model_weights = model.get_weights()
-    optimizer_weights = optimizer.get_weights()
+    optimizer_weights = [w.numpy() for w in optimizer.weights]
     if FLAGS.TPU:
         with tf.device('/CPU:0'):
             cpu_model.set_weights(model_weights)
-            cpu_optimizer.set_weights(optimizer.get_weights())
+            cpu_optimizer.set_weights(optimizer_weights)
             ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=cpu_optimizer, net=cpu_model)
     else:
         ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
@@ -727,11 +727,11 @@ def main():
         print(model.summary())
 
         model_weights = model.get_weights()
-        optimizer_weights = optimizer.get_weights()
+        optimizer_weights = [w.numpy() for w in optimizer.weights]
         if FLAGS.TPU:
             with tf.device('/CPU:0'):
                 cpu_model.set_weights(model_weights)
-                cpu_optimizer.set_weights(optimizer.get_weights())
+                cpu_optimizer.set_weights(optimizer_weights)
                 ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=cpu_optimizer, net=cpu_model)
         else:
             ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
