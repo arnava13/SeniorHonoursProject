@@ -622,7 +622,10 @@ def main():
     else:
         ckpts_path=out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name_base_unfreezing+'/'
     ckpt_name = 'ckpt'
-    ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model) 
+    with tf.device('/CPU:0'):
+        cpu_model = tf.identity(model)
+        cpu_optimizer = tf.identity(optimizer)
+        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=cpu_optimizer, net=cpu_model)
     
     if FLAGS.fine_tune:
         print('Loading ckpt from %s' %ckpts_path)
@@ -688,7 +691,10 @@ def main():
             model.build(input_shape=input_shape)
         print(model.summary())
         
-        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
+        with tf.device('/CPU:0'):
+            cpu_model = tf.identity(model)
+            cpu_optimizer = tf.identity(optimizer)
+            ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=cpu_optimizer, net=cpu_model)
     elif FLAGS.one_vs_all:
         if not FLAGS.test_mode:
             ckpts_path = out_path+'/tf_ckpts'+add_ckpt_name+'/'
@@ -698,10 +704,10 @@ def main():
         if FLAGS.test_mode:
             ckpt_name+='_test'
         
-        
-    manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
-                                         max_to_keep=2, 
-                                         checkpoint_name=ckpt_name)
+    with tf.device('/CPU:0'):
+        manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
+                                            max_to_keep=2, 
+                                            checkpoint_name=ckpt_name)
     
     if FLAGS.TPU:
         with strategy.scope():
