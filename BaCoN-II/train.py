@@ -114,8 +114,6 @@ def my_loss(y, logits, TPU=False, batch_size=None):
 def ELBO(y, logits, kl, TPU=False, batch_size=None):
     neg_log_likelihood = my_loss(y, logits, TPU=TPU, batch_size=batch_size)
     elbo_loss = neg_log_likelihood + kl
-    if TPU:
-        elbo_loss = tf.nn.compute_average_loss(elbo_loss, global_batch_size=batch_size)
     return elbo_loss
 
 
