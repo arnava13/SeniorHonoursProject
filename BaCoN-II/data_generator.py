@@ -361,9 +361,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         self.indexes_dict = {self.labels[i]:np.arange(len(self.list_IDs_dict[self.labels[i]] )) for i,label in enumerate(self.labels)}
         #print('--- Epoch ended')
         if self.shuffle == True:
-            self.indexes = tf.random.stateless_shuffle(self.indexes, seed=(1, 2)).numpy()
+            np.random.shuffle(self.indexes)
             for label in self.labels:
-                self.indexes_dict[label] = tf.random.stateless_shuffle(self.indexes_dict[label], seed=(3, 4)).numpy()
+                np.random.shuffle(self.indexes_dict[label])
 
  
 
@@ -427,7 +427,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                     print('Noise realization %s' %i_noise)
                   # add noise if selected
                   if self.add_cosvar:
-                    noise_cosVar = tf.random.stateless_normal(shape=generate_noise(k,self.norm_data[: , self.z_bins],sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=True, add_sys=False, add_shot=False,sigma_sys=self.sigma_sys).shape, mean=0, stddev=1, seed=(1, 2)).numpy()
+                    noise_cosVar = np.random.normal(loc=0, scale=generate_noise(k,self.norm_data[: , self.z_bins],sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=True, add_sys=False, add_shot=False,sigma_sys=self.sigma_sys))
                     P_noisy = P_noisy + noise_cosVar
 
                   if self.add_sys:
@@ -450,15 +450,15 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                     noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * self.norm_data[:,self.z_bins]
 
                     if self.rescale_curves == 'uniform':
-                        noise_sys = noise_sys * tf.random.stateless_uniform(shape=[], minval=0, maxval=1, seed=(1, 2)).numpy()
+                        noise_sys = noise_sys * np.random.uniform(0,1)
                     if self.rescale_curves == 'gaussian':
-                        noise_sys = noise_sys * tf.random.stateless_normal(shape=[], loc=0, scale=1, seed=(3, 4)).numpy()
+                        noise_sys = noise_sys * np.random.normal(loc=0, scale = 1)
 
                     P_noisy = P_noisy + noise_sys
 
 
                   if self.add_shot:
-                    noise_shot = tf.random.stateless_normal(shape=generate_noise(k,self.norm_data[: , self.z_bins],sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys).shape, mean=0, stddev=1, seed=(1, 2)).numpy()
+                    noise_shot = np.random.normal(loc=0, scale=generate_noise(k,self.norm_data[: , self.z_bins],sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys))
                     P_noisy = P_noisy + noise_shot
 
 
@@ -554,7 +554,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
    
         # shuffle to avoid having always three examples with different label in a row
         if self.shuffle:
-          p = tf.random.stateless_shuffle(tf.range(X.shape[0]), seed=(1, 2)).numpy()
+          p = np.random.permutation(X.shape[0])
           X = X[p, :, :, :]
           y = y[p]
           if self.save_indexes:
@@ -637,17 +637,10 @@ def create_generators(FLAGS):
 
     
     # SPLIT TRAIN/VALIDATION /(TEST)
-    val_size_int = int(np.floor(val_size*n_samples))
-    val_index = tf.random.stateless_uniform([val_size_int], seed=(1, 2), minval=0, maxval=len(all_index), dtype=tf.float32)
-    val_index = tf.cast(tf.floor(val_index), tf.int32).numpy()
-
-    train_index_temp =  np.setdiff1d(all_index, val_index)
-
+    val_index = np.random.choice(all_index, size=int(np.floor(val_size*n_samples)), replace=False)
+    train_index_temp =  np.setdiff1d(all_index, val_index) #np.delete(all_index, val_index-1)
     test_size_eff = FLAGS.test_size/(train_index_temp.shape[0]/n_samples)
-    test_size_int = int(np.floor(test_size_eff*train_index_temp.shape[0]))
-    test_index = tf.random.stateless_uniform([test_size_int], seed=(3, 4), minval=0, maxval=len(train_index_temp), dtype=tf.float32)
-    test_index = tf.cast(tf.floor(test_index), tf.int32).numpy()
-
+    test_index = np.random.choice(train_index_temp, size=int(np.floor(test_size_eff*train_index_temp.shape[0])), replace=False)
     train_index =  np.setdiff1d(train_index_temp, test_index)
 
     print('Check for no duplicates in test: (0=ok):')
