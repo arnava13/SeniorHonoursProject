@@ -20,33 +20,31 @@ import sys
 import time
 
 @tf.function
-def step_fn(x, y):
-    with tf.GradientTape() as tape:
-        tape.watch(model.trainable_variables)
-        for layer in model.layers:  # Supports frozen weights
-            x = layer(x, training=layer.trainable)
-        logits = x
-        if bayesian:
-            # Assuming model.losses are appropriately scaled
-            kl = sum(model.losses) / n_train_example
-            loss_value = loss(y, logits, kl, TPU=TPU, batch_size=batch_size)
-        else:
-            loss_value = loss(y, logits, TPU=TPU, batch_size=batch_size)
-
-    grads = tape.gradient(loss_value, model.trainable_weights)
-    optimizer.apply_gradients(zip(grads, model.trainable_weights))
-
-    # Compute accuracy
-    proba = tf.nn.softmax(logits)
-    prediction = tf.argmax(proba, axis=1)
-    train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
-
-    return loss_value
-
-@tf.function
 def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=False, n_train_example=60000, TPU=False, strategy=None, batch_size=2500):
     if TPU:
         with strategy.scope():
+            def step_fn(x, y):
+                with tf.GradientTape() as tape:
+                    tape.watch(model.trainable_variables)
+                    for layer in model.layers:  # Supports frozen weights
+                        x = layer(x, training=layer.trainable)
+                    logits = x
+                    if bayesian:
+                        # Assuming model.losses are appropriately scaled
+                        kl = sum(model.losses) / n_train_example
+                        loss_value = loss(y, logits, kl, TPU=TPU, batch_size=batch_size)
+                    else:
+                        loss_value = loss(y, logits, TPU=TPU, batch_size=batch_size)
+
+                grads = tape.gradient(loss_value, model.trainable_weights)
+                optimizer.apply_gradients(zip(grads, model.trainable_weights))
+
+                # Compute accuracy
+                proba = tf.nn.softmax(logits)
+                prediction = tf.argmax(proba, axis=1)
+                train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
+
+                return loss_value
             # Distribute the computation to the replicas
             per_replica_losses = strategy.run(step_fn, args=(x, y))
             # Reduce the loss across replicas for reporting or further use
