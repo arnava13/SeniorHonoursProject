@@ -637,12 +637,17 @@ def create_generators(FLAGS):
 
     
     # SPLIT TRAIN/VALIDATION /(TEST)
-    val_index = tf.random.stateless_uniform([int(np.floor(val_size*n_samples))], seed=(1, 2), minval=0, maxval=len(all_index), dtype=tf.int32)
-    val_index = val_index.numpy()
-    train_index_temp =  np.setdiff1d(all_index, val_index) #np.delete(all_index, val_index-1)
+    val_size_int = int(np.floor(val_size*n_samples))
+    val_index = tf.random.stateless_uniform([val_size_int], seed=(1, 2), minval=0, maxval=len(all_index), dtype=tf.float32)
+    val_index = tf.cast(tf.floor(val_index), tf.int32).numpy()
+
+    train_index_temp =  np.setdiff1d(all_index, val_index)
+
     test_size_eff = FLAGS.test_size/(train_index_temp.shape[0]/n_samples)
-    test_index = tf.random.stateless_uniform([int(np.floor(test_size_eff*train_index_temp.shape[0]))], seed=(3, 4), minval=0, maxval=len(train_index_temp), dtype=tf.int32)
-    test_index = test_index.numpy()
+    test_size_int = int(np.floor(test_size_eff*train_index_temp.shape[0]))
+    test_index = tf.random.stateless_uniform([test_size_int], seed=(3, 4), minval=0, maxval=len(train_index_temp), dtype=tf.float32)
+    test_index = tf.cast(tf.floor(test_index), tf.int32).numpy()
+
     train_index =  np.setdiff1d(train_index_temp, test_index)
 
     print('Check for no duplicates in test: (0=ok):')
