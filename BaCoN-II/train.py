@@ -581,6 +581,7 @@ def main():
                         bayesian=bayesian, 
                         n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
                             )
+        cpu_model.build(input_shape=input_shape)
     else:
         model=make_model(     model_name=model_name,
                          drop=drop, 
@@ -722,6 +723,7 @@ def main():
         if FLAGS.TPU:
             with strategy.scope():
                 model.build(input_shape=input_shape)
+            cpu_model.build(input_shape=input_shape)
         else:
             model.build(input_shape=input_shape)
         print(model.summary())
