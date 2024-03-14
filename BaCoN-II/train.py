@@ -143,11 +143,7 @@ def my_train(model, optimizer, loss,
       
       #optimizer.iterations # this is to fix bug in restoring optimizer. See https://gist.github.com/yoshihikoueno/4ff0694339f88d579bb3d9b07e609122
       print('Restoring ckpt...')
-      if TPU:
-            with strategy.scope():
-                ckpt.restore(manager.latest_checkpoint)
-      else:
-          ckpt.restore(manager.latest_checkpoint)
+      ckpt.restore(manager.latest_checkpoint)
       print('ckpt step: %s' %ckpt.step)
       hist_start=int(ckpt.step)
       print('Starting from history at step %s' %hist_start)
@@ -626,19 +622,11 @@ def main():
     else:
         ckpts_path=out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name_base_unfreezing+'/'
     ckpt_name = 'ckpt'
-    if FLAGS.TPU:
-        with strategy.scope():
-            ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
-    else:
-        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model) 
+    ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model) 
     
     if FLAGS.fine_tune:
         print('Loading ckpt from %s' %ckpts_path)
-        if FLAGS.TPU: 
-            with strategy.scope():
-                latest = tf.train.latest_checkpoint(ckpts_path)
-        else:
-            latest = tf.train.latest_checkpoint(ckpts_path)
+        latest = tf.train.latest_checkpoint(ckpts_path)
         print('Loading ckpt %s' %latest)
         if not FLAGS.test_mode:
             ckpts_path = out_path+'/tf_ckpts_fine_tuning'+add_ckpt_name+'/'
@@ -647,11 +635,7 @@ def main():
         ckpt_name = ckpt_name+'_fine_tuning'+add_ckpt_name
         if FLAGS.test_mode:
             ckpt_name+='_test'
-        if FLAGS.TPU:
-            with strategy.scope():
-                ckpt.restore(latest)
-        else:
-            ckpt.restore(latest)
+        ckpt.restore(latest)
         print('Last learning rate was %s' %ckpt.optimizer.learning_rate)
         ckpt.optimizer.learning_rate = FLAGS.lr
         print('Learning rate set to %s' %ckpt.optimizer.learning_rate)
@@ -703,12 +687,8 @@ def main():
         else:
             model.build(input_shape=input_shape)
         print(model.summary())
-    
-        if FLAGS.TPU:
-            with strategy.scope():
-                ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)     
-        else: 
-            ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
+        
+        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
     elif FLAGS.one_vs_all:
         if not FLAGS.test_mode:
             ckpts_path = out_path+'/tf_ckpts'+add_ckpt_name+'/'
