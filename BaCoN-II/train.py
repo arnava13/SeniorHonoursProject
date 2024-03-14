@@ -288,7 +288,7 @@ def main():
     parser.add_argument("--fine_tune", default=False, type=str2bool, required=False)
     parser.add_argument("--one_vs_all", default=False, type=str2bool, required=False)
     parser.add_argument("--c_0", nargs='+', default=['lcdm'], required=False)
-    parser.add_argument("--c_1", nargs='+', default=['fR', 'dgp', 'wcdm', 'rand'], required=False)
+    parser.add_argument("--c_1", nargs='+', default=['fR', 'dgp', 'wcdm', 'rand', 'ds'], required=False)
     parser.add_argument("--dataset_balanced", default=False, type=str2bool, required=False)
     parser.add_argument("--include_last", default=False, type=str2bool, required=False)
     
