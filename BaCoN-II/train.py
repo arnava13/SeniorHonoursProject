@@ -19,37 +19,36 @@ from utils import DummyHist, plot_hist, str2bool, Logger, get_flags
 import sys
 import time
 
+@tf.function
+def step_fn(x, y, optimizer, model, batch_size, n_train_example, loss, TPU, train_acc_metric):
+    with tf.GradientTape() as tape:
+        tape.watch(model.trainable_variables)
+        for layer in model.layers:  # Supports frozen weights
+            x = layer(x, training=layer.trainable)
+        logits = x
+        if bayesian:
+            # Assuming model.losses are appropriately scaled
+            kl = sum(model.losses) / n_train_example
+            loss_value = loss(y, logits, kl, TPU=TPU, batch_size=batch_size)
+        else:
+            loss_value = loss(y, logits, TPU=TPU, batch_size=batch_size)
 
+    grads = tape.gradient(loss_value, model.trainable_weights)
+    optimizer.apply_gradients(zip(grads, model.trainable_weights))
+
+    # Compute accuracy
+    proba = tf.nn.softmax(logits)
+    prediction = tf.argmax(proba, axis=1)
+    train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
+
+    return loss_value
 
 @tf.function
 def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=False, n_train_example=60000, TPU=False, strategy=None, batch_size=2500):
     if TPU:
         with strategy.scope():
-            def step_fn(x, y):
-                with tf.GradientTape() as tape:
-                    tape.watch(model.trainable_variables)
-                    for layer in model.layers:  # Supports frozen weights
-                        x = layer(x, training=layer.trainable)
-                    logits = x
-                    if bayesian:
-                        # Assuming model.losses are appropriately scaled
-                        kl = sum(model.losses) / n_train_example
-                        loss_value = loss(y, logits, kl, TPU=TPU, strategy=strategy, batch_size=batch_size)
-                    else:
-                        loss_value = loss(y, logits, TPU=TPU, strategy=strategy, batch_size=batch_size)
-
-                grads = tape.gradient(loss_value, model.trainable_weights)
-                optimizer.apply_gradients(zip(grads, model.trainable_weights))
-                
-                # Compute accuracy
-                proba = tf.nn.softmax(logits)
-                prediction = tf.argmax(proba, axis=1)
-                train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
-
-                return loss_value
-
             # Distribute the computation to the replicas
-            per_replica_losses = strategy.run(step_fn, args=(x, y))
+            per_replica_losses = strategy.run(step_fn, args=(x, y, optimizer, model, batch_size, n_train_example, loss, TPU, train_acc_metric))
             # Reduce the loss across replicas for reporting or further use
             loss_value = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
     else:
@@ -60,9 +59,9 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
             logits=x
             if bayesian:
                 kl = sum(model.losses)/n_train_example
-                loss_value = loss(y, logits, kl, TPU=TPU, strategy=strategy, batch_size = batch_size)
+                loss_value = loss(y, logits, kl, TPU=TPU, batch_size = batch_size)
             else:
-                loss_value = loss(y, logits, TPU=TPU, strategy=strategy, batch_size = batch_size)
+                loss_value = loss(y, logits, TPU=TPU, batch_size = batch_size)
         grads = tape.gradient(loss_value, model.trainable_weights)
         optimizer.apply_gradients(zip(grads, model.trainable_weights))
         proba = tf.nn.softmax(logits)
@@ -72,27 +71,34 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
 
 @tf.function
 def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10000, TPU=False, strategy=None, batch_size=2500):
-    val_logits = model(x, training=False)
-    if bayesian:
-       val_kl = sum(model.losses)/n_val_example
-       val_loss_value = loss(y, val_logits, val_kl, TPU=TPU, strategy=strategy, batch_size = batch_size)
-    else:
-         val_loss_value = loss(y, val_logits, TPU=TPU, strategy=strategy, batch_size = batch_size)
-    val_proba = tf.nn.softmax(val_logits)
-    val_prediction = tf.argmax(val_proba, axis=1)
     if TPU:
         with strategy.scope():
+            val_logits = model(x, training=False)
+            if bayesian:
+                val_kl = sum(model.losses)/n_val_example
+                val_loss_value = loss(y, val_logits, val_kl, TPU=TPU, batch_size = batch_size)
+            else:
+                val_loss_value = loss(y, val_logits, TPU=TPU, batch_size = batch_size)
+            val_proba = tf.nn.softmax(val_logits)
+            val_prediction = tf.argmax(val_proba, axis=1)
             val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
     else:
         val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
+        val_logits = model(x, training=False)
+        if bayesian:
+            val_kl = sum(model.losses)/n_val_example
+            val_loss_value = loss(y, val_logits, val_kl, TPU=TPU, strategy=strategy, batch_size = batch_size)
+        else:
+            val_loss_value = loss(y, val_logits, TPU=TPU, strategy=strategy, batch_size = batch_size)
+        val_proba = tf.nn.softmax(val_logits)
+        val_prediction = tf.argmax(val_proba, axis=1)
     return val_loss_value
 
 
 @tf.function
-def my_loss(y, logits, TPU=False, strategy=None, batch_size=None):
+def my_loss(y, logits, TPU=False, batch_size=None):
     if TPU:
-        with strategy.scope():
-            loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
+        loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
     else:
         loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
     loss_per_example = loss_f(y, logits)
@@ -107,8 +113,8 @@ def my_loss(y, logits, TPU=False, strategy=None, batch_size=None):
 
 
 @tf.function
-def ELBO(y, logits, kl, TPU=False, strategy=None, batch_size=None):
-    neg_log_likelihood = my_loss(y, logits, TPU=TPU, strategy=strategy, batch_size=batch_size)
+def ELBO(y, logits, kl, TPU=False, batch_size=None):
+    neg_log_likelihood = my_loss(y, logits, TPU=TPU, batch_size=batch_size)
     elbo_loss = neg_log_likelihood + kl
     if TPU:
         elbo_loss = tf.nn.compute_average_loss(elbo_loss, global_batch_size=batch_size)
@@ -285,9 +291,9 @@ def compute_loss(generator, model, bayesian=False, TPU=False, strategy=None):
     logits = model(x_batch_train, training=False)
     if bayesian:
             kl = sum(model.losses)/generator.batch_size/generator.n_batches
-            loss_0 = ELBO(y_batch_train, logits, kl, TPU=TPU, strategy=strategy, batch_size=generator.batch_size)
+            loss_0 = ELBO(y_batch_train, logits, kl, TPU=TPU, batch_size=generator.batch_size)
     else:
-            loss_0 = my_loss(y_batch_train, logits, TPU=TPU, strategy=strategy, batch_size=generator.batch_size)
+            loss_0 = my_loss(y_batch_train, logits, TPU=TPU, batch_size=generator.batch_size)
     return loss_0
 
 
@@ -608,7 +614,11 @@ def main():
     print(model.summary())
     
     if FLAGS.fine_tune:
-        loss_0 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
+        if FLAGS.TPU:
+            with strategy.scope():
+                loss_0 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
+        else:
+            loss_0 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
         print('Loss before loading weights/ %s\n' %loss_0.numpy())
     
     if FLAGS.decay is not None:
@@ -669,7 +679,11 @@ def main():
         ckpt.optimizer.learning_rate = FLAGS.lr
         print('Learning rate set to %s' %ckpt.optimizer.learning_rate)
         
-        loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
+        if FLAGS.TPU:
+            with strategy.scope():
+                loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
+        else:
+            loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
 
         print('Loss after loading weights/ %s\n' %loss_1.numpy())
         if FLAGS.add_FT_dense:
