@@ -490,7 +490,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             X = (X - mu_batch) / std_batch
         elif self.normalization == 'stdcosmo':
             if self.swap_axes:
-                gatherednorm = tf.gather(self.norm_data, z_bins_tensor, axis=1)
+                gatherednorm = tf.gather(self.norm_data, self.z_bins, axis=1)
                 expandednorm = tf.expand_dims(gatherednorm, axis=0)
                 expandednorm = tf.expand_dims(expandednorm, axis=2)
                 X = X / expandednorm - 1
