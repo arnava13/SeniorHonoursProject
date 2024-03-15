@@ -871,7 +871,7 @@ def create_generators(FLAGS, strategy = None):
 
 
 
-def create_test_generator(FLAGS, strategy = None):
+def create_test_generator(FLAGS):
     
     if FLAGS.my_path is not None:
         print('Changing directory to %s' %FLAGS.my_path)
