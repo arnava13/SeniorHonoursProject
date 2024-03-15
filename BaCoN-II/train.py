@@ -738,8 +738,8 @@ def main():
     
     
     #print('Model n_classes : %s ' %n_classes)
-    print('Features shape:', training_generator.xshape.numpy())
-    print('Labels shape:', training_generator.yshap.numpy())
+    print('Features shape:', training_generator.xshape
+    print('Labels shape:', training_generator.yshape
    
     model, history = my_train(model, optimizer, loss,
                 FLAGS.n_epochs, 
