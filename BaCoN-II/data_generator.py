@@ -671,6 +671,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     dataset = dataset.shuffle(buffer_size=len(list_IDs))   
                 dataset = dataset.batch(self.batch_size)
                 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+                dataset = self.strategy.experimental_distribute_dataset(dataset)
         else:
             dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
             if self.shuffle:
@@ -679,19 +680,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     
         return dataset
-    
-    def __iter__(self):
-        # Create a fresh iterator at the start of each epoch
-        self.iterator = iter(self.dataset)
-        return self
 
-    def __next__(self):
-        try:
-            return next(self.iterator)
-        except StopIteration:
-            # Reset iterator for the next epoch
-            self.iterator = iter(self.dataset)
-            raise StopIteration
 
 def read_partition(FLAGS):
     out_path = FLAGS.models_dir+FLAGS.fname
