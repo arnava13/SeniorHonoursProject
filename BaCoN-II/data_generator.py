@@ -664,20 +664,17 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         # Generate data
         self.i_ind=0
         dataset = dataset.map(lambda ID, fname: wrap_func(ID, fname), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        if self.shuffle:
+            dataset = dataset.shuffle(buffer_size=len(list_IDs))
+
+        dataset = dataset.batch(self.batch_size)
+        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+
+        # Distribute the dataset within the strategy scope
         if self.TPU:
             with self.strategy.scope():
-                dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-                if self.shuffle:
-                    dataset = dataset.shuffle(buffer_size=len(list_IDs))   
-                dataset = dataset.batch(self.batch_size)
-                dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
                 dataset = self.strategy.experimental_distribute_dataset(dataset)
-        else:
-            dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-            if self.shuffle:
-                dataset = dataset.shuffle(buffer_size=len(list_IDs))   
-            dataset = dataset.batch(self.batch_size)
-            dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     
         return dataset
 
