@@ -125,8 +125,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             if self.z_bins.shape[0]!=self.n_channels:
                 raise ValueError('Number of z bins does not match n_channels.')
         
-        self.z_bins = tf.convert_to_tensor(self.z_bins, dtype=tf.int32)
-        
         self.data_root=data_root
         self.norm_data_path = self.data_root+norm_data_name
         print('Normalisation file is %s' %norm_data_name)
@@ -435,6 +433,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                     print('Final dimension of data: %s' %str(expanded.shape))
                     print('expanded first 10:') 
                     print(expanded[10])
+                    expanded = expanded[:,:,0,:]
                 # now shape of expanded is (1, n_data_points, 1, n_channels=3)
             X = expanded  
 
@@ -470,7 +469,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             X_save = np.empty((self.batch_size*self.n_batches+1, len(k)+1))
             X_save[1:,0] = y  
             X_save[0,1:] = self.k_range
-            for i_z in self.z_bins.numpy():
+            for i_z in self.z_bins:
                 X_save[1:,1:] = X[:,:,0,i_z]
                 spectra_file = os.path.join(name_spectra_folder, 'processed_spectra_zbin{}.txt'.format(i_z))
                 if not os.path.exists(spectra_file):
@@ -532,6 +531,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             print(fname_list)
             
         print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size, self.n_noisy_samples))
+        assert len(fname_list)==self.batch_size*self.n_batches//(self.n_noisy_samples)
 
         fname_list = np.array(fname_list)
         ID_list = np.array(ID_list, dtype=int)
