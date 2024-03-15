@@ -339,6 +339,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         return((len(self.list_IDs), self.dim[0]/self.sample_pace, self.dim[1] ))
 
     def process_file(self, ID, fname):
+        fname = fname.numpy().decode('utf-8')
         if self.Verbose:
                     print('Loading file %s' %fname)
         loaded_all = np.loadtxt(fname)
