@@ -178,7 +178,7 @@ def my_train(model, optimizer, loss,
     start_time = time.time()
 
     for batch_ID, batch in enumerate(train_generator):
-        batch_indexes, x_batch_train, y_batch_train = batch #train_generator[batch_idx]
+        batch_indexes, x_batch_train, y_batch_train = batch #train_generator[batch_ID]
         if save_indexes:
             train_generator.write_indexes(batch_ID, batch_indexes)
         loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy, batch_size=train_generator.batch_size)
@@ -732,8 +732,11 @@ def main():
     
     
     #print('Model n_classes : %s ' %n_classes)
-    print('Features shape: %s' %str(training_generator[0][0].shape))
-    print('Labels shape: %s' %str(training_generator[0][1].shape))     
+    for batch_ids, x_batch_train, y_batch_train in training_generator.take(1):
+        print('Features shape:', x_batch_train.shape)
+        print('Labels shape:', y_batch_train.shape)
+        break
+   
     model, history = my_train(model, optimizer, loss,
                 FLAGS.n_epochs, 
                 training_generator, 
