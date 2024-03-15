@@ -591,6 +591,10 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         self.i_ind += 1
 
+        ID = tf.convert_to_tensor(ID, dtype=tf.int32)
+        X = tf.convert_to_tensor(X, dtype=tf.float32)
+        y = tf.convert_to_tensor(y, dtype=tf.int32)
+
         return ID, X, y
 
     def normalize_and_onehot(self, ID, X, y):
@@ -616,6 +620,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.i_ind == 0:
             self.xshape = X.shape
             self.yshape = y.shape
+        X = tf.cast(X, dtype=tf.float32)
+        y = tf.cast(y, dtype=tf.int32)
+        ID = tf.cast(ID, dtype=tf.int32)
         return ID, X, y
     
     def write_indexes(self, batch_ID, indices):
