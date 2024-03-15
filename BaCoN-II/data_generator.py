@@ -691,10 +691,17 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             raise StopIteration
     
     def get_shapes(self):
-        for batch_ids, x_batch_train, y_batch_train in self.dataset.take(1):
-            print('Features shape:', x_batch_train.shape)
-            print('Labels shape:', y_batch_train.shape)
-            break
+        if self.TPU:
+            with self.strategy.scope():
+                for batch_ids, x_batch_train, y_batch_train in self.dataset.take(1):
+                    print('Features shape:', x_batch_train.shape)
+                    print('Labels shape:', y_batch_train.shape)
+                    break
+        else:
+            for batch_ids, x_batch_train, y_batch_train in self.dataset.take(1):
+                print('Features shape:', x_batch_train.shape)
+                print('Labels shape:', y_batch_train.shape)
+                break
 
 
 def read_partition(FLAGS):
