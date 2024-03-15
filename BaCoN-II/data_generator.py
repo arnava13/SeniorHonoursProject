@@ -611,6 +611,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     tf.print('axes not swapped')
                     tf.print('Dimension of NORM data:', tf.shape(self.norm_data[None, :, :, None]))
         y = tf.one_hot(y, depth=self.n_classes_out)
+        if self.i_ind == 0:
+            self.xshape = X.shape
+            self.yshape = y.shape
         return ID, X, y
     
     def write_indexes(self, batch_ID, indices):
@@ -689,20 +692,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             # Reset iterator for the next epoch
             self.iterator = iter(self.dataset)
             raise StopIteration
-    
-    def get_shapes(self):
-        if self.TPU:
-            with self.strategy.scope():
-                for batch_ids, x_batch_train, y_batch_train in self.dataset.take(1):
-                    print('Features shape:', x_batch_train.shape)
-                    print('Labels shape:', y_batch_train.shape)
-                    break
-        else:
-            for batch_ids, x_batch_train, y_batch_train in self.dataset.take(1):
-                print('Features shape:', x_batch_train.shape)
-                print('Labels shape:', y_batch_train.shape)
-                break
-
 
 def read_partition(FLAGS):
     out_path = FLAGS.models_dir+FLAGS.fname
