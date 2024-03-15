@@ -20,7 +20,9 @@ import sys
 import time
 
 @tf.function
-def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=False, n_train_example=60000, TPU=False, strategy=None, batch_size=2500):
+def train_on_batch(train_generator, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian=False, n_train_example=60000, TPU=False, strategy=None, batch_size=2500, save_indexes=False):
+    dataset = train_generator.dataset
+    IDs, x, y = next(iter(dataset))
     if TPU:
         with strategy.scope():
             def step_fn(x, y):
@@ -35,6 +37,7 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
                         loss_value = loss(y, logits, kl, TPU=TPU, batch_size=batch_size)
                     else:
                         loss_value = loss(y, logits, TPU=TPU, batch_size=batch_size)
+                    train_acc_metric.update_state(y, logits)
 
                 grads = tape.gradient(loss_value, model.trainable_weights)
                 optimizer.apply_gradients(zip(grads, model.trainable_weights))
@@ -44,7 +47,6 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
                 prediction = tf.argmax(proba, axis=1)
                 train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
 
-                return loss_value
             # Distribute the computation to the replicas
             per_replica_losses = strategy.run(step_fn, args=(x, y))
             # Reduce the loss across replicas for reporting or further use
@@ -60,15 +62,20 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
                 loss_value = loss(y, logits, kl, TPU=TPU, batch_size = batch_size)
             else:
                 loss_value = loss(y, logits, TPU=TPU, batch_size = batch_size)
+            train_acc_metric.update_state(y, logits)
         grads = tape.gradient(loss_value, model.trainable_weights)
         optimizer.apply_gradients(zip(grads, model.trainable_weights))
         proba = tf.nn.softmax(logits)
         prediction = tf.argmax(proba, axis=1)
         train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
-    return loss_value
+    if save_indexes:
+        train_generator.write_indexes(epoch, IDs)
+    train_loss_metric.update_state(loss)
 
 @tf.function
-def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10000, TPU=False, strategy=None, batch_size=2500):
+def val_step(val_generator, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian=False, n_val_example=10000, TPU=False, strategy=None, batch_size=2500, save_indexes=False):
+    dataset = val_generator.dataset
+    IDs, x, y = next(iter(dataset))
     if TPU:
         with strategy.scope():
             val_logits = model(x, training=False)
@@ -90,7 +97,10 @@ def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10
             val_loss_value = loss(y, val_logits, TPU=TPU, strategy=strategy, batch_size = batch_size)
         val_proba = tf.nn.softmax(val_logits)
         val_prediction = tf.argmax(val_proba, axis=1)
-    return val_loss_value
+    if save_indexes:
+        val_generator.write_indexes(epoch, IDs)
+    val_loss_metric.update_state(val_loss_value)
+    val_acc_metric.update_state(y, val_logits)
 
 
 @tf.function
@@ -119,8 +129,8 @@ def ELBO(y, logits, kl, TPU=False, batch_size=None):
 def my_train(model, optimizer, loss,
              epochs, 
              train_generator, 
-             val_generator, manager, ckpt,            
-             train_acc_metric, val_acc_metric, TPU=False, strategy=None,
+             val_generator, manager, ckpt, train_loss_metric,            
+             train_acc_metric, val_loss_metric, val_acc_metric, TPU=False, strategy=None,
              restore=False, patience=100,
              bayesian=False, save_ckpt=False, decayed_lr_value=None, save_indexes = False
               ):
@@ -173,27 +183,20 @@ def my_train(model, optimizer, loss,
   n_val_example=val_generator.batch_size*val_generator.n_batches
   n_train_example=train_generator.batch_size*train_generator.n_batches
   count = 0
+  batchstep = 0
   for epoch in range(epochs):
     print("Epoch %d" % (epoch,))
     start_time = time.time()
+    train_loss_metric.reset_states()
+    train_acc_metric.reset_states()
+    val_loss_metric.reset_states()
+    val_acc_metric.reset_states()
+    train_on_batch(train_generator, epoch, model, optimizer, loss, train_acc_metric, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy, batch_size=train_generator.batch_size, save_indexes=save_indexes)
+    val_step(val_generator, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy, batch_size=val_generator.batch_size, save_indexes = save_indexes)/ float(val_generator.n_batches)
+    
+    val_loss_value = val_loss_metric.result()
+    loss_value = train_loss_metric.result()
 
-    for batch_ID, batch in enumerate(train_generator):
-        batch_indexes, x_batch_train, y_batch_train = batch #train_generator[batch_ID]
-        if save_indexes:
-            train_generator.write_indexes(batch_ID, batch_indexes)
-        loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy, batch_size=train_generator.batch_size)
- 
-    
-    # Run  validation loop
-    val_loss_value = 0.
-    for batch_ID, batch in enumerate(val_generator):      
-        batch_indexes, x_batch_val, y_batch_val = batch #val_generator[val_batch_idx]
-        if save_indexes:
-            val_generator.write_indexes(batch_ID, batch_indexes)
-        lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy, batch_size=val_generator.batch_size)/ float(val_generator.n_batches)
-        val_loss_value += lv
-            
-    
     if val_loss_value.numpy()<best_loss: #int(ckpt.step) % 10 == 0:
         if save_ckpt and not TPU:
             save_path = manager.save()
