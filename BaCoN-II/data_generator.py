@@ -52,7 +52,7 @@ def generate_noise(k, P,
     return sigma_noise
 
 
-class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variable to 'params' further down
+class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
     def __init__(self, list_IDs, labels, labels_dict, batch_size=32, 
                 data_root = 'data/', dim=(500, 4), n_channels=1,
                 shuffle=True, normalization='stdcosmo',
@@ -115,7 +115,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         else:
           self.dim = (int(dim[0]/sample_pace), dim[1]) 
         self.n_channels = n_channels
-        self.z_bins=np.asarray(z_bins, dtype=int)
+        self.z_bins=tf.constant(z_bins, dtype=tf.int32)
         
         print('Using z bins %s' %z_bins)
         if not self.swap_axes:
@@ -365,10 +365,11 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                     print('Noise realization %s' %i_noise)
                 # add noise if selected
                 if self.add_cosvar:
-                    noise_scale = generate_noise(k, self.norm_data[:, self.z_bins], sys_scaled=self.sys_scaled,
+                    noise_scale = generate_noise(k, tf.gather(self.norm_data, self.z_bins, axis=1), sys_scaled=self.sys_scaled,
                                                     sys_factor=self.sys_factor,sys_max=self.sys_max,
                                                     add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
-                    noise_cosvar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
+                    noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
+                    P_noisy = P_noisy + noise_cosVar
 
                 if self.add_sys:
                     curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
@@ -393,7 +394,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                 # rescale noise_sys curves according to error (10% default from production curves), 
                 # rescale by Gaussian with sigma = 1
                 # multiply with normalisation spectrum
-                noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * self.norm_data[:,self.z_bins]
+                noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * tf.gather(self.norm_data, self.z_bins, axis=1)
+
 
                 if self.rescale_curves == 'uniform':
                     noise_sys = noise_sys * self.rng.uniform(shape=noise_sys.shape, minval=0, maxval=1, dtype=tf.float32)
@@ -404,7 +406,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
 
 
                 if self.add_shot:
-                    noise_scale = generate_noise(k,self.norm_data[: , self.z_bins],sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
+                    noise_scale = generate_noise(k,tf.gather(self.norm_data, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
                     noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
                     P_noisy = P_noisy + noise_shot
 
@@ -428,7 +430,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                 expanded = tf.transpose(expanded, perm=[0, 2, 1])
                 if self.Verbose:
                     print('New dimension of data: %s' %str(expanded.shape))
-                expanded = expanded[:,:,self.z_bins]
+                expanded = tf.gather(self.norm_data, self.z_bins, axis=-1)
                 if self.Verbose:
                     print('Final dimension of data: %s' %str(expanded.shape))
                     print('expanded first 10:') 
@@ -488,10 +490,13 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
             X = (X - mu_batch) / std_batch
         elif self.normalization == 'stdcosmo':
             if self.swap_axes:
-                X = X / self.norm_data[None, :, None, self.z_bins] - 1
+                gatherednorm = tf.gather(self.norm_data, z_bins_tensor, axis=1)
+                expandednorm = tf.expand_dims(gatherednorm, axis=0)
+                expandednorm = tf.expand_dims(expandednorm, axis=2)
+                X = X / expandednorm - 1
                 if self.Verbose:
                     tf.print('axes swapped')
-                    tf.print('NORM first 10:', self.norm_data[None, :, None, self.z_bins][:10])
+                    tf.print('NORM first 10:', expandednorm.numpy()[:10])
             else:
                 X = X / self.norm_data[None, :, :, None] - 1
                 if self.Verbose:
