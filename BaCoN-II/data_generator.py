@@ -76,7 +76,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 c_0=None, c_1=None, group_lab_dict=None,
                 z_bins=[0, 1, 2, 3], swap_axes=False,
                 dataset_balanced=False, test_mode=False, one_vs_all=False,
-                seed=1234, TPU=False
+                seed=1234, TPU=False, strategy = None
                 ):
       
         print('Data Generator Initialization')
@@ -104,6 +104,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.seed = seed
         self.rng = tf.random.Generator.from_seed(self.seed)
         self.swap_axes = swap_axes 
+
+        self.TPU=TPU
+        self.strategy = strategy
         
         self.k_max=k_max
         self.k_min=k_min
@@ -341,128 +344,231 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         loaded_all = np.loadtxt(fname)
         P_original = tf.convert_to_tensor(loaded_all[:, 1:], dtype=tf.float32)
         k = tf.convert_to_tensor(loaded_all[:, 0], dtype=tf.float32)
+        if self.TPU: 
+            with self.strategy.scope():
+                if self.sample_pace != 1:
+                    P_original = P_original[::self.sample_pace]
+                    k = k[::self.sample_pace]
+                    
+                P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
+                self.k_range = k
 
-        if self.sample_pace != 1:
-            P_original = P_original[::self.sample_pace]
-            k = k[::self.sample_pace]
-            
-        P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
-        self.k_range = k
-
-        if self.Verbose:
-            print('Dimension of original data: %s' %str(P_original.shape))
-        
-        if self.Verbose:
-            print('dimension P_original: %s' %str(P_original.shape))    
-            print('P_original first 10:') 
-            print(P_original[10])
-
-        # Add noise
-        for i_noise in range(self.n_noisy_samples):
-            if self.add_noise:
-                P_noisy = P_original
                 if self.Verbose:
-                    print('Noise realization %s' %i_noise)
-                # add noise if selected
-                if self.add_cosvar:
-                    noise_scale = generate_noise(k, tf.gather(self.norm_data, self.z_bins, axis=1), sys_scaled=self.sys_scaled,
-                                                    sys_factor=self.sys_factor,sys_max=self.sys_max,
-                                                    add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
-                    noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
-                    P_noisy = P_noisy + noise_cosVar
-
-                if self.add_sys:
-                    curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-
-                curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
-                curves_loaded = np.loadtxt(curve_file)
-               
-                noise_sys = tf.convert_to_tensor(curves_loaded[:, 1:], dtype=tf.float32)
-                k_sys = tf.convert_to_tensor(curves_loaded[:, 0], dtype=tf.float32)
-
-                shape_match = tf.reduce_all(tf.equal(tf.shape(k), tf.shape(k_sys)))
-                match = tf.cond(shape_match, lambda: tf.reduce_all(tf.equal(k, k_sys)), lambda: tf.constant(False))
-            
-                if not match:
-                    print('ERROR: k-values in spectrum and theory-error curve file not identical')
-
-                if self.sample_pace!=1:
-                    noise_sys = noise_sys[0::self.sample_pace, :]
-                    k_sys = k_sys[0::self.sample_pace]
-                noise_sys, k_sys = noise_sys[self.i_min:self.i_max], k_sys[self.i_min:self.i_max]
-
-                # rescale noise_sys curves according to error (10% default from production curves), 
-                # rescale by Gaussian with sigma = 1
-                # multiply with normalisation spectrum
-                noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * tf.gather(self.norm_data, self.z_bins, axis=1)
-
-
-                if self.rescale_curves == 'uniform':
-                    noise_sys = noise_sys * self.rng.uniform(shape=noise_sys.shape, minval=0, maxval=1, dtype=tf.float32)
-                if self.rescale_curves == 'gaussian':
-                    noise_sys = noise_sys * self.rng.normal(shape=noise_sys.shape, mean=0, stddev=1, dtype=tf.float32)
-
-                P_noisy = P_noisy + noise_sys
-
-
-                if self.add_shot:
-                    noise_scale = generate_noise(k,tf.gather(self.norm_data, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
-                    noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
-                    P_noisy = P_noisy + noise_shot
-
-
-                expanded = tf.expand_dims(P_noisy, axis=2)
-
-
-            else:
+                    print('Dimension of original data: %s' %str(P_original.shape))
+                
                 if self.Verbose:
-                    print('No noise')
-                expanded = tf.expand_dims(P_original, axis=2)
+                    print('dimension P_original: %s' %str(P_original.shape))    
+                    print('P_original first 10:') 
+                    print(P_original[10])
 
-            # Store sample
+                # Add noise
+                for i_noise in range(self.n_noisy_samples):
+                    if self.add_noise:
+                        P_noisy = P_original
+                        if self.Verbose:
+                            print('Noise realization %s' %i_noise)
+                        # add noise if selected
+                        if self.add_cosvar:
+                            noise_scale = generate_noise(k, tf.gather(self.norm_data, self.z_bins, axis=1), sys_scaled=self.sys_scaled,
+                                                            sys_factor=self.sys_factor,sys_max=self.sys_max,
+                                                            add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
+                            noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
+                            P_noisy = P_noisy + noise_cosVar
+
+                        if self.add_sys:
+                            curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
+
+                        curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
+                        curves_loaded = np.loadtxt(curve_file)
+                    
+                        noise_sys = tf.convert_to_tensor(curves_loaded[:, 1:], dtype=tf.float32)
+                        k_sys = tf.convert_to_tensor(curves_loaded[:, 0], dtype=tf.float32)
+
+                        shape_match = tf.reduce_all(tf.equal(tf.shape(k), tf.shape(k_sys)))
+                        match = tf.cond(shape_match, lambda: tf.reduce_all(tf.equal(k, k_sys)), lambda: tf.constant(False))
+                    
+                        if not match:
+                            print('ERROR: k-values in spectrum and theory-error curve file not identical')
+
+                        if self.sample_pace!=1:
+                            noise_sys = noise_sys[0::self.sample_pace, :]
+                            k_sys = k_sys[0::self.sample_pace]
+                        noise_sys, k_sys = noise_sys[self.i_min:self.i_max], k_sys[self.i_min:self.i_max]
+
+                        # rescale noise_sys curves according to error (10% default from production curves), 
+                        # rescale by Gaussian with sigma = 1
+                        # multiply with normalisation spectrum
+                        noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * tf.gather(self.norm_data, self.z_bins, axis=1)
+
+
+                        if self.rescale_curves == 'uniform':
+                            noise_sys = noise_sys * self.rng.uniform(shape=noise_sys.shape, minval=0, maxval=1, dtype=tf.float32)
+                        if self.rescale_curves == 'gaussian':
+                            noise_sys = noise_sys * self.rng.normal(shape=noise_sys.shape, mean=0, stddev=1, dtype=tf.float32)
+
+                        P_noisy = P_noisy + noise_sys
+
+
+                        if self.add_shot:
+                            noise_scale = generate_noise(k,tf.gather(self.norm_data, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
+                            noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
+                            P_noisy = P_noisy + noise_shot
+
+
+                        expanded = tf.expand_dims(P_noisy, axis=2)
+
+
+                    else:
+                        if self.Verbose:
+                            print('No noise')
+                        expanded = tf.expand_dims(P_original, axis=2)
+
+                    # Store sample
+                    if self.Verbose:
+                        print('Storing at position %s in the data' %self.i_ind)
+                        print('Dimension of data: %s' %str(expanded.shape))
+                    # swap axis if using one dim array in multiple channels 
+                    if self.swap_axes:
+                        if self.Verbose:
+                            print('Reshaping')
+                        expanded = tf.transpose(expanded, perm=[0, 2, 1])
+                        if self.Verbose:
+                            print('New dimension of data: %s' %str(expanded.shape))
+                        expanded = tf.gather(self.norm_data, self.z_bins, axis=-1)
+                        if self.Verbose:
+                            print('Final dimension of data: %s' %str(expanded.shape))
+                            print('expanded first 10:') 
+                            print(expanded[10])
+                            expanded = expanded[:,:,0,:]
+                        # now shape of expanded is (1, n_data_points, 1, n_channels=3)
+                    X = expanded  
+
+                    if self.Verbose:
+                        print('dimension of X: %s' %str(X.shape))
+                        print('X first 10:') 
+                        print(X[10])
+        else:
+            if self.sample_pace != 1:
+                P_original = P_original[::self.sample_pace]
+                k = k[::self.sample_pace]
+                
+            P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
+            self.k_range = k
+
             if self.Verbose:
-                print('Storing at position %s in the data' %self.i_ind)
-                print('Dimension of data: %s' %str(expanded.shape))
-            # swap axis if using one dim array in multiple channels 
-            if self.swap_axes:
-                if self.Verbose:
-                    print('Reshaping')
-                expanded = tf.transpose(expanded, perm=[0, 2, 1])
-                if self.Verbose:
-                    print('New dimension of data: %s' %str(expanded.shape))
-                expanded = tf.gather(self.norm_data, self.z_bins, axis=-1)
-                if self.Verbose:
-                    print('Final dimension of data: %s' %str(expanded.shape))
-                    print('expanded first 10:') 
-                    print(expanded[10])
-                    expanded = expanded[:,:,0,:]
-                # now shape of expanded is (1, n_data_points, 1, n_channels=3)
-            X = expanded  
-
-            if self.Verbose:
-                print('dimension of X: %s' %str(X.shape))
-                print('X first 10:') 
-                print(X[10])
-                            
-            # Store class   
-            label = fname.split('/')[-2]
+                print('Dimension of original data: %s' %str(P_original.shape))
             
-            if not self.base_case_dataset:
-                label = self.group_lab_dict[label]
-                encoding = self.labels_dict[label]
-            elif (self.fine_tune and not self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and not self.dataset_balanced):
-                label = self.group_lab_dict[label]
-                encoding = self.labels_dict[label]
-            else:
-                # regular 5 labels case
-                encoding = self.labels_dict[label]
             if self.Verbose:
-                print('Label for this example: %s' %label)
-                print('Encoding: %s' % encoding)
-            
-            y = encoding
+                print('dimension P_original: %s' %str(P_original.shape))    
+                print('P_original first 10:') 
+                print(P_original[10])
 
-        if self.save_processed_spectra:
+            # Add noise
+            for i_noise in range(self.n_noisy_samples):
+                if self.add_noise:
+                    P_noisy = P_original
+                    if self.Verbose:
+                        print('Noise realization %s' %i_noise)
+                    # add noise if selected
+                    if self.add_cosvar:
+                        noise_scale = generate_noise(k, tf.gather(self.norm_data, self.z_bins, axis=1), sys_scaled=self.sys_scaled,
+                                                        sys_factor=self.sys_factor,sys_max=self.sys_max,
+                                                        add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
+                        noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
+                        P_noisy = P_noisy + noise_cosVar
+
+                    if self.add_sys:
+                        curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
+
+                    curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
+                    curves_loaded = np.loadtxt(curve_file)
+                
+                    noise_sys = tf.convert_to_tensor(curves_loaded[:, 1:], dtype=tf.float32)
+                    k_sys = tf.convert_to_tensor(curves_loaded[:, 0], dtype=tf.float32)
+
+                    shape_match = tf.reduce_all(tf.equal(tf.shape(k), tf.shape(k_sys)))
+                    match = tf.cond(shape_match, lambda: tf.reduce_all(tf.equal(k, k_sys)), lambda: tf.constant(False))
+                
+                    if not match:
+                        print('ERROR: k-values in spectrum and theory-error curve file not identical')
+
+                    if self.sample_pace!=1:
+                        noise_sys = noise_sys[0::self.sample_pace, :]
+                        k_sys = k_sys[0::self.sample_pace]
+                    noise_sys, k_sys = noise_sys[self.i_min:self.i_max], k_sys[self.i_min:self.i_max]
+
+                    # rescale noise_sys curves according to error (10% default from production curves), 
+                    # rescale by Gaussian with sigma = 1
+                    # multiply with normalisation spectrum
+                    noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * tf.gather(self.norm_data, self.z_bins, axis=1)
+
+
+                    if self.rescale_curves == 'uniform':
+                        noise_sys = noise_sys * self.rng.uniform(shape=noise_sys.shape, minval=0, maxval=1, dtype=tf.float32)
+                    if self.rescale_curves == 'gaussian':
+                        noise_sys = noise_sys * self.rng.normal(shape=noise_sys.shape, mean=0, stddev=1, dtype=tf.float32)
+
+                    P_noisy = P_noisy + noise_sys
+
+
+                    if self.add_shot:
+                        noise_scale = generate_noise(k,tf.gather(self.norm_data, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
+                        noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
+                        P_noisy = P_noisy + noise_shot
+
+
+                    expanded = tf.expand_dims(P_noisy, axis=2)
+
+
+                else:
+                    if self.Verbose:
+                        print('No noise')
+                    expanded = tf.expand_dims(P_original, axis=2)
+
+                # Store sample
+                if self.Verbose:
+                    print('Storing at position %s in the data' %self.i_ind)
+                    print('Dimension of data: %s' %str(expanded.shape))
+                # swap axis if using one dim array in multiple channels 
+                if self.swap_axes:
+                    if self.Verbose:
+                        print('Reshaping')
+                    expanded = tf.transpose(expanded, perm=[0, 2, 1])
+                    if self.Verbose:
+                        print('New dimension of data: %s' %str(expanded.shape))
+                    expanded = tf.gather(self.norm_data, self.z_bins, axis=-1)
+                    if self.Verbose:
+                        print('Final dimension of data: %s' %str(expanded.shape))
+                        print('expanded first 10:') 
+                        print(expanded[10])
+                        expanded = expanded[:,:,0,:]
+                    # now shape of expanded is (1, n_data_points, 1, n_channels=3)
+                X = expanded  
+
+                if self.Verbose:
+                    print('dimension of X: %s' %str(X.shape))
+                    print('X first 10:') 
+                    print(X[10])
+                
+                # Store class   
+                label = fname.split('/')[-2]
+                
+                if not self.base_case_dataset:
+                    label = self.group_lab_dict[label]
+                    encoding = self.labels_dict[label]
+                elif (self.fine_tune and not self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and not self.dataset_balanced):
+                    label = self.group_lab_dict[label]
+                    encoding = self.labels_dict[label]
+                else:
+                    # regular 5 labels case
+                    encoding = self.labels_dict[label]
+                if self.Verbose:
+                    print('Label for this example: %s' %label)
+                    print('Encoding: %s' % encoding)
+                
+                y = encoding
+
+        if self.save_processed_spectra and not self.TPU:
             name_spectra_folder = os.path.join(self.models_dir,self.fname,'processed_spectra') 
             if not os.path.exists(name_spectra_folder):
                 print('Creating directory %s' %  name_spectra_folder)
@@ -478,6 +584,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     print('Saving processed (noisy and normalised) spectra in %s' % spectra_file)
                     with open(spectra_file, "a+") as myCurvefile:
                         np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
+        elif self.TPU:
+            print("Cannot save processed spectra in TPU mode.")
 
         self.i_ind += 1
 
@@ -553,12 +661,20 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         # Generate data
         self.i_ind=0
         dataset = dataset.map(lambda ID, fname: wrap_func(ID, fname), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        if self.shuffle:
-            dataset = dataset.shuffle(buffer_size=len(list_IDs))   
-        dataset = dataset.batch(self.batch_size)
-        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-
+        if self.TPU:
+            with self.strategy.scope():
+                dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                if self.shuffle:
+                    dataset = dataset.shuffle(buffer_size=len(list_IDs))   
+                dataset = dataset.batch(self.batch_size)
+                dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+        else:
+            dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            if self.shuffle:
+                dataset = dataset.shuffle(buffer_size=len(list_IDs))   
+            dataset = dataset.batch(self.batch_size)
+            dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+    
         return dataset
     
     def __iter__(self):
@@ -599,7 +715,7 @@ def read_partition(FLAGS):
     
     
 
-def create_generators(FLAGS):
+def create_generators(FLAGS, strategy = None):
     
     if FLAGS.my_path is not None:
         os.chdir(FLAGS.my_path)
@@ -760,9 +876,9 @@ def create_generators(FLAGS):
         params['n_noisy_samples']=1
     
     print('\n--DataGenerator Train')
-    training_generator = DataGenerator(partition['train'], labels, labels_dict, data_root = FLAGS.DIR, save_indexes=False, seed = seed, **params)
+    training_generator = DataGenerator(partition['train'], labels, labels_dict, data_root = FLAGS.DIR, save_indexes=False, seed = seed, strategy=strategy, **params)
     print('\n--DataGenerator Validation')
-    validation_generator = DataGenerator(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False, seed = seed, **params)
+    validation_generator = DataGenerator(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False, seed = seed, strategy = strategy **params)
 
     
     return training_generator, validation_generator #, params
@@ -770,7 +886,7 @@ def create_generators(FLAGS):
 
 
 
-def create_test_generator(FLAGS):
+def create_test_generator(FLAGS, strategy = None):
     
     if FLAGS.my_path is not None:
         print('Changing directory to %s' %FLAGS.my_path)
@@ -884,7 +1000,7 @@ def create_test_generator(FLAGS):
                                    data_root=FLAGS.TEST_DIR , 
                                save_indexes = FLAGS.save_indexes,
                                models_dir=FLAGS.models_dir+FLAGS.fname,
-                               idx_file_name = FLAGS.fname, seed = seed
+                               idx_file_name = FLAGS.fname, seed = seed, strategy = None, TPU = False,
                                **params_test)
 
 

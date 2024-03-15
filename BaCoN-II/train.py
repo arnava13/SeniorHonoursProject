@@ -508,11 +508,17 @@ def main():
     
     
     print('\n------------ CREATING DATA GENERATORS ------------')
-    training_generator, validation_generator = create_generators(FLAGS)
+    if FLAGS.TPU:
+        training_generator, validation_generator = create_generators(FLAGS, strategy=strategy)
+    else:
+        training_generator, validation_generator = create_generators(FLAGS)
     
     if FLAGS.fine_tune:
         print('\n------------ CREATING ORIGINAL DATA GENERATORS FOR CHECK------------')
-        or_training_generator, or_validation_generator = create_generators(FLAGS_ORIGINAL)
+        if FLAGS.TPU:
+            or_training_generator, or_validation_generator = create_generators(FLAGS_ORIGINAL, strategy=strategy)
+        else:
+            or_training_generator, or_validation_generator = create_generators(FLAGS_ORIGINAL)
         n_classes = or_training_generator.n_classes_out # in order to build correctly original model
         model_name = FLAGS_ORIGINAL.model_name
         bayesian=FLAGS_ORIGINAL.bayesian
