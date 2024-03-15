@@ -878,7 +878,7 @@ def create_generators(FLAGS, strategy = None):
     print('\n--DataGenerator Train')
     training_generator = DataGenerator(partition['train'], labels, labels_dict, data_root = FLAGS.DIR, save_indexes=False, seed = seed, strategy=strategy, **params)
     print('\n--DataGenerator Validation')
-    validation_generator = DataGenerator(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False, seed = seed, strategy = strategy **params)
+    validation_generator = DataGenerator(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False, seed = seed, strategy = strategy, **params)
 
     
     return training_generator, validation_generator #, params
