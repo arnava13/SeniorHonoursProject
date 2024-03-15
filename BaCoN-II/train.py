@@ -732,10 +732,7 @@ def main():
     
     
     #print('Model n_classes : %s ' %n_classes)
-    for batch_ids, x_batch_train, y_batch_train in training_generator.take(1):
-        print('Features shape:', x_batch_train.shape)
-        print('Labels shape:', y_batch_train.shape)
-        break
+    training_generator.get_shapes()
    
     model, history = my_train(model, optimizer, loss,
                 FLAGS.n_epochs, 
