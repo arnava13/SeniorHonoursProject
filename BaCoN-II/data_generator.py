@@ -574,6 +574,23 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             self.iterator = iter(self.dataset)
             raise StopIteration
         
+    def __getitem__(self, index):
+        """Return the specified batch from the dataset."""
+
+        # Convert the dataset to an iterable.
+        dataset_iter = iter(self.dataset)
+        
+        # Skip to the desired batch.
+        for i in range(index + 1):
+            try:
+                batch_ids, X_batch, y_batch = next(dataset_iter)
+            except StopIteration:
+                # Reinitialize the iterator and raise an error
+                dataset_iter = iter(self.dataset)
+                raise IndexError("Index is out of bounds.")
+        
+        return X_batch, y_batch
+        
 
 
 
