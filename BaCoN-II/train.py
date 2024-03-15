@@ -720,9 +720,13 @@ def main():
         with strategy.scope():
             train_acc_metric = tf.keras.metrics.Accuracy()
             val_acc_metric = tf.keras.metrics.Accuracy()
+            train_loss_metric = tf.keras.metrics.Mean()
+            val_loss_metric = tf.keras.metrics.Mean()
     else:
         train_acc_metric = tf.keras.metrics.Accuracy()
         val_acc_metric = tf.keras.metrics.Accuracy()
+        train_loss_metric = tf.keras.metrics.Mean()
+        val_loss_metric = tf.keras.metrics.Mean()
     
     
     if FLAGS.GPU:
@@ -747,8 +751,8 @@ def main():
     model, history = my_train(model, optimizer, loss,
                 FLAGS.n_epochs, 
                 training_generator, 
-                validation_generator, manager, ckpt,
-                train_acc_metric, val_acc_metric, TPU=FLAGS.TPU,
+                validation_generator, manager, ckpt, train_loss_metric,
+                train_acc_metric, val_loss_metric, val_acc_metric, TPU=FLAGS.TPU,
                 strategy=strategy, patience=FLAGS.patience, restore=FLAGS.restore, 
                 bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None, save_indexes = FLAGS.save_indexes #not(FLAGS.test_mode)
             )
