@@ -16,7 +16,7 @@ from utils import cut_sample, get_all_indexes, get_fname_list, find_nearest
 
 
 
-def generate_noise(k, P, 
+def generate_noise(k, P, pi 
                    add_shot=True,
                    add_sys=True,
                    add_cosvar=True,
@@ -28,7 +28,7 @@ def generate_noise(k, P,
                    delta_k=0.055, sigma_sys=15, quadrature=True):
 
     sigma_noise = tf.zeros(P.shape)
-    sigma_hat_noise = (2 * tf.math.pi / ((k[:, None]) * tf.sqrt(V * (1e3)**3 * delta_k)))
+    sigma_hat_noise = (2 * pi / ((k[:, None]) * tf.sqrt(V * (1e3)**3 * delta_k)))
     if add_cosvar:
         sigma_noise = tf.abs(P * sigma_hat_noise)
       
@@ -345,6 +345,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         loaded_all = np.loadtxt(fname)
         P_original = tf.convert_to_tensor(loaded_all[:, 1:], dtype=tf.float32)
         k = tf.convert_to_tensor(loaded_all[:, 0], dtype=tf.float32)
+        pi = tf.constant(np.pi, dtype=tf.float32)
         if self.TPU: 
             with self.strategy.scope():
                 if self.sample_pace != 1:
@@ -370,7 +371,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                             print('Noise realization %s' %i_noise)
                         # add noise if selected
                         if self.add_cosvar:
-                            noise_scale = generate_noise(k, tf.gather(self.norm_data, self.z_bins, axis=1), sys_scaled=self.sys_scaled,
+                            noise_scale = generate_noise(k, tf.gather(self.norm_data, self.z_bins, axis=1), pi, sys_scaled=self.sys_scaled,
                                                             sys_factor=self.sys_factor,sys_max=self.sys_max,
                                                             add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
                             noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
@@ -411,7 +412,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
 
                         if self.add_shot:
-                            noise_scale = generate_noise(k,tf.gather(self.norm_data, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
+                            noise_scale = generate_noise(k,tf.gather(self.norm_data,pi, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
                             noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
                             P_noisy = P_noisy + noise_shot
 
@@ -472,7 +473,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                         print('Noise realization %s' %i_noise)
                     # add noise if selected
                     if self.add_cosvar:
-                        noise_scale = generate_noise(k, tf.gather(self.norm_data, self.z_bins, axis=1), sys_scaled=self.sys_scaled,
+                        noise_scale = generate_noise(k, tf.gather(self.norm_data, self.z_bins, axis=1),pi, sys_scaled=self.sys_scaled,
                                                         sys_factor=self.sys_factor,sys_max=self.sys_max,
                                                         add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
                         noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
@@ -513,7 +514,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
 
                     if self.add_shot:
-                        noise_scale = generate_noise(k,tf.gather(self.norm_data, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
+                        noise_scale = generate_noise(k,tf.gather(self.norm_data, self.z_bins, axis=1),pi,sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
                         noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
                         P_noisy = P_noisy + noise_shot
 
