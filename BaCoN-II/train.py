@@ -154,7 +154,6 @@ def my_train(model, optimizer, loss,
   n_val_example=val_generator.batch_size*val_generator.n_batches
   n_train_example=train_generator.batch_size*train_generator.n_batches
   count = 0
-  batchstep = 0
   for epoch in range(epochs):
     print("Epoch %d" % (epoch,))
     start_time = time.time()
@@ -174,9 +173,9 @@ def my_train(model, optimizer, loss,
             val_acc_metric = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_acc_metric.result(), axis=None)
     else:
         for IDs, x_batch_train, y_batch_train in train_generator.dataset:
-            train_on_batch(IDs, x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, val_generator.batch_size)
+            train_on_batch(IDs, x_batch_train, y_batch_train, train_generator, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, val_generator.batch_size)
         for IDs, x_batch_val, y_batch_val in val_generator.dataset:
-            val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, val_loss_metric, bayesian, n_val_example, val_generator.batch_size)
+            val_step(IDs, x_batch_train, y_batch_train, train_generator, epoch, model, loss, val_acc_metric, val_loss_metric, bayesian, n_val_example, val_generator.batch_size)
         train_acc_metric = train_acc_metric.result()
         train_loss_metric = train_loss_metric.result()
         val_loss_value = val_loss_metric.result()
