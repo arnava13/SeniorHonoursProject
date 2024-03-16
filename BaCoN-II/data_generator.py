@@ -501,6 +501,22 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 tf.print('dimension of X: %s' %str(X.shape))
                 tf.print('X first 10:') 
                 tf.print(X[10])
+            
+            if not self.base_case_dataset:
+                    label = self.group_lab_dict[label]
+                    encoding = self.labels_dict[label]
+            elif (self.fine_tune and not self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and not self.dataset_balanced):
+                label = self.group_lab_dict[label]
+                encoding = self.labels_dict[label]
+            else:
+                # regular 5 labels case
+                encoding = self.labels_dict[label]
+            if self.Verbose:
+                print('Label for this example: %s' %label)
+                print('Encoding: %s' % encoding)
+            
+            y = encoding
+            self.i_ind += 1
 
         if self.save_processed_spectra and not self.TPU:
             name_spectra_folder = os.path.join(self.models_dir,self.fname,'processed_spectra') 
