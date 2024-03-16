@@ -62,7 +62,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 #fname_user='my_model',
                 curves_folder = 'curve_files_sys/curve_files_train1k_sysFactor0o04_start0o03_dirChange0',
                 sample_pace = 4, pad=False, 
-                Verbose=False, Verbose_2=False,
+                Verbose=True, Verbose_2=False,
                 k_max=2.5, i_max = None,
                 k_min=0.0, i_min = None,
                 add_noise=True, n_noisy_samples = 10, 
@@ -574,7 +574,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             self.yshape = y.shape
         if self.swap_axes:
             X = X[:,:,0,:]
-            X = X[:,0,:,:]
         return ID, X, y
     
     def __data_generation(self, list_IDs, list_IDs_dict):
