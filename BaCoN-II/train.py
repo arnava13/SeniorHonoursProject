@@ -47,7 +47,6 @@ def train_on_batch(IDs, x, y, train_generator, epoch, model, optimizer, loss, tr
 
 @tf.function
 def val_step(IDs, x, y, val_generator, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian=False, n_val_example=10000, TPU=False, strategy=None, batch_size=2500, save_indexes=False):
-    dataset = val_generator.dataset
     if TPU:
         with strategy.scope():
             val_logits = model(x, training=False)
@@ -166,9 +165,9 @@ def my_train(model, optimizer, loss,
     if TPU:
         with strategy.scope():
             for IDs, x_batch_train, y_batch_train in train_generator.dataset:
-                strategy.run(train_on_batch, args=(IDs, x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, train_generator.batch_size))
+                strategy.run(train_on_batch, args=(IDs, x_batch_train, y_batch_train, train_generator, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, train_generator.batch_size))
             for IDs, x_batch_val, y_batch_val in val_generator.dataset:
-                strategy.run(val_step, args=(IDs, x_batch_val, y_batch_val, model, loss, val_acc_metric, val_loss_metric, bayesian, n_val_example, val_generator.batch_size))
+                strategy.run(val_step, args=(IDs, x_batch_val, y_batch_val, val_generator, epoch, model, loss, val_acc_metric, val_loss_metric, bayesian, n_val_example, val_generator.batch_size))
             train_acc_metric = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_acc_metric.result(), axis=None)
             train_loss_metric = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_loss_metric.result(), axis=None)
             val_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_loss_metric.result(), axis=None)
