@@ -238,7 +238,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         
         if self.normalization=='stdcosmo':
           self.norm_data = np.loadtxt(self.norm_data_path)[:, 1:]
-          self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
+
           if self.sample_pace !=1:
             self.norm_data = self.norm_data[0::self.sample_pace, :]
           self.norm_data = self.norm_data[self.i_min:self.i_max]
@@ -343,8 +343,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.Verbose:
                     tf.print('Loading file %s' %fname)
         loaded_all = np.loadtxt(fname)
-        P_original = tf.convert_to_tensor(loaded_all[:, 1:], dtype=tf.float32)
-        k = loaded_all[:, 0]
+        P_original = loaded_all[:, 1:]
+        k = loaded_all[:, 0] #length 500
         pi = tf.constant(np.pi, dtype=tf.float32)
         if self.TPU: 
             with self.strategy.scope():
@@ -359,6 +359,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 k = k[::self.sample_pace]
             P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
             self.k_range = tf.convert_to_tensor(k, dtype=tf.float32)
+        
+        P_original = tf.convert_to_tensor(P_original, dtype=tf.float32)
                     
         if self.Verbose:
             tf.print('Dimension of original data: %s' %str(P_original.shape))
@@ -367,6 +369,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print('dimension P_original: %s' %str(P_original.shape))    
             tf.print('P_original first 10:') 
             tf.print(P_original[10])
+
+        norm_data_tensor = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
 
         # Add noise
         for i_noise in range(self.n_noisy_samples):
@@ -377,7 +381,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                        tf.print('Noise realization %s' %i_noise)
                     # add noise if selected
                     if self.add_cosvar:
-                        noise_scale = generate_noise(k, tf.gather(self.norm_data, self.z_bins, axis=1), pi, sys_scaled=self.sys_scaled,
+                        noise_scale = generate_noise(k, tf.gather(norm_data_tensor, self.z_bins, axis=1), pi, sys_scaled=self.sys_scaled,
                                                         sys_factor=self.sys_factor,sys_max=self.sys_max,
                                                         add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
                         noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
@@ -392,7 +396,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                         tf.print('Noise realization %s' %i_noise)
                     # add noise if selected
                     if self.add_cosvar:
-                        noise_scale = generate_noise(k, tf.gather(self.norm_data, self.z_bins, axis=1), pi, sys_scaled=self.sys_scaled,
+                        noise_scale = generate_noise(k, tf.gather(norm_data_tensor, self.z_bins, axis=1), pi, sys_scaled=self.sys_scaled,
                                                         sys_factor=self.sys_factor,sys_max=self.sys_max,
                                                         add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
                         noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
@@ -420,7 +424,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                         noise_sys = tf.convert_to_tensor(noise_sys, dtype=tf.float32)
                         k_sys = tf.convert_to_tensor(k_sys, dtype=tf.float32)
 
-                        noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * tf.gather(self.norm_data, self.z_bins, axis=1)
+                        noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * tf.gather(norm_data_tensor, self.z_bins, axis=1)
 
 
                         if self.rescale_curves == 'uniform':
@@ -432,7 +436,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
 
                         if self.add_shot:
-                            noise_scale = generate_noise(k,tf.gather(self.norm_data,pi, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
+                            noise_scale = generate_noise(k,tf.gather(norm_data_tensor ,pi, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
                             noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
                             P_noisy = P_noisy + noise_shot
 
@@ -452,7 +456,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     # multiply with normalisation spectrum
                     noise_sys = tf.convert_to_tensor(noise_sys, dtype=tf.float32)
                     k_sys = tf.convert_to_tensor(k_sys, dtype=tf.float32)
-                    noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * tf.gather(self.norm_data, self.z_bins, axis=1)
+                    noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * tf.gather(norm_data_tensor, self.z_bins, axis=1)
 
 
                     if self.rescale_curves == 'uniform':
@@ -464,12 +468,12 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
 
                     if self.add_shot:
-                        noise_scale = generate_noise(k,tf.gather(self.norm_data,pi, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
+                        noise_scale = generate_noise(k,tf.gather(norm_data_tensor,pi, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
                         noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
                         P_noisy = P_noisy + noise_shot
 
 
-                expanded = tf.expand_dims(P_noisy, axis=2)
+                    expanded = tf.expand_dims(P_noisy, axis=2)
 
 
             else:
@@ -488,12 +492,11 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 expanded = tf.transpose(expanded, perm=[0, 2, 1])
                 if self.Verbose:
                     tf.print('New dimension of data: %s' %str(expanded.shape))
-                expanded = tf.gather(self.norm_data, self.z_bins, axis=-1)
+                expanded = tf.gather(norm_data_tensor, self.z_bins, axis=-1)
                 if self.Verbose:
                     tf.print('Final dimension of data: %s' %str(expanded.shape))
                     tf.print('expanded first 10:') 
                     tf.print(expanded[10])
-                    expanded = expanded[:,:,0,:]
                 # now shape of expanded is (1, n_data_points, 1, n_channels=3)
             X = expanded  
 
@@ -548,44 +551,31 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         return ID, X, y
 
     def normalize_and_onehot(self, ID, X, y):
+        norm_data_tensor = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
         if self.normalization == 'batch':
             mu_batch = tf.reduce_mean(X, axis=0)
             std_batch = tf.math.reduce_std(X, axis=0)
             X = (X - mu_batch) / std_batch
         elif self.normalization == 'stdcosmo':
             if self.swap_axes:
-                gatherednorm = tf.gather(self.norm_data, self.z_bins, axis=1)
-                expandednorm = tf.expand_dims(gatherednorm, axis=0)
-                expandednorm = tf.expand_dims(expandednorm, axis=2)
-                X = X / expandednorm - 1
+                divisor = tf.convert_to_tensor(self.norm_data[None, :, None, self.z_bins], dtype=tf.float32)
+                X = X/divisor - 1
                 if self.Verbose:
                     tf.print('axes swapped')
-                    tf.print('NORM first 10:', expandednorm.numpy()[:10])
+                    tf.print('NORM first 10:', divisor.numpy()[:10])
             else:
-                X = X / self.norm_data[None, :, :, None] - 1
+                X = X / norm_data_tensor[None, :, :, None] - 1
                 if self.Verbose:
                     tf.print('axes not swapped')
-                    tf.print('Dimension of NORM data:', tf.shape(self.norm_data[None, :, :, None]))
+                    tf.print('Dimension of NORM data:', tf.shape(norm_data_tensor[None, :, :, None]))
         y = tf.one_hot(y, depth=self.n_classes_out)
         if self.i_ind == 0:
             self.xshape = X.shape
             self.yshape = y.shape
+        if self.swap_axes:
+            expanded = expanded[:,:,0,:]
         return ID, X, y
     
-    def write_indexes(self, batch_ID, indices):
-        indices = indices.numpy()
-        if not os.path.exists(self.models_dir+'/idx_files/'):
-              print('Creating directory %s' %self.models_dir+'/idx_files/')
-              os.makedirs(self.models_dir+'/idx_files/')
-
-        idx_file = self.models_dir+'/idx_files/idx_file_batch'+ str(batch_ID)+'.txt'                  
-        print('Saving indexes in  %s' %idx_file)
-        idx_list = indices
-        with open(idx_file, 'w+') as file:
-            print('Opened %s' %idx_file)
-            for idx in idx_list: #i in range(len(idx_list)):
-                file.write(idx+'\n')
-
     def __data_generation(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
         if not self.fine_tune and not self.one_vs_all:
@@ -633,6 +623,20 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 dataset = self.strategy.experimental_distribute_dataset(dataset)
     
         return dataset
+    
+    def write_indexes(self, batch_ID, indices):
+        indices = indices.numpy()
+        if not os.path.exists(self.models_dir+'/idx_files/'):
+              print('Creating directory %s' %self.models_dir+'/idx_files/')
+              os.makedirs(self.models_dir+'/idx_files/')
+
+        idx_file = self.models_dir+'/idx_files/idx_file_batch'+ str(batch_ID)+'.txt'                  
+        print('Saving indexes in  %s' %idx_file)
+        idx_list = indices
+        with open(idx_file, 'w+') as file:
+            print('Opened %s' %idx_file)
+            for idx in idx_list: #i in range(len(idx_list)):
+                file.write(idx+'\n')
 
 
 def read_partition(FLAGS):
