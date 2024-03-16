@@ -562,7 +562,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 X = X/divisor - 1
                 if self.Verbose:
                     tf.print('axes swapped')
-                    tf.print('NORM first 10:', divisor.numpy()[:10])
+                    tf.print('NORM first 10:', divisor[:10])
             else:
                 X = X / norm_data_tensor[None, :, :, None] - 1
                 if self.Verbose:
