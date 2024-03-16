@@ -341,65 +341,85 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
     def process_file(self, ID, fname):
         fname = fname.numpy().decode('utf-8')
         if self.Verbose:
-                    print('Loading file %s' %fname)
+                    tf.print('Loading file %s' %fname)
         loaded_all = np.loadtxt(fname)
         P_original = tf.convert_to_tensor(loaded_all[:, 1:], dtype=tf.float32)
-        k = tf.convert_to_tensor(loaded_all[:, 0], dtype=tf.float32)
+        k = loaded_all[:, 0]
         pi = tf.constant(np.pi, dtype=tf.float32)
         if self.TPU: 
             with self.strategy.scope():
                 if self.sample_pace != 1:
                     P_original = P_original[::self.sample_pace]
                     k = k[::self.sample_pace]
+            P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
+            self.k_range = tf.convert_to_tensor(k, dtype=tf.float32)
+        else:
+            if self.sample_pace != 1:
+                P_original = P_original[::self.sample_pace]
+                k = k[::self.sample_pace]
+            P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
+            self.k_range = tf.convert_to_tensor(k, dtype=tf.float32)
                     
-                P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
-                self.k_range = k
+        if self.Verbose:
+            tf.print('Dimension of original data: %s' %str(P_original.shape))
+        
+        if self.Verbose:
+            tf.print('dimension P_original: %s' %str(P_original.shape))    
+            tf.print('P_original first 10:') 
+            tf.print(P_original[10])
 
-                if self.Verbose:
-                    print('Dimension of original data: %s' %str(P_original.shape))
-                
-                if self.Verbose:
-                    print('dimension P_original: %s' %str(P_original.shape))    
-                    print('P_original first 10:') 
-                    print(P_original[10])
+        # Add noise
+        for i_noise in range(self.n_noisy_samples):
+            if self.TPU:
+                if self.add_noise:
+                    P_noisy = P_original
+                    if self.Verbose:
+                       tf.print('Noise realization %s' %i_noise)
+                    # add noise if selected
+                    if self.add_cosvar:
+                        noise_scale = generate_noise(k, tf.gather(self.norm_data, self.z_bins, axis=1), pi, sys_scaled=self.sys_scaled,
+                                                        sys_factor=self.sys_factor,sys_max=self.sys_max,
+                                                        add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
+                        noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
+                        P_noisy = P_noisy + noise_cosVar
 
-                # Add noise
-                for i_noise in range(self.n_noisy_samples):
-                    if self.add_noise:
-                        P_noisy = P_original
-                        if self.Verbose:
-                            print('Noise realization %s' %i_noise)
-                        # add noise if selected
-                        if self.add_cosvar:
-                            noise_scale = generate_noise(k, tf.gather(self.norm_data, self.z_bins, axis=1), pi, sys_scaled=self.sys_scaled,
-                                                            sys_factor=self.sys_factor,sys_max=self.sys_max,
-                                                            add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
-                            noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
-                            P_noisy = P_noisy + noise_cosVar
+                    if self.add_sys:
+                        curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
+            else:
+                if self.add_noise:
+                    P_noisy = P_original
+                    if self.Verbose:
+                        tf.print('Noise realization %s' %i_noise)
+                    # add noise if selected
+                    if self.add_cosvar:
+                        noise_scale = generate_noise(k, tf.gather(self.norm_data, self.z_bins, axis=1), pi, sys_scaled=self.sys_scaled,
+                                                        sys_factor=self.sys_factor,sys_max=self.sys_max,
+                                                        add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
+                        noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
+                        P_noisy = P_noisy + noise_cosVar
 
-                        if self.add_sys:
-                            curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
+                    if self.add_sys:
+                        curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
+            if self.add_noise:
+                curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
+                curves_loaded = np.loadtxt(curve_file)
 
-                        curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
-                        curves_loaded = np.loadtxt(curve_file)
-                    
-                        noise_sys = tf.convert_to_tensor(curves_loaded[:, 1:], dtype=tf.float32)
-                        k_sys = tf.convert_to_tensor(curves_loaded[:, 0], dtype=tf.float32)
-
-                        shape_match = tf.reduce_all(tf.equal(tf.shape(k), tf.shape(k_sys)))
-                        match = tf.cond(shape_match, lambda: tf.reduce_all(tf.equal(k, k_sys)), lambda: tf.constant(False))
-                    
-                        if not match:
-                            print('ERROR: k-values in spectrum and theory-error curve file not identical')
+                if self.TPU:
+                    with self.strategy.scope:
+                        noise_sys, k_sys = curves_loaded[:, 1:], curves_loaded[:, 0]
 
                         if self.sample_pace!=1:
                             noise_sys = noise_sys[0::self.sample_pace, :]
                             k_sys = k_sys[0::self.sample_pace]
                         noise_sys, k_sys = noise_sys[self.i_min:self.i_max], k_sys[self.i_min:self.i_max]
-
+                        if (k.all() != k_sys.all()):
+                            print('ERROR: k-values in spectrum and theory-error curve file not identical')
                         # rescale noise_sys curves according to error (10% default from production curves), 
                         # rescale by Gaussian with sigma = 1
                         # multiply with normalisation spectrum
+                        noise_sys = tf.convert_to_tensor(noise_sys, dtype=tf.float32)
+                        k_sys = tf.convert_to_tensor(k_sys, dtype=tf.float32)
+
                         noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * tf.gather(self.norm_data, self.z_bins, axis=1)
 
 
@@ -418,90 +438,20 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
 
                         expanded = tf.expand_dims(P_noisy, axis=2)
-
-
-                    else:
-                        if self.Verbose:
-                            print('No noise')
-                        expanded = tf.expand_dims(P_original, axis=2)
-
-                    # Store sample
-                    if self.Verbose:
-                        print('Storing at position %s in the data' %self.i_ind)
-                        print('Dimension of data: %s' %str(expanded.shape))
-                    # swap axis if using one dim array in multiple channels 
-                    if self.swap_axes:
-                        if self.Verbose:
-                            print('Reshaping')
-                        expanded = tf.transpose(expanded, perm=[0, 2, 1])
-                        if self.Verbose:
-                            print('New dimension of data: %s' %str(expanded.shape))
-                        expanded = tf.gather(self.norm_data, self.z_bins, axis=-1)
-                        if self.Verbose:
-                            print('Final dimension of data: %s' %str(expanded.shape))
-                            print('expanded first 10:') 
-                            print(expanded[10])
-                            expanded = expanded[:,:,0,:]
-                        # now shape of expanded is (1, n_data_points, 1, n_channels=3)
-                    X = expanded  
-
-                    if self.Verbose:
-                        print('dimension of X: %s' %str(X.shape))
-                        print('X first 10:') 
-                        print(X[10])
-        else:
-            if self.sample_pace != 1:
-                P_original = P_original[::self.sample_pace]
-                k = k[::self.sample_pace]
-                
-            P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
-            self.k_range = k
-
-            if self.Verbose:
-                print('Dimension of original data: %s' %str(P_original.shape))
-            
-            if self.Verbose:
-                print('dimension P_original: %s' %str(P_original.shape))    
-                print('P_original first 10:') 
-                print(P_original[10])
-
-            # Add noise
-            for i_noise in range(self.n_noisy_samples):
-                if self.add_noise:
-                    P_noisy = P_original
-                    if self.Verbose:
-                        print('Noise realization %s' %i_noise)
-                    # add noise if selected
-                    if self.add_cosvar:
-                        noise_scale = generate_noise(k, tf.gather(self.norm_data, self.z_bins, axis=1),pi, sys_scaled=self.sys_scaled,
-                                                        sys_factor=self.sys_factor,sys_max=self.sys_max,
-                                                        add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
-                        noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
-                        P_noisy = P_noisy + noise_cosVar
-
-                    if self.add_sys:
-                        curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-
-                    curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
-                    curves_loaded = np.loadtxt(curve_file)
-                
-                    noise_sys = tf.convert_to_tensor(curves_loaded[:, 1:], dtype=tf.float32)
-                    k_sys = tf.convert_to_tensor(curves_loaded[:, 0], dtype=tf.float32)
-
-                    shape_match = tf.reduce_all(tf.equal(tf.shape(k), tf.shape(k_sys)))
-                    match = tf.cond(shape_match, lambda: tf.reduce_all(tf.equal(k, k_sys)), lambda: tf.constant(False))
-                
-                    if not match:
-                        print('ERROR: k-values in spectrum and theory-error curve file not identical')
+                else:
+                    noise_sys, k_sys = curves_loaded[:, 1:], curves_loaded[:, 0]
 
                     if self.sample_pace!=1:
                         noise_sys = noise_sys[0::self.sample_pace, :]
                         k_sys = k_sys[0::self.sample_pace]
                     noise_sys, k_sys = noise_sys[self.i_min:self.i_max], k_sys[self.i_min:self.i_max]
-
+                    if (k.all() != k_sys.all()):
+                        print('ERROR: k-values in spectrum and theory-error curve file not identical')
                     # rescale noise_sys curves according to error (10% default from production curves), 
                     # rescale by Gaussian with sigma = 1
                     # multiply with normalisation spectrum
+                    noise_sys = tf.convert_to_tensor(noise_sys, dtype=tf.float32)
+                    k_sys = tf.convert_to_tensor(k_sys, dtype=tf.float32)
                     noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * tf.gather(self.norm_data, self.z_bins, axis=1)
 
 
@@ -514,66 +464,48 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
 
                     if self.add_shot:
-                        noise_scale = generate_noise(k,tf.gather(self.norm_data, self.z_bins, axis=1),pi,sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
+                        noise_scale = generate_noise(k,tf.gather(self.norm_data,pi, self.z_bins, axis=1),sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
                         noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
                         P_noisy = P_noisy + noise_shot
 
 
-                    expanded = tf.expand_dims(P_noisy, axis=2)
+                expanded = tf.expand_dims(P_noisy, axis=2)
 
 
-                else:
-                    if self.Verbose:
-                        print('No noise')
-                    expanded = tf.expand_dims(P_original, axis=2)
-
-                # Store sample
+            else:
                 if self.Verbose:
-                    print('Storing at position %s in the data' %self.i_ind)
-                    print('Dimension of data: %s' %str(expanded.shape))
-                # swap axis if using one dim array in multiple channels 
-                if self.swap_axes:
-                    if self.Verbose:
-                        print('Reshaping')
-                    expanded = tf.transpose(expanded, perm=[0, 2, 1])
-                    if self.Verbose:
-                        print('New dimension of data: %s' %str(expanded.shape))
-                    expanded = tf.gather(self.norm_data, self.z_bins, axis=-1)
-                    if self.Verbose:
-                        print('Final dimension of data: %s' %str(expanded.shape))
-                        print('expanded first 10:') 
-                        print(expanded[10])
-                        expanded = expanded[:,:,0,:]
-                    # now shape of expanded is (1, n_data_points, 1, n_channels=3)
-                X = expanded  
+                    tf.print('No noise')
+                expanded = tf.expand_dims(P_original, axis=2)
 
+            # Store sample
+            if self.Verbose:
+                tf.print('Storing at position %s in the data' %self.i_ind)
+                tf.print('Dimension of data: %s' %str(expanded.shape))
+            # swap axis if using one dim array in multiple channels 
+            if self.swap_axes:
                 if self.Verbose:
-                    print('dimension of X: %s' %str(X.shape))
-                    print('X first 10:') 
-                    print(X[10])
-                
-                # Store class   
-                label = fname.split('/')[-2]
-                
-                if not self.base_case_dataset:
-                    label = self.group_lab_dict[label]
-                    encoding = self.labels_dict[label]
-                elif (self.fine_tune and not self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and not self.dataset_balanced):
-                    label = self.group_lab_dict[label]
-                    encoding = self.labels_dict[label]
-                else:
-                    # regular 5 labels case
-                    encoding = self.labels_dict[label]
+                    tf.print('Reshaping')
+                expanded = tf.transpose(expanded, perm=[0, 2, 1])
                 if self.Verbose:
-                    print('Label for this example: %s' %label)
-                    print('Encoding: %s' % encoding)
-                
-                y = encoding
+                    tf.print('New dimension of data: %s' %str(expanded.shape))
+                expanded = tf.gather(self.norm_data, self.z_bins, axis=-1)
+                if self.Verbose:
+                    tf.print('Final dimension of data: %s' %str(expanded.shape))
+                    tf.print('expanded first 10:') 
+                    tf.print(expanded[10])
+                    expanded = expanded[:,:,0,:]
+                # now shape of expanded is (1, n_data_points, 1, n_channels=3)
+            X = expanded  
+
+            if self.Verbose:
+                tf.print('dimension of X: %s' %str(X.shape))
+                tf.print('X first 10:') 
+                tf.print(X[10])
 
         if self.save_processed_spectra and not self.TPU:
             name_spectra_folder = os.path.join(self.models_dir,self.fname,'processed_spectra') 
             if not os.path.exists(name_spectra_folder):
-                print('Creating directory %s' %  name_spectra_folder)
+                tf.print('Creating directory %s' %  name_spectra_folder)
                 os.makedirs(name_spectra_folder)
             # new matrix for spectra, first column is class_idx, first row is k-values
             X_save = np.empty((self.batch_size*self.n_batches+1, len(k)+1))
@@ -591,7 +523,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         self.i_ind += 1
 
-        ID = tf.convert_to_tensor(ID, dtype=tf.int32)
+        ID = tf.convert_to_tensor(ID)
+        ID = tf.cast(ID, dtype=tf.int32)
         X = tf.convert_to_tensor(X, dtype=tf.float32)
         y = tf.convert_to_tensor(y, dtype=tf.int32)
 
@@ -656,7 +589,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         assert len(fname_list)==self.batch_size*self.n_batches//(self.n_noisy_samples)
 
         fname_list = np.array(fname_list)
-        ID_list = np.array(ID_list, dtype=int)
+        ID_list = np.array(ID_list, dtype=np.int32)
 
         if self.Verbose_2:
             print("list_IDs_dict")
