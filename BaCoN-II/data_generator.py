@@ -573,7 +573,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             self.xshape = X.shape
             self.yshape = y.shape
         if self.swap_axes:
-            expanded = expanded[:,:,0,:]
+            X = X[:,:,0,:]
         return ID, X, y
     
     def __data_generation(self, list_IDs, list_IDs_dict):
