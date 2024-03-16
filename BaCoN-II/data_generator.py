@@ -501,7 +501,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 tf.print('dimension of X: %s' %str(X.shape))
                 tf.print('X first 10:') 
                 tf.print(X[10])
-            
+            # Store class   
+            label = fname.split('/')[-2]
             if not self.base_case_dataset:
                     label = self.group_lab_dict[label]
                     encoding = self.labels_dict[label]
