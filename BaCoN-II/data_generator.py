@@ -620,9 +620,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.i_ind == 0:
             self.xshape = X.shape
             self.yshape = y.shape
-        X = tf.cast(X, dtype=tf.float32)
-        y = tf.cast(y, dtype=tf.int32)
-        ID = tf.cast(ID, dtype=tf.int32)
         return ID, X, y
     
     def write_indexes(self, batch_ID, indices):
