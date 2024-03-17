@@ -570,7 +570,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             print("Cannot save processed spectra in TPU mode.")
         if self.swap_axes:
             X = X[:,:,0,:]
-            X = X[:,0,:,:]
+            X = X[0,:,:]
         y = tf.one_hot(y, depth=self.n_classes_out)
 
         return ID, X, y
