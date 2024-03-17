@@ -370,7 +370,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print('P_original first 10:') 
             tf.print(P_original[10])
 
-        P_noise = tf.convert_to_tensor(self.norm_data[: , self.z_bins])
+        P_noise = tf.convert_to_tensor(self.norm_data[: , self.z_bins], dtype=tf.float32)
 
         # Add noise
         for i_noise in range(self.n_noisy_samples):
