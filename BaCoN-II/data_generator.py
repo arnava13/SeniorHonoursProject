@@ -492,7 +492,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 expanded = tf.transpose(expanded, perm=[0, 2, 1])
                 if self.Verbose:
                     tf.print('New dimension of data: %s' %str(expanded.shape))
-                expanded = expanded[:,:,self.z_bins]
+                expanded = tf.gather(expanded, self.z_bins, axis=2)
                 if self.Verbose:
                     tf.print('Final dimension of data: %s' %str(expanded.shape))
                     tf.print('expanded first 10:') 
