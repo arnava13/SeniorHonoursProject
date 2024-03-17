@@ -173,10 +173,8 @@ def my_train(model, optimizer, loss,
             val_acc_metric = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_acc_metric.result(), axis=None)
     else:
         for IDs, x_batch_train, y_batch_train in train_generator.dataset:
-            x_batch_train = x_batch_train[:,0,:,:]
             train_on_batch(IDs, x_batch_train, y_batch_train, train_generator, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, val_generator.batch_size)
         for IDs, x_batch_val, y_batch_val in val_generator.dataset:
-            x_batch_train = x_batch_train[:,0,:,:]
             val_step(IDs, x_batch_train, y_batch_train, train_generator, epoch, model, loss, val_acc_metric, val_loss_metric, bayesian, n_val_example, val_generator.batch_size)
         train_acc_metric = train_acc_metric.result()
         train_loss_metric = train_loss_metric.result()
