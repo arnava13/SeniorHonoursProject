@@ -104,7 +104,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.one_vs_all=one_vs_all
         self.dataset_balanced=dataset_balanced
         self.sigma_sys=sigma_sys
-        self.sigma_sys = tf.constant(self.sigma_sys, tf.float32)
         self.add_shot=add_shot
         self.add_sys=add_sys
         self.add_cosvar=add_cosvar
@@ -799,7 +798,7 @@ def create_generators(FLAGS, strategy = None):
         tf.print(' ####  FLAGS.swap_axes not found! #### \n Probably loading an older model. Set swap_axes=%s' %str(swap_axes))
     ###################
         
-    ##Generate a random seed now to prevent issues in parallel processing when in TPU mode
+    ##Generate a random seed for a tensorflow random number generator used in the class to prevent issues in parallel processing when in TPU mode
     seed = np.random.randint(0, 2**32 - 1)
     
     
