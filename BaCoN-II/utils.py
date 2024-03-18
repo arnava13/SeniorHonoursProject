@@ -14,35 +14,29 @@ import tensorflow.compat.v2 as tf
 
 
 
-
+@tf.function
 def get_fname_list(c_0, c_1, list_IDs_temp, data_root, list_IDs_temp_dict, dataset_balanced=True):
-    
-    # np.array([self.data_root + '/'+l+ '/'+ str(ID) + '.txt' for ID in list_IDs_temp for l in self.labels])
     if dataset_balanced:
-        fnames_c0 = np.array([ data_root+'/'+c_0[0]+'/'+str(ID)+'.txt' for ID in list_IDs_temp ])
-    
+        fnames_c0 = tf.strings.join([data_root, '/', c_0[0], '/', tf.strings.as_string(list_IDs_temp), '.txt'], separator='')
+
         fnames_c1 = []
-        n_loops=len(list_IDs_temp)//len(c_1)
-        #print('get_fname_list len(list_IDs_temp): %s' %len(list_IDs_temp))
-        #print('get_fname_list n_loops: %s' %n_loops)
+        n_loops = len(list_IDs_temp) // len(c_1)
         for k in range(n_loops):
-            p  = np.random.permutation(list_IDs_temp[k*len(c_1):(k+1)*len(c_1)])
+            p = tf.random.shuffle(list_IDs_temp[k*len(c_1):(k+1)*len(c_1)])
             for i, l in enumerate(c_1):
-                fname = data_root+'/'+l+'/'+str(p[i])+'.txt'
-                #print(fname)
+                fname = tf.strings.join([data_root, '/', l, '/', tf.strings.as_string(p[i]), '.txt'], separator='')
                 fnames_c1.append(fname)
-        fnames_c1 = np.array(fnames_c1)
-        fname_list = np.concatenate([fnames_c0,fnames_c1])
+        fnames_c1 = tf.stack(fnames_c1)
+        fname_list = tf.concat([fnames_c0, fnames_c1], axis=0)
     else:
-        #print('get_fname_list non balanced case')
-        fname_list=[]
-        all_labels=c_0+c_1
+        fname_list = []
+        all_labels = c_0 + c_1
         for l in all_labels:
-            for ID in list_IDs_temp: #list_IDs_temp_dict[l]:
-                t_st =  data_root + '/'+l+ '/'+ str(ID) + '.txt' 
+            for ID in list_IDs_temp:
+                t_st = tf.strings.join([data_root, '/', l, '/', tf.strings.as_string(ID), '.txt'], separator='')
                 fname_list.append(t_st)
-        fname_list = np.array(fname_list)
-    
+        fname_list = tf.stack(fname_list)
+
     return fname_list
 
 
@@ -459,8 +453,8 @@ def get_all_indexes(FLAGS, Test=False):
 
 
 def find_nearest(array, value):
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
+    array = tf.convert_to_tensor(array, dtype=tf.float32)
+    idx = tf.argmin(tf.abs(array - value), axis=0, output_type=tf.int32)
     return idx, array[idx]
 
 
