@@ -43,7 +43,7 @@ def train_on_batch(IDs, x, y, train_generator, epoch, model, optimizer, loss, tr
         train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)        
     if save_indexes:
         train_generator.write_indexes(epoch, IDs)
-    train_loss_metric.update_state(loss)
+    train_loss_metric.update_state(loss_value)
 
 @tf.function
 def val_step(IDs, x, y, val_generator, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian=False, n_val_example=10000, TPU=False, strategy=None, batch_size=2500, save_indexes=False):
