@@ -295,6 +295,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 #tf.print('( n_labels x n_noisy_samples) = %s' %(self.n_classes*self.n_noisy_samples))
                 raise ValueError('Batch size must be multiple of n_classes x len(c_1)  x (n_noisy_samples) ')
             self.n_indexes = len(self.c_1)*self.batch_size//(self.n_classes*self.n_noisy_samples) #len(self.c_1)*
+            self.n_indexes = tf.convert_to_tensor(self.n_indexes, dtype=tf.int32)
             tf.print('batch_size, n_classes, len(self.c_1), n_noisy_samples= %s, %s, %s, %s' %(self.batch_size, self.n_classes, len(self.c_1), self.n_noisy_samples))
             tf.print('n_indexes=len(self.c_1)*batch_size//(n_classes*n_noisy_samples)=%s' %self.n_indexes)
              
@@ -304,6 +305,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 tf.print('( n_classes x n_noisy_samples) = %s' %(self.n_classes*self.n_noisy_samples))
                 raise ValueError('Batch size must be multiple of (number of classes) x (n_noisy_samples) ')
             self.n_indexes = self.batch_size//(self.n_classes*self.n_noisy_samples) # now many index files to read per each batch
+            self.n_indexes = tf.convert_to_tensor(self.n_indexes, dtype=tf.int32)
         
         self.n_batches = tf.convert_to_tensor(len(list_IDs)//(self.n_indexes))
         tf.print('list_IDs length: %s' %len(list_IDs))
@@ -323,10 +325,10 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
          
         if self.base_case_dataset:
             n_ex = self.n_indexes*self.n_classes*self.n_noisy_samples
-            n_check = self.n_classes*self.n_noisy_samples 
+            n_check = tf.cast(self.n_classes*self.n_noisy_samples, tf.int32)
         else:
             n_ex = self.n_indexes*self.n_classes*self.n_noisy_samples/len(self.c_1)
-            n_check = self.n_classes*self.n_noisy_samples#*len(self.c_1) # n_indexes must be a multiple of this x batch_size
+            n_check = tf.cast(self.n_classes*self.n_noisy_samples, tf.int32)#*len(self.c_1) # n_indexes must be a multiple of this x batch_size
         
         tf.print('In total, for each batch we have %s training examples' %(n_ex))
         tf.print('Input batch size: %s' %self.batch_size)
