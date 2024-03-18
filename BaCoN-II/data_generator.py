@@ -138,7 +138,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
           self.dim = dim
         else:
           self.dim = (tf.cast((dim[0]/sample_pace), tf.int32), tf.cast(dim[1], tf.int32)) 
-        self.n_channels = tf.cast(n_channels, tf.int32)
+        self.n_channels = tf.convert_to_tensor(n_channels, tf.int32)
         self.z_bins=tf.convert_to_tensor(z_bins, dtype=tf.int32)
         
         tf.print('Using z bins %s' %z_bins)
@@ -216,6 +216,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         
             
         self.batch_size = batch_size
+
+        self.batch_size = tf.convert_to_tensor(self.batch_size, tf.int32)
         
         self.labels = labels
         #tf.print(self.labels)
@@ -237,14 +239,14 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         tf.print('base_case_dataset: %s' %str(self.base_case_dataset))
         
         
-        self.n_classes_out = len(self.labels)
+        self.n_classes_out = tf.constant(len(self.labels), dtype=tf.int32)
         if not self.base_case_dataset:
-            self.n_classes = 2*(len(self.c_1))
+            self.n_classes = 2*(tf.constant(len(self.c_1), dtype=tf.int32))
         elif (self.fine_tune and not self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and not self.dataset_balanced):
-            self.n_classes = len(self.c_1)+len(self.c_0)
+            self.n_classes = tf.constant(len(self.c_1), dtype=tf.int32)+tf.constant(len(self.c_0), dtype=tf.int32)
         else:
             # regular 5 labels case
-            self.n_classes =len(self.labels)
+            self.n_classes =tf.constant(len(self.labels), dtype=tf.int32)
         
         
         tf.print('N. classes: %s' %self.n_classes) 
@@ -271,7 +273,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
           self.n_noisy_samples = 1
         else:
           self.n_noisy_samples = n_noisy_samples
-        
+        self.n_noisy_samples = tf.convert_to_tensor(self.n_noisy_samples, dtype=tf.int32)
         
         ######
         # Consistency checks
@@ -303,7 +305,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 raise ValueError('Batch size must be multiple of (number of classes) x (n_noisy_samples) ')
             self.n_indexes = self.batch_size//(self.n_classes*self.n_noisy_samples) # now many index files to read per each batch
         
-        self.n_batches = len(list_IDs)//(self.n_indexes)
+        self.n_batches = tf.convert_to_tensor(len(list_IDs)//(self.n_indexes))
         tf.print('list_IDs length: %s' %len(list_IDs))
         tf.print('n_indexes (n of file IDs read for each batch): %s' %self.n_indexes)
         tf.print('batch size: %s' %self.batch_size)
@@ -610,7 +612,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print(fname_list)
             
         tf.print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size, self.n_noisy_samples))
-        assert len(fname_list)==self.batch_size*self.n_batches//(self.n_noisy_samples)
+        assert tf.constant(len(fname_list), dtype=tf.int32) == self.batch_size*self.n_batches//(self.n_noisy_samples)
 
         fname_list = tf.constant(fname_list, dtype=tf.string)
         ID_list = tf.constant(ID_list, dtype=tf.int32)
