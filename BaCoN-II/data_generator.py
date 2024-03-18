@@ -567,7 +567,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             def write_spectra(z_bins, X, X_save):
                 def condition(i, z_bins, X, X_save):
                     return i < tf.size(z_bins)
-                def body(i, z_bins, X, X_save):
+                def body(i_z, z_bins, X, X_save):
                     X_save[1:,1:].assign(X[:,:,0,i_z])
                     spectra_file = tf.io.gfile.join(self.name_spectra_folder, 'processed_spectra_zbin{}.txt'.format(i_z))
                     if not tf.io.gfile.exists(spectra_file):
@@ -622,6 +622,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.add_sys:
             curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
         self.curve_file = tf.io.gfile.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
+        self.curve_file = tf.io.gfile.join(self.data_root, self.curve_file)
 
         self.name_spectra_folder = tf.strings.join([self.models_dir, self.fname, 'processed_spectra'], separator='/')
         if not tf.io.gfile.exists(self.name_spectra_folder):
