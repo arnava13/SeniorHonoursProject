@@ -103,7 +103,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         
         self.one_vs_all=one_vs_all
         self.dataset_balanced=dataset_balanced
-        self.sigma_sys=tf.constant(sigma_sys, tf.float32)
+        self.sigma_sys=sigma_sys
+        self.sigma_sys = tf.constant(self.sigma_sys, tf.float32)
         self.add_shot=add_shot
         self.add_sys=add_sys
         self.add_cosvar=add_cosvar
