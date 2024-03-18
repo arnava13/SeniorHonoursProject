@@ -58,8 +58,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             return sum(1 for line in file)
     
     @tf.function
-    @staticmethod
-    def read_file(file_path, *, column_indices=None, dtype=tf.float32):
+    def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
         file_content = tf.io.read_file(file_path)
         lines = tf.strings.split([file_content], '\n').values
         lines = tf.cond(tf.equal(lines[-1], ""), lambda: lines[:-1], lambda: lines)
