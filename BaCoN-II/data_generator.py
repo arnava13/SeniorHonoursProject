@@ -151,6 +151,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         
         self.data_root=data_root
         self.norm_data_path = tf.io.gfile.join(self.data_root, norm_data_name)
+        tf.print('Data root dir is %s' %self.data_root)
         tf.print('Normalisation file is %s' %self.norm_data_path)
         self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)
         if self.sample_pace !=1:
