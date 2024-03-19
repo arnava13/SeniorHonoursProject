@@ -497,7 +497,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             if self.Verbose:
                 tf.print('Final dimension of data: %s' %str(expanded.shape))
                 tf.print('expanded first 10:') 
-                tf.print(expanded[10.numpy()])
+                tf.print(expanded[10].numpy())
             # now shape of expanded is (1, n_data_points (k values), 1, n_channels=3)
         X = expanded  
 
