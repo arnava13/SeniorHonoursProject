@@ -592,14 +592,14 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 for ID in list_IDs_dict[l]:
                     t_st =  self.data_root + '/'+l+ '/'+ str(ID) + '.txt' 
                     fname_list.append(t_st)
-                    ID_value = tf.constant(ID, dtype=tf.int32)
+                    ID_value = tf.cast(ID, dtype=tf.int32)
                     ID_list = tf.concat([ID_list, [ID_value]], axis=0)
         else:
             fname_list = get_fname_list(self.c_0, self.c_1, list_IDs, self.data_root,  list_IDs_dict, dataset_balanced=self.dataset_balanced,)
             ID_list = tf.constant([], dtype=tf.int32)
             for fname in fname_list:
                 ID = int(fname.split('.')[0].split('/')[-2]+'/'+fname.split('.')[0].split('/')[-1])
-                ID_value = tf.constant(ID, dtype=tf.int32)
+                ID_value = tf.cast(ID, dtype=tf.int32)
                 ID_list = tf.concat([ID_list, [ID_value]], axis=0)
         if self.fine_tune and self.Verbose :
             tf.print(fname_list)
