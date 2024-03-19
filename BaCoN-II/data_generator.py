@@ -208,9 +208,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         self.all_ks = self.all_ks[self.i_min:self.i_max]
         self.dim = (tf.cast(self.all_ks.shape[0], tf.int32), self.dim[1])
-        tf.print('New data dim: %s' %str(self.dim.numpy()) )
-        tf.print('Final i_max used is %s' %self.i_max.numpy())
-        tf.print('Final i_min used is %s' %self.i_min.numpy())
+        tf.print('New data dim: %s' %str(self.dim) )
+        tf.print('Final i_max used is %s' %(self.i_max.numpy() if self.i_max is tf.Tensor else self.i_max))
+        tf.print('Final i_min used is %s' %(self.i_min.numpy() if self.i_min is tf.Tensor else self.i_min))
   
         self.batch_size = tf.convert_to_tensor(batch_size, tf.int32)
         
