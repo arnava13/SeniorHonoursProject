@@ -612,12 +612,19 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.shuffle:
             dataset = dataset.shuffle(buffer_size=len(list_IDs))
 
-        global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
+        #Batch the dataset 
+        if self.TPU:
+            global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
+        else:
+            global_batchsize = self.batch_size
         dataset = dataset.batch(global_batchsize)
+
+        #Prefetch for improved performance
         dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
-        # Distribute the dataset within the strategy scope
-        dataset = self.strategy.experimental_distribute_dataset(dataset)
+        # Distribute the dataset within the strategy scope if TPU mode
+        if self.TPU:
+            dataset = self.strategy.experimental_distribute_dataset(dataset)
     
         return dataset
     
