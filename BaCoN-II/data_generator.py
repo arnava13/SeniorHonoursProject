@@ -587,20 +587,26 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         'Generates a batched DataSet'
         if not self.fine_tune and not self.one_vs_all:
             fname_list=[]
-            ID_list = tf.constant([], dtype=tf.int32)
+            ID_array = tf.TensorArray(dtype=tf.int32, size=0, dynamic_size=True)
+            i = 0
             for l in self.labels:
                 for ID in list_IDs_dict[l]:
                     t_st =  self.data_root + '/'+l+ '/'+ str(ID) + '.txt' 
                     fname_list.append(t_st)
                     ID_value = tf.cast(ID, dtype=tf.int32)
-                    ID_list = tf.concat([ID_list, [ID_value]], axis=0)
+                    ID_array = ID_array.write(i, ID_value)
+                    i += 1
+            ID_list = ID_array.stack()
         else:
             fname_list = get_fname_list(self.c_0, self.c_1, list_IDs, self.data_root,  list_IDs_dict, dataset_balanced=self.dataset_balanced,)
-            ID_list = tf.constant([], dtype=tf.int32)
+            ID_array = tf.TensorArray(dtype=tf.int32, size=0, dynamic_size=True)
+            i = 0
             for fname in fname_list:
                 ID = int(fname.split('.')[0].split('/')[-2]+'/'+fname.split('.')[0].split('/')[-1])
                 ID_value = tf.cast(ID, dtype=tf.int32)
-                ID_list = tf.concat([ID_list, [ID_value]], axis=0)
+                ID_array = ID_array.write(i, ID_value)
+                i += 1
+            ID_list = ID_array.stack()
         if self.fine_tune and self.Verbose :
             tf.print(fname_list)
             
