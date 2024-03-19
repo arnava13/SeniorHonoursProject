@@ -603,7 +603,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         tf.debugging.assert_equal(tf.constant(len(fname_list), dtype=tf.int32), self.batch_size * self.n_batches // self.n_noisy_samples, message="Fname list != batch_size * n_batches // n_noisy_samples")
 
         fname_list = tf.constant(fname_list, dtype=tf.string)
-        ID_list = tf.constant(ID_list, dtype=tf.int32)
+        ID_list = tf.convert_to_tensor(ID_list, dtype=tf.int32)
 
         if self.Verbose_2:
             tf.print("list_IDs_dict")
