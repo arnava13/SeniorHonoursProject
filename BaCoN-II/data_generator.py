@@ -186,7 +186,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         if self.k_min is not None:
             tf.print('Specified k_min is %s' %self.k_min)
-            self.i_min, k_min_res = find_nearest(self.all_ks, self.k_min.numpy()) 
+            self.i_min, k_min_res = find_nearest(self.all_ks, self.k_min) 
             tf.print('Corresponding i_min is %s' %self.i_min.numpy())
             tf.print('Closest k to k_min is %s' %k_min_res.numpy())
 
