@@ -342,7 +342,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
           tf.print('length of IDs = %s' %str(len(list_IDs)))
           tf.print('n_batches = %s' %self.n_batches.numpy())
           tf.print('n_indexes = %s' %self.n_indexes.numpy())
-          tf.print('len(list_IDs)/self.n_batches = %s' %(len(list_IDs)/self.n_batches).numpy()
+          tf.print('len(list_IDs)/self.n_batches = %s' %(len(list_IDs)/self.n_batches).numpy())
           raise ValueError('n_batches does not match length of IDs')
         self.Verbose=Verbose
         self.Verbose_2=Verbose_2
