@@ -387,6 +387,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 self.k_range = tf.convert_to_tensor(k, dtype=tf.float32)
                 if self.add_noise:
                     P_noisy = tf.map_fn(loop_over_noise, tf.range(self.n_noisy_samples))
+                    P_noisy = tf.cast(P_noisy, dtype=tf.float32)
                     
         else:
             P_original = loaded_all[:, 1:]
@@ -407,6 +408,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             P_noise = tf.gather(self.norm_data, self.z_bins, axis=1)
             if self.add_noise:
                 P_noisy = tf.map_fn(loop_over_noise, tf.range(self.n_noisy_samples))
+                P_noisy = tf.cast(P_noisy, dtype=tf.float32)
 
         if self.add_noise and self.add_sys:
             curves_loaded = self.read_file(self.curve_file, dtype=tf.float32)
@@ -457,6 +459,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 # rescale by Gaussian with sigma = 1
                 # multiply with normalisation spectrum
                 noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * P_noise
+                noise_sys = tf.cast(noise_sys, dtype=tf.float32)
 
 
                 if self.rescale_curves == 'uniform':
@@ -469,7 +472,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
                 if self.add_shot:
                     noise_scale = generate_noise(k,P_noise,self.pi, sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
-                    noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
+                    noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale, dtype=tf.float32)
                     P_noisy = P_noisy + noise_shot
 
 
