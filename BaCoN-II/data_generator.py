@@ -436,7 +436,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     if self.rescale_curves == 'gaussian':
                         noise_sys = noise_sys * self.rng.normal(shape=noise_sys.shape, mean=0, stddev=1, dtype=tf.float32)
 
+                    P_noisy = tf.cast(P_noisy, dtype=tf.float32)
                     P_noisy = P_noisy + noise_sys
+                    P_noisy = tf.cast(P_noisy, dtype=tf.float32)
 
 
                     if self.add_shot:
@@ -467,7 +469,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 if self.rescale_curves == 'gaussian':
                     noise_sys = noise_sys * self.rng.normal(shape=noise_sys.shape, mean=0, stddev=1, dtype=tf.float32)
 
+                P_noisy = tf.cast(P_noisy, dtype=tf.float32)
                 P_noisy = P_noisy + noise_sys
+                P_noisy = tf.cast(P_noisy, dtype=tf.float32)
 
 
                 if self.add_shot:
