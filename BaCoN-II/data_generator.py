@@ -81,7 +81,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 #fname_user='my_model',
                 curves_folder = 'curve_files_sys/curve_files_train1k_sysFactor0o04_start0o03_dirChange0',
                 sample_pace = 4, pad=False, 
-                Verbose=False, Verbose_2=False,
+                Verbose=True, Verbose_2=False,
                 k_max=2.5, i_max = None,
                 k_min=0.0, i_min = None,
                 add_noise=True, n_noisy_samples = 10, 
@@ -642,6 +642,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         # Generate data
         self.i_ind=0
         dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        
         dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         if self.shuffle:
             dataset = dataset.shuffle(buffer_size=len(list_IDs))
