@@ -529,12 +529,14 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         def set_shapes():
             self.xshape = X.shape
             self.yshape = y.shape
+            return True
         tf.cond(tf.equal(self.i_ind, 0), set_shapes, lambda: False)
         if self.save_processed_spectra and not self.TPU:
             def make_spectra_dir():
                 if not tf.io.gfile.exists(self.name_spectra_folder):
                     tf.print('Creating directory %s' %  self.name_spectra_folder)
                     tf.io.gfile.makedirs(self.name_spectra_folder)
+                return True
             tf.cond(tf.equal(ID, 0), make_spectra_dir, lambda: False)
             # new matrix for spectra, first column is class_idx, first row is k-values
             X_save = tf.Variable(tf.zeros((self.batch_size*self.n_batches+1, len(self.k_range)+1)))
