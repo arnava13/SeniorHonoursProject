@@ -505,9 +505,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 tf.print('New dimension of data: %s' %str(expanded.shape))
             expanded = tf.gather(expanded, self.z_bins, axis=2)
             if self.Verbose:
-                tf.print('expanded first 10:') 
-                tf.print(expanded[10].numpy())
-            # now shape of expanded is (1, n_data_points (k values), 1, n_channels=3)
+                tf.print('expanded first 5:') 
+                tf.print(expanded[5])
+            # now shape of expanded is (1, n_data_points (k values), 1, n_channels)
         tf.print('Dimension of data before normalising: %s' %str(expanded.shape))
         X = expanded  
 
