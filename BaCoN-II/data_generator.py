@@ -360,7 +360,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
     @tf.function
     def process_file(self, ID, fname):
-        fname = tf.constant(fname, dtype=tf.string)
+        fname = tf.cast(fname, dtype=tf.string)
         if self.Verbose:
                     tf.print('Loading file %s' %fname)
         loaded_all = self.read_file(fname, dtype=tf.float32)
@@ -627,7 +627,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         self.name_spectra_folder = tf.strings.join([self.models_dir, self.fname, 'processed_spectra'], separator='/')
         if not tf.io.gfile.exists(self.name_spectra_folder.numpy().decode('utf-8')):
-            tf.print('Creating directory %s' %  self.name_spectra_folder)
+            tf.print('Creating directory %s' %  self.name_spectra_folder.numpy.decode('utf-8')
             tf.io.gfile.makedirs(self.name_spectra_folder.numpy().decode('utf-8'))
                 
         # Generate data
