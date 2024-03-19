@@ -582,7 +582,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         return ID, X, y
     
-    @tf.function
     def __data_generation(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
         if not self.fine_tune and not self.one_vs_all:
