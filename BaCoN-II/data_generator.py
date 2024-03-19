@@ -424,7 +424,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
             P_noise = tf.gather(self.norm_data, self.z_bins, axis=1)
             if self.add_noise:
-                P_noisy, curves_loaded = tf.map_fn(loop_over_noise, tf.range(self.n_noisy_samples))
+                P_noisy = tf.map_fn(lambda x: loop_over_noise(x)[0], tf.range(self.n_noisy_samples))
+                curves_loaded = tf.map_fn(lambda x: loop_over_noise(x)[1], tf.range(self.n_noisy_samples))
                 P_noisy = tf.cast(P_noisy, dtype=tf.float32)
                 curves_loaded = tf.case(curves_loaded, dtype=tf.float32)
 
