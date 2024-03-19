@@ -493,22 +493,19 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print('Storing at position %s in the data' %self.i_ind)
             tf.print('Dimension of data: %s' %str(expanded.shape))
         # swap axis if using one dim array in multiple channels 
+        expanded = expanded[:,:,0,:]
         if self.swap_axes:
             if self.Verbose:
                 tf.print('Reshaping')
-            if self.TPU:
-                with self.strategy.scope:
-                    expanded = tf.transpose(expanded, perm=[0, 2, 1])
-            else:
-                expanded = tf.transpose(expanded, perm=[0, 2, 1])
+            expanded = tf.transpose(expanded, perm=[0, 2, 1])
             if self.Verbose:
                 tf.print('New dimension of data: %s' %str(expanded.shape))
             expanded = tf.gather(expanded, self.z_bins, axis=2)
             if self.Verbose:
-                tf.print('Final dimension of data: %s' %str(expanded.shape))
                 tf.print('expanded first 10:') 
                 tf.print(expanded[10].numpy())
             # now shape of expanded is (1, n_data_points (k values), 1, n_channels=3)
+        tf.print('Dimension of data before normalising: %s' %str(expanded.shape))
         X = expanded  
 
         if self.Verbose:
