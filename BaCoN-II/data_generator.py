@@ -124,7 +124,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.sigma_curves = tf.constant(sigma_curves, tf.float32)
         self.sigma_curves_default = tf.constant(sigma_curves_default, tf.float32)
         self.save_processed_spectra = save_processed_spectra
-        self.rescale_curves = rescale_curves
+        self.name_spectra_folder = os.fsdecode(os.path.join(self.models_dir, self.fname, 'processed_spectra'))
         self.seed = seed
         self.rng = tf.random.Generator.from_seed(self.seed)
         self.swap_axes = swap_axes 
@@ -504,6 +504,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         return ID, X, y
 
+    
+
     @tf.function
     def normalize_and_onehot(self, ID, X, y):
         if self.normalization == 'batch':
@@ -516,24 +518,23 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 X = X / divisor - 1
                 if self.Verbose:
                     tf.print('axes swapped')
-                    tf.print('NORM first 10:', divisor[:10], dtype=tf.float32)
+                    tf.print('NORM first 10:', divisor[:10])
             else:
                 divisor = tf.expand_dims(tf.expand_dims(self.norm_data, axis=0), axis=-1)
                 X = X / divisor - 1
                 if self.Verbose:
                     tf.print('axes not swapped')
-                    tf.print('Dimension of NORM data:', tf.shape(divisor), dtype=tf.float32)
+                    tf.print('Dimension of NORM data:', tf.shape(divisor))
         def set_shapes():
             self.xshape = X.shape
             self.yshape = y.shape
         tf.cond(tf.equal(self.i_ind, 0), lambda: set_shapes, lambda: False)
         if self.save_processed_spectra and not self.TPU:
-            def write_processed_spectra():
-                self.name_spectra_folder = tf.strings.join([self.models_dir, self.fname, 'processed_spectra'], separator='/')
-                if not tf.io.gfile.exists(self.name_spectra_folder.numpy().decode('utf-8')):
-                    tf.print('Creating directory %s' %  self.name_spectra_folder.numpy.decode('utf-8'))
-                    tf.io.gfile.makedirs(self.name_spectra_folder.numpy().decode('utf-8'))
-            tf.cond(tf.equal(ID, 0), lambda: write_processed_spectra, lambda: False)
+            def make_spectra_dir():
+                if not tf.io.gfile.exists(self.name_spectra_folder):
+                    tf.print('Creating directory %s' %  self.name_spectra_folder)
+                    tf.io.gfile.makedirs(self.name_spectra_folder)
+            tf.cond(tf.equal(ID, 0), lambda: make_spectra_dir, lambda: False)
             # new matrix for spectra, first column is class_idx, first row is k-values
             X_save = tf.Variable(tf.zeros((self.batch_size*self.n_batches+1, len(self.k_range)+1)))
             X_save[1:,0].assign(y)

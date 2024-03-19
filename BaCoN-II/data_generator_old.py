@@ -442,7 +442,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                     curve_random_nr = random.randint(1,1000)
                     curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
                     curves_loaded = np.loadtxt(curve_file)
-                    , k_sys = curves_loaded[:, 1:], curves_loaded[:, 0]
+                    noise_sys, k_sys = curves_loaded[:, 1:], curves_loaded[:, 0]
 
 
                     if self.sample_pace!=1:
