@@ -500,7 +500,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.swap_axes:
             if self.Verbose:
                 tf.print('Reshaping')
-            expanded = tf.transpose(expanded, perm=[0, 2, 1])
+            expanded = tf.transpose(expanded, perm=[0, 2, 1, 3])
             if self.Verbose:
                 tf.print('New dimension of data: %s' %str(expanded.shape))
             expanded = tf.gather(expanded, self.z_bins, axis=2)
