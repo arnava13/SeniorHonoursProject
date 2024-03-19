@@ -532,12 +532,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             return True
         tf.cond(tf.equal(self.i_ind, 0), set_shapes, lambda: False)
         if self.save_processed_spectra and not self.TPU:
-            def make_spectra_dir():
-                if not tf.io.gfile.exists(self.name_spectra_folder):
-                    tf.print('Creating directory %s' %  self.name_spectra_folder)
-                    tf.io.gfile.makedirs(self.name_spectra_folder)
-                return True
-            tf.cond(tf.equal(ID_, 0), make_spectra_dir, lambda: False)
             # new matrix for spectra, first column is class_idx, first row is k-values
             X_save = tf.Variable(tf.zeros((self.batch_size*self.n_batches+1, len(self.k_range)+1)))
             X_save[1:,0].assign(y)
@@ -556,10 +550,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 tf.while_loop(condition, body, [i, z_bins, X, X_save])
             write_spectra(self.z_bins, X, X_save)
                 
-            
-
-        elif self.TPU:
-            tf.print("WARNING: Cannot save processed spectra in TPU mode.")
         if self.swap_axes:
             X = X[:,:,0,:]
             X = X[0,:,:]
@@ -609,7 +599,17 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.i_ind=tf.constant(0, dtype=tf.int32)
         dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         
+        if self.save_processed_spectra and not self.TPU:
+            if not tf.io.gfile.exists(self.name_spectra_folder):
+                tf.print('Creating directory %s' %  self.name_spectra_folder)
+                tf.io.gfile.makedirs(self.name_spectra_folder)
+            return True
+        elif self.TPU:
+            tf.print("WARNING: Cannot save processed spectra in TPU mode.")
+
+        # Normalize and one-hot encode 
         dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
         if self.shuffle:
             dataset = dataset.shuffle(buffer_size=len(list_IDs))
 
