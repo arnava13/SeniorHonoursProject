@@ -161,50 +161,50 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         # Select points from k_max or i_max
 
         if self.k_max is not None:
-            tf.print('Specified k_max is %s' %self.k_max.numpy())
+            tf.print('Specified k_max is %s' %self.k_max)
             self.i_max, k_max_res = find_nearest(self.all_ks, self.k_max) 
             tf.print('Corresponding i_max is %s' %self.i_max.numpy())
             tf.print('Closest k to k_max is %s' %k_max_res.numpy())
 
         elif self.i_max is not None:
-            self.k_max = tf.gather(self.all_ks, self.i_max.numpy())
-            tf.print('Specified i_max is %s' %self.i_max.numpy())
+            self.k_max = tf.gather(self.all_ks, self.i_max)
+            tf.print('Specified i_max is %s' %self.i_max)
             tf.print('Corresponding k_max is %s' %self.k_max.numpy())
             
         elif self.i_max is not None and self.k_max is not None:
-            tf.print('Specified i_max is %s' %self.i_max.numpy())
-            tf.print('Specified k_max is %s' %self.k_max.numpy())
+            tf.print('Specified i_max is %s' %self.i_max)
+            tf.print('Specified k_max is %s' %self.k_max)
             
             i_max, k_max = find_nearest(self.all_ks, self.k_max)
             assert(i_max==self.i_max)
 
         else:
             self.i_max = -1
-            tf.print('No max in k. Using all ks . k_max=%s' %tf.gather(self.all_ks, self.i_max))
+            tf.print('No max in k. k_max=%s' %tf.gather(self.all_ks, self.i_max))
 
         # Select points from k_min or i_min
 
         if self.k_min is not None:
-            tf.print('Specified k_min is %s' %self.k_min.numpy())
+            tf.print('Specified k_min is %s' %self.k_min)
             self.i_min, k_min_res = find_nearest(self.all_ks, self.k_min.numpy()) 
             tf.print('Corresponding i_min is %s' %self.i_min.numpy())
             tf.print('Closest k to k_min is %s' %k_min_res.numpy())
 
         elif self.i_min is not None:
-            self.k_min = tf.gather(self.all_ks, self.i_min.numpy())
-            tf.print('Specified i_min is %s' %self.i_min.numpy())
+            self.k_min = tf.gather(self.all_ks, self.i_min)
+            tf.print('Specified i_min is %s' %self.i_min)
             tf.print('Corresponding k_min is %s' %self.k_min.numpy())
             
         elif self.i_min is not None and self.k_min is not None:
-            tf.print('Specified i_min is %s' %self.i_min.numpy())
-            tf.print('Specified k_min is %s' %self.k_min.numpy())
+            tf.print('Specified i_min is %s' %self.i_min)
+            tf.print('Specified k_min is %s' %self.k_min)
             
             i_min, k_min = find_nearest(self.all_ks, self.k_min)
             assert(i_min==self.i_min)
 
         else:
             self.i_min = 0
-            tf.print('No min in k. Using all ks . k_min=%s' %tf.gather(self.all_ks, self.i_min))
+            tf.print('No min in k. k_min=%s' %tf.gather(self.all_ks, self.i_min))
 
         self.all_ks = self.all_ks[self.i_min:self.i_max]
         self.dim = (tf.cast(self.all_ks.shape[0], tf.int32), self.dim[1])
