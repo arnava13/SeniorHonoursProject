@@ -501,22 +501,27 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.i_ind += 1
 
         ID = tf.convert_to_tensor(ID)
-        tf.cast(ID, dtype=tf.int32)
+        ID = tf.cast(ID, dtype=tf.int32)
 
         return ID, X, y
 
     
 
-    @tf.function
-    def normalize_and_onehot(self, ID_, X, y):
+    @tf.py_function
+    def normalize_and_onehot(self, ID, X, y):
         if self.normalization == 'batch':
             mu_batch = tf.reduce_mean(X, axis=0)
             std_batch = tf.math.reduce_std(X, axis=0)
             X = (X - mu_batch) / std_batch
         elif self.normalization == 'stdcosmo':
             if self.swap_axes:
-                divisor = tf.gather(self.norm_data, self.z_bins, axis=1)
-                X = X / divisor - 1
+                if self.TPU:
+                    with self.strategy.scope():
+                        divisor = tf.gather(self.norm_data, self.z_bins, axis=1)
+                        X = X / divisor - 1
+                else:
+                    divisor = tf.expand_dims(tf.expand_dims(self.norm_data, axis=0), axis=-1)
+                    X = X / divisor - 1
                 if self.Verbose:
                     tf.print('axes swapped')
                     tf.print('NORM first 10:', divisor[:10])
@@ -554,7 +559,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             X = X[:,:,0,:]
             X = X[0,:,:]
         y = tf.one_hot(y, depth=self.n_classes_out)
-        ID = ID_
+        ID = ID
 
         return ID, X, y
     
