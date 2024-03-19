@@ -513,8 +513,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         if self.Verbose:
             tf.print('dimension of X: %s' %str(X.shape))
-            tf.print('X first 10:') 
-            tf.print(X[10])
+            tf.print('X first 5:') 
+            tf.print(X[5])
 
         # Store class   
         label = tf.strings.split(fname, '/')[-2]
