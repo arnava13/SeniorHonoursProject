@@ -111,7 +111,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.sys_factor=tf.constant(sys_factor, tf.float32)
         self.pi = tf.constant(np.pi, dtype=tf.float32)
         self.sys_max=sys_max
-        self.group_lab_dict=group_lab_dict
+        self.group_lab_dict = tf.lookup.StaticHashTable(initializer=tf.lookup.KeyValueTensorInitializer(list(group_lab_dict.keys()), list(group_lab_dict.values())), default_value="", name="group_lab_mapping")
         self.fine_tune=fine_tune
         self.c_0=c_0
         self.c_1=c_1
@@ -216,8 +216,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         
         self.labels = labels
         #tf.print(self.labels)
-        self.labels_dict = labels_dict
-        self.inv_labels_dict={value:key for key,value in zip(self.labels_dict.keys(), self.labels_dict.values())}
+        self.labels_dict = tf.lookup.StaticHashTable(initializer=tf.lookup.KeyValueTensorInitializer(list(self.labels_dict.keys()), list(self.labels_dict.values())), default_value=-1, name="labels_dict_mapping")
+        self.inv_labels_dict={value:key for key,value in zip(labels_dict.keys(), labels_dict.values())}
+
         #tf.print(self.inv_labels_dict)
 
         self.list_IDs = list_IDs
@@ -512,20 +513,18 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print('dimension of X: %s' %str(X.shape))
             tf.print('X first 10:') 
             tf.print(X[10])
+
         # Store class   
-        label = fname.split('/')[-2]
+        label = tf.strings.split(fname, '/')[-2]
         if not self.base_case_dataset:
-                label = self.group_lab_dict[label]
-                encoding = self.labels_dict[label]
+            label = self.group_lab_dict.lookup(label)
+            encoding = self.labels_dict.lookup(label)
         elif (self.fine_tune and not self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and not self.dataset_balanced):
-            label = self.group_lab_dict[label]
-            encoding = self.labels_dict[label]
+            label = self.group_lab_dict.lookup(label)
+            encoding = self.labels_dict.lookup(label)
         else:
             # regular 5 labels case
-            encoding = self.labels_dict[label]
-        if self.Verbose:
-            tf.print('Label for this example: %s' %label)
-            tf.print('Encoding: %s' % encoding)
+            encoding = self.labels_dict.lookup(label)
         
         y = encoding
         self.i_ind += 1
