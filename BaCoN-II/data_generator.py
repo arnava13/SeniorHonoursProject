@@ -124,6 +124,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.sigma_curves = tf.constant(sigma_curves, tf.float32)
         self.sigma_curves_default = tf.constant(sigma_curves_default, tf.float32)
         self.save_processed_spectra = save_processed_spectra
+        self.rescale_curves = rescale_curves
         self.models_dir = models_dir
         self.name_spectra_folder = os.fsdecode(os.path.join(self.models_dir, self.fname, 'processed_spectra'))
         self.seed = seed
