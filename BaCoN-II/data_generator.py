@@ -338,7 +338,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
           raise ValueError('Batch size should satisfy  m x Batch size /( n_labels x n_noisy_samples) =  n_indexes  with m a positive integer ')
         
         
-        if self.n_indexes!=tf.cast(len(list_IDs), dtype = tf.int32)/self.n_batches: 
+        if self.n_indexes!=tf.cast(tf.convert_to_tensor(len(list_IDs))/self.n_batches, dtype=tf.int32): 
           tf.print('length of IDs = %s' %str(len(list_IDs)))
           tf.print('n_batches = %s' %self.n_batches.numpy())
           tf.print('n_indexes = %s' %self.n_indexes.numpy())
