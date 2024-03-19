@@ -161,19 +161,19 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         # Select points from k_max or i_max
 
         if self.k_max is not None:
-            tf.print('Specified k_max is %s' %self.k_max)
+            tf.print('Specified k_max is %s' %self.k_max.numpy())
             self.i_max, k_max_res = find_nearest(self.all_ks, self.k_max) 
-            tf.print('Corresponding i_max is %s' %self.i_max)
-            tf.print('Closest k to k_max is %s' %k_max_res)
+            tf.print('Corresponding i_max is %s' %self.i_max.numpy())
+            tf.print('Closest k to k_max is %s' %k_max_res.numpy())
 
         elif self.i_max is not None:
-            self.k_max = tf.gather(self.all_ks, self.i_max)
-            tf.print('Specified i_max is %s' %self.i_max)
-            tf.print('Corresponding k_max is %s' %self.k_max)
+            self.k_max = tf.gather(self.all_ks, self.i_max.numpy())
+            tf.print('Specified i_max is %s' %self.i_max.numpy())
+            tf.print('Corresponding k_max is %s' %self.k_max.numpy())
             
         elif self.i_max is not None and self.k_max is not None:
-            tf.print('Specified i_max is %s' %self.i_max)
-            tf.print('Specified k_max is %s' %self.k_max)
+            tf.print('Specified i_max is %s' %self.i_max.numpy())
+            tf.print('Specified k_max is %s' %self.k_max.numpy())
             
             i_max, k_max = find_nearest(self.all_ks, self.k_max)
             assert(i_max==self.i_max)
@@ -185,19 +185,19 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         # Select points from k_min or i_min
 
         if self.k_min is not None:
-            tf.print('Specified k_min is %s' %self.k_min)
-            self.i_min, k_min_res = find_nearest(self.all_ks, self.k_min) 
-            tf.print('Corresponding i_min is %s' %self.i_min)
-            tf.print('Closest k to k_min is %s' %k_min_res)
+            tf.print('Specified k_min is %s' %self.k_min.numpy())
+            self.i_min, k_min_res = find_nearest(self.all_ks, self.k_min.numpy()) 
+            tf.print('Corresponding i_min is %s' %self.i_min.numpy())
+            tf.print('Closest k to k_min is %s' %k_min_res.numpy())
 
         elif self.i_min is not None:
-            self.k_min = tf.gather(self.all_ks, self.i_min)
-            tf.print('Specified i_min is %s' %self.i_min)
-            tf.print('Corresponding k_min is %s' %self.k_min)
+            self.k_min = tf.gather(self.all_ks, self.i_min.numpy())
+            tf.print('Specified i_min is %s' %self.i_min.numpy())
+            tf.print('Corresponding k_min is %s' %self.k_min.numpy())
             
         elif self.i_min is not None and self.k_min is not None:
-            tf.print('Specified i_min is %s' %self.i_min)
-            tf.print('Specified k_min is %s' %self.k_min)
+            tf.print('Specified i_min is %s' %self.i_min.numpy())
+            tf.print('Specified k_min is %s' %self.k_min.numpy())
             
             i_min, k_min = find_nearest(self.all_ks, self.k_min)
             assert(i_min==self.i_min)
@@ -207,17 +207,12 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print('No min in k. Using all ks . k_min=%s' %tf.gather(self.all_ks, self.i_min))
 
         self.all_ks = self.all_ks[self.i_min:self.i_max]
-        self.dim = (self.all_ks.shape[0], self.dim[1])
-        tf.print('New data dim: %s' %str(self.dim) )
-        tf.print('Final i_max used is %s' %self.i_max)
-        tf.print('Final i_min used is %s' %self.i_min)
-        self.all_ks = tf.convert_to_tensor(self.all_ks)
-            
-        
-            
-        self.batch_size = batch_size
-
-        self.batch_size = tf.convert_to_tensor(self.batch_size, tf.int32)
+        self.dim = (tf.cast(self.all_ks.shape[0], tf.int32), self.dim[1])
+        tf.print('New data dim: %s' %str(self.dim.numpy()) )
+        tf.print('Final i_max used is %s' %self.i_max.numpy())
+        tf.print('Final i_min used is %s' %self.i_min.numpy())
+  
+        self.batch_size = tf.convert_to_tensor(batch_size, tf.int32)
         
         self.labels = labels
         #tf.print(self.labels)
@@ -249,8 +244,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             self.n_classes =tf.constant(len(self.labels), dtype=tf.int32)
         
         
-        tf.print('N. classes: %s' %self.n_classes) 
-        tf.print('N. n_classes in output: %s' %self.n_classes_out) #number of labels to predict
+        tf.print('N. classes: %s' %self.n_classes.numpy()) 
+        tf.print('N. n_classes in output: %s' %self.n_classes_out.numpy()) #number of labels to predict
         tf.print('LABELS:', self.labels)
             
         self.shuffle = shuffle
@@ -281,7 +276,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         
         if not self.base_case_dataset:
             if self.batch_size%(self.n_classes*self.n_noisy_samples):
-                tf.print('batch_size,n_classes, len(c_1), n_noisy_samples= %s, %s, %s, %s '%(self.batch_size, self.n_classes, len(self.c_1), self.n_noisy_samples))
+                tf.print('batch_size,n_classes, len(c_1), n_noisy_samples= %s, %s, %s, %s '%(self.batch_size.numpy(), self.n_classes.numpy(), len(self.c_1), self.n_noisy_samples.numpy()))
                 raise ValueError('batch size must be multiple of n_classes x len(c_1) x n_noisy_samples')
         elif not(self.fine_tune and self.dataset_balanced) or not(not self.fine_tune and self.one_vs_all and self.dataset_balanced):
             if self.batch_size%(self.n_classes*self.n_noisy_samples):
@@ -291,37 +286,37 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             
         if not self.base_case_dataset:
             if self.batch_size%(self.n_classes*self.n_noisy_samples)!=0:
-                tf.print('Batch size = %s' %self.batch_size)
+                tf.print('Batch size = %s' %self.batch_size.numpy())
                 #tf.print('( n_labels x n_noisy_samples) = %s' %(self.n_classes*self.n_noisy_samples))
                 raise ValueError('Batch size must be multiple of n_classes x len(c_1)  x (n_noisy_samples) ')
             self.n_indexes = len(self.c_1)*self.batch_size//(self.n_classes*self.n_noisy_samples) #len(self.c_1)*
             self.n_indexes = tf.convert_to_tensor(self.n_indexes, dtype=tf.int32)
-            tf.print('batch_size, n_classes, len(self.c_1), n_noisy_samples= %s, %s, %s, %s' %(self.batch_size, self.n_classes, len(self.c_1), self.n_noisy_samples))
-            tf.print('n_indexes=len(self.c_1)*batch_size//(n_classes*n_noisy_samples)=%s' %self.n_indexes)
+            tf.print('batch_size, n_classes, len(self.c_1), n_noisy_samples= %s, %s, %s, %s' %(self.batch_size.numpy(), self.n_classes.numpy(), len(self.c_1), self.n_noisy_samples.numpy()))
+            tf.print('n_indexes=len(self.c_1)*batch_size//(n_classes*n_noisy_samples)=%s' %self.n_indexes.numpy())
              
         else:
             if self.batch_size%(self.n_classes*self.n_noisy_samples)!=0:
-                tf.print('Batch size = %s' %self.batch_size)
-                tf.print('( n_classes x n_noisy_samples) = %s' %(self.n_classes*self.n_noisy_samples))
+                tf.print('Batch size = %s' %self.batch_size.numpy())
+                tf.print('( n_classes x n_noisy_samples) = %s' %(self.n_classes*self.n_noisy_samples).numpy())
                 raise ValueError('Batch size must be multiple of (number of classes) x (n_noisy_samples) ')
             self.n_indexes = self.batch_size//(self.n_classes*self.n_noisy_samples) # now many index files to read per each batch
             self.n_indexes = tf.convert_to_tensor(self.n_indexes, dtype=tf.int32)
         
         self.n_batches = tf.convert_to_tensor(len(list_IDs)//(self.n_indexes))
         tf.print('list_IDs length: %s' %len(list_IDs))
-        tf.print('n_indexes (n of file IDs read for each batch): %s' %self.n_indexes)
-        tf.print('batch size: %s' %self.batch_size)
-        tf.print('n_batches : %s' %self.n_batches)
+        tf.print('n_indexes (n of file IDs read for each batch): %s' %self.n_indexes.numpy())
+        tf.print('batch size: %s' %self.batch_size.numpy())
+        tf.print('n_batches : %s' %self.n_batches.numpy())
         if self.n_batches==0:
             raise ValueError('Not enough examples to support this batch size ')
    
         tf.print('For each batch we read %s file IDs' %self.n_indexes)
         if not self.fine_tune or not self.dataset_balanced:
-            tf.print('For each file ID we have %s labels' %(self.n_classes ))
+            tf.print('For each file ID we have %s labels' %(self.n_classes.numpy()))
         else:
             tf.print('We read %s IDs for label %s and 1 ID for each of the labels %s' %(str(len(self.c_1)), c_0[0],str( c_1)) )
         if self.add_noise:
-          tf.print('For each ID, label we have %s realizations of noise' %self.n_noisy_samples)
+          tf.print('For each ID, label we have %s realizations of noise' %self.n_noisy_samples.numpy())
          
         if self.base_case_dataset:
             n_ex = self.n_indexes*self.n_classes*self.n_noisy_samples
@@ -330,24 +325,24 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             n_ex = self.n_indexes*self.n_classes*self.n_noisy_samples/len(self.c_1)
             n_check = tf.cast(self.n_classes*self.n_noisy_samples, tf.int32)#*len(self.c_1) # n_indexes must be a multiple of this x batch_size
         
-        tf.print('In total, for each batch we have %s training examples' %(n_ex))
-        tf.print('Input batch size: %s' %self.batch_size)
-        tf.print('N of batches to cover all file IDs: %s' %self.n_batches)
+        tf.print('In total, for each batch we have %s training examples' %(n_ex.numpy()))
+        tf.print('Input batch size: %s' %self.batch_size.numpy())
+        tf.print('N of batches to cover all file IDs: %s' %self.n_batches.numpy())
         if n_ex!=self.batch_size:
             raise ValueError('Effective batch size does not match input batch size')
         
-        if self.n_indexes%(self.batch_size/(n_check))!=0:
-          tf.print('Batch size = %s' %self.batch_size)
-          tf.print('( n_labels x n_noisy_samples) = %s' %(n_check*self.n_noisy_samples))
-          tf.print('n_indexes = %s' %self.n_indexes)
+        if self.n_indexes%tf.cast((self.batch_size/(n_check)), dtype=tf.int32)!=0:
+          tf.print('Batch size = %s' %self.batch_size.numpy())
+          tf.print('( n_labels x n_noisy_samples) = %s' %(n_check*self.n_noisy_samples).numpy())
+          tf.print('n_indexes = %s' %self.n_indexes.numpy())
           raise ValueError('Batch size should satisfy  m x Batch size /( n_labels x n_noisy_samples) =  n_indexes  with m a positive integer ')
         
         
         if self.n_indexes!=tf.cast(len(list_IDs), dtype = tf.int32)/self.n_batches: 
           tf.print('length of IDs = %s' %str(len(list_IDs)))
-          tf.print('n_batches = %s' %self.n_batches)
-          tf.print('n_indexes = %s' %self.n_indexes)
-          tf.print('len(list_IDs)/self.n_batches = %s' %(len(list_IDs)/self.n_batches))
+          tf.print('n_batches = %s' %self.n_batches.numpy())
+          tf.print('n_indexes = %s' %self.n_indexes.numpy())
+          tf.print('len(list_IDs)/self.n_batches = %s' %(len(list_IDs)/self.n_batches).numpy()
           raise ValueError('n_batches does not match length of IDs')
         self.Verbose=Verbose
         self.Verbose_2=Verbose_2
@@ -369,6 +364,18 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.Verbose:
                     tf.print('Loading file %s' %fname)
         loaded_all = self.read_file(fname, dtype=tf.float32)
+        def loop_over_noise(i_noise):
+            if self.add_noise:
+                            P_noisy = P_original
+                            if self.Verbose:
+                                tf.print('Noise realization %s' %i_noise.numpy())
+                            # add noise if selected
+                            if self.add_cosvar:
+                                noise_scale = generate_noise(k, P_noise, self.pi, sys_scaled=self.sys_scaled,
+                                                                sys_factor=self.sys_factor,sys_max=self.sys_max,
+                                                                add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
+                                noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
+                                P_noisy = P_noisy + noise_cosVar
         if self.TPU:
             with self.strategy.scope(): 
                 P_original = loaded_all[:, 1:]
@@ -378,18 +385,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     k = k[::self.sample_pace]
                 P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
                 self.k_range = tf.convert_to_tensor(k, dtype=tf.float32)
-                for i_noise in range(self.n_noisy_samples):
-                    if self.add_noise:
-                        P_noisy = P_original
-                        if self.Verbose:
-                            tf.print('Noise realization %s' %i_noise)
-                        # add noise if selected
-                        if self.add_cosvar:
-                            noise_scale = generate_noise(k, P_noise, self.pi, sys_scaled=self.sys_scaled,
-                                                            sys_factor=self.sys_factor,sys_max=self.sys_max,
-                                                            add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
-                            noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
-                            P_noisy = P_noisy + noise_cosVar
+                tf.map_fn(loop_over_noise, tf.range(self.n_noisy_samples))
+                    
         else:
             P_original = loaded_all[:, 1:]
             k = loaded_all[:, 0] #length 500
@@ -404,21 +401,10 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             if self.Verbose:
                 tf.print('dimension P_original: %s' %str(P_original.shape))    
                 tf.print('P_original first 10:') 
-                tf.print(P_original[10])
+                tf.print(P_original[10].numpy())
 
             P_noise = tf.gather(self.norm_data, self.z_bins, axis=1)
-            for i_noise in range(self.n_noisy_samples):
-                    if self.add_noise:
-                        P_noisy = P_original
-                        if self.Verbose:
-                            tf.print('Noise realization %s' %i_noise)
-                        # add noise if selected
-                        if self.add_cosvar:
-                            noise_scale = generate_noise(k, P_noise, self.pi, sys_scaled=self.sys_scaled,
-                                                            sys_factor=self.sys_factor,sys_max=self.sys_max,
-                                                            add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
-                            noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
-                            P_noisy = P_noisy + noise_cosVar
+            tf.map_fn(loop_over_noise, tf.range(self.n_noisy_samples))
 
         if self.add_noise and self.add_sys:
             curves_loaded = self.read_file(self.curve_file, dtype=tf.float32)
@@ -511,7 +497,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             if self.Verbose:
                 tf.print('Final dimension of data: %s' %str(expanded.shape))
                 tf.print('expanded first 10:') 
-                tf.print(expanded[10])
+                tf.print(expanded[10.numpy()])
             # now shape of expanded is (1, n_data_points (k values), 1, n_channels=3)
         X = expanded  
 
@@ -554,7 +540,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 X = X / divisor - 1
                 if self.Verbose:
                     tf.print('axes swapped')
-                    tf.print('NORM first 10:', divisor[:10], dtype=tf.float32)
+                    tf.print('NORM first 10:', divisor[:10].numpy(), dtype=tf.float32)
             else:
                 divisor = tf.expand_dims(tf.expand_dims(self.norm_data, axis=0), axis=-1)
                 X = X / divisor - 1
@@ -613,7 +599,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.fine_tune and self.Verbose :
             tf.print(fname_list)
             
-        tf.print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size, self.n_noisy_samples))
+        tf.print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size.numpy(), self.n_noisy_samples.numpy()))
         assert tf.constant(len(fname_list), dtype=tf.int32) == self.batch_size*self.n_batches//(self.n_noisy_samples)
 
         fname_list = tf.constant(fname_list, dtype=tf.string)
@@ -697,7 +683,7 @@ def create_generators(FLAGS, strategy = None):
     # --------------------  CREATE DATA GENERATORS   --------------------
     
     all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS)
-    print('create_generators n_labels: %s' %n_labels) 
+    tf.print('create_generators n_labels: %s' %n_labels) 
     if (FLAGS.fine_tune or FLAGS.one_vs_all) and FLAGS.dataset_balanced:
         # balanced dataset , 1/2 lcdm , 1/2 rest in FT or one vs all mode
         case=1
