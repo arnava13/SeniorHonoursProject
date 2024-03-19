@@ -111,7 +111,10 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.sys_factor=tf.constant(sys_factor, tf.float32)
         self.pi = tf.constant(np.pi, dtype=tf.float32)
         self.sys_max=sys_max
-        self.group_lab_dict = tf.lookup.StaticHashTable(initializer=tf.lookup.KeyValueTensorInitializer(list(group_lab_dict.keys()), list(group_lab_dict.values())), default_value="", name="group_lab_mapping")
+        if group_lab_dict:
+            self.group_lab_dict = tf.lookup.StaticHashTable(initializer=tf.lookup.KeyValueTensorInitializer(list(group_lab_dict.keys()), list(group_lab_dict.values())), default_value="", name="group_lab_mapping")
+        else:
+            self.group_lab_dict = None
         self.fine_tune=fine_tune
         self.c_0=c_0
         self.c_1=c_1
