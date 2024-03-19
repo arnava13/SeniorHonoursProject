@@ -627,9 +627,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.curve_file = tf.io.gfile.join(self.data_root, self.curve_file)
 
         self.name_spectra_folder = tf.strings.join([self.models_dir, self.fname, 'processed_spectra'], separator='/')
-        if not tf.io.gfile.exists(self.name_spectra_folder):
+        if not tf.io.gfile.exists(self.name_spectra_folder.numpy().decode('utf-8')):
             tf.print('Creating directory %s' %  self.name_spectra_folder)
-            tf.io.gfile.makedirs(self.name_spectra_folder)
+            tf.io.gfile.makedirs(self.name_spectra_folder.numpy().decode('utf-8'))
                 
         # Generate data
         self.i_ind=0
