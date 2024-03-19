@@ -124,6 +124,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.sigma_curves = tf.constant(sigma_curves, tf.float32)
         self.sigma_curves_default = tf.constant(sigma_curves_default, tf.float32)
         self.save_processed_spectra = save_processed_spectra
+
         self.name_spectra_folder = os.fsdecode(os.path.join(self.models_dir, self.fname, 'processed_spectra'))
         self.seed = seed
         self.rng = tf.random.Generator.from_seed(self.seed)
@@ -153,6 +154,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 raise ValueError('Number of z bins does not match n_channels.')
         
         self.data_root=data_root
+        self.models_dir = models_dir
         self.norm_data_path = tf.io.gfile.join(self.data_root, norm_data_name)
         tf.print('Data root dir is %s' %self.data_root)
         tf.print('Normalisation file is %s' %self.norm_data_path)
@@ -265,7 +267,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             self.norm_data = self.norm_data[0::self.sample_pace, :]
           self.norm_data = self.norm_data[self.i_min:self.i_max]
         
-        self.models_dir = models_dir
         self.pad=pad
         self.add_noise=add_noise
         if not self.add_noise:
