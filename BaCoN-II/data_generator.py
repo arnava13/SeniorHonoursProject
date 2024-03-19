@@ -505,9 +505,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         return ID, X, y
 
-    
 
-    @tf.py_function
     def normalize_and_onehot(self, ID, X, y):
         if self.normalization == 'batch':
             mu_batch = tf.reduce_mean(X, axis=0)
@@ -613,7 +611,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print("WARNING: Cannot save processed spectra in TPU mode.")
 
         # Normalize and one-hot encode 
-        dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.map(lambda ID, x, y: tf.py_function(func = self.normalize_and_onehot, inp=[ID, x, y]), num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         if self.shuffle:
             dataset = dataset.shuffle(buffer_size=len(list_IDs))
