@@ -501,14 +501,14 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.i_ind += 1
 
         ID = tf.convert_to_tensor(ID)
-        ID = tf.cast(ID, dtype=tf.int32)
+        tf.cast(ID, dtype=tf.int32)
 
         return ID, X, y
 
     
 
     @tf.function
-    def normalize_and_onehot(self, ID, X, y):
+    def normalize_and_onehot(self, ID_, X, y):
         if self.normalization == 'batch':
             mu_batch = tf.reduce_mean(X, axis=0)
             std_batch = tf.math.reduce_std(X, axis=0)
@@ -537,22 +537,20 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     tf.print('Creating directory %s' %  self.name_spectra_folder)
                     tf.io.gfile.makedirs(self.name_spectra_folder)
                 return True
-            tf.cond(tf.equal(ID, 0), make_spectra_dir, lambda: False)
+            tf.cond(tf.equal(ID_, 0), make_spectra_dir, lambda: False)
             # new matrix for spectra, first column is class_idx, first row is k-values
             X_save = tf.Variable(tf.zeros((self.batch_size*self.n_batches+1, len(self.k_range)+1)))
             X_save[1:,0].assign(y)
             X_save[0,1:].assign(self.k_range)
-
             def write_spectra(z_bins, X, X_save):
                 def condition(i, z_bins, X, X_save):
                     return i < tf.size(z_bins)
                 def body(i_z, z_bins, X, X_save):
                     X_save[1:,1:].assign(X[:,:,0,i_z])
                     spectra_file = tf.io.gfile.join(self.name_spectra_folder, 'processed_spectra_zbin{}.txt'.format(i_z))
-                    if not tf.io.gfile.exists(spectra_file):
-                        tf.print('Saving processed (noisy and normalised) spectra in %s' % spectra_file)
-                        with tf.io.gfile.GFile(spectra_file, "a+") as myCurvefile:
-                            tf.io.write_file(myCurvefile, tf.strings.reduce_join(tf.strings.as_string(X_save), separator=' ', axis=-1))
+                    tf.print('Saving processed (noisy and normalised) spectra in %s' % spectra_file)
+                    X_save_string = tf.strings.reduce_join(tf.strings.as_string(X_save), separator=' ', axis=-1)
+                    tf.io.write_file(spectra_file, X_save_string)
                     return [tf.add(i, 1), z_bins, X, X_save]
                 i = tf.constant(0)
                 tf.while_loop(condition, body, [i, z_bins, X, X_save])
@@ -566,6 +564,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             X = X[:,:,0,:]
             X = X[0,:,:]
         y = tf.one_hot(y, depth=self.n_classes_out)
+        ID = ID_
 
         return ID, X, y
     
