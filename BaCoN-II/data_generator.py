@@ -208,9 +208,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         self.all_ks = self.all_ks[self.i_min:self.i_max]
         self.dim = (tf.cast(self.all_ks.shape[0], tf.int32), self.dim[1])
-        tf.print('New data dim: %s' %str(self.dim) )
-        tf.print('Final i_max used is %s' %(self.i_max.numpy() if self.i_max is tf.Tensor else self.i_max))
-        tf.print('Final i_min used is %s' %(self.i_min.numpy() if self.i_min is tf.Tensor else self.i_min))
+        tf.print('New data dim: %s' %str(self.dim.numpy()) )
+        tf.print('Final i_max used is %s' %(self.i_max.numpy() if type(self.i_max) is tf.Tensor else self.i_max))
+        tf.print('Final i_min used is %s' %(self.i_min.numpy() if type(self.i_min) is tf.Tensor else self.i_min))
   
         self.batch_size = tf.convert_to_tensor(batch_size, tf.int32)
         
@@ -310,7 +310,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.n_batches==0:
             raise ValueError('Not enough examples to support this batch size ')
    
-        tf.print('For each batch we read %s file IDs' %self.n_indexes)
+        tf.print('For each batch we read %s file IDs' %self.n_indexes.numpy())
         if not self.fine_tune or not self.dataset_balanced:
             tf.print('For each file ID we have %s labels' %(self.n_classes.numpy()))
         else:
@@ -600,7 +600,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print(fname_list)
             
         tf.print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size.numpy(), self.n_noisy_samples.numpy()))
-        assert tf.constant(len(fname_list), dtype=tf.int32) == self.batch_size*self.n_batches//(self.n_noisy_samples)
+        tf.debugging.assert_equal(tf.constant(len(fname_list), dtype=tf.int32), self.batch_size * self.n_batches // self.n_noisy_samples, message="Fname list != batch_size * n_batches // n_noisy_samples")
 
         fname_list = tf.constant(fname_list, dtype=tf.string)
         ID_list = tf.constant(ID_list, dtype=tf.int32)
