@@ -545,7 +545,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             X = (X - mu_batch) / std_batch
         elif self.normalization == 'stdcosmo':
             if self.swap_axes:
-                divisor = tf.gather(self.norm_data, self.z_bins, axis=3)
+                divisor = tf.gather(self.norm_data, self.z_bins, axis=1)
                 X = X / divisor - 1
                 if self.Verbose:
                     tf.print('axes swapped')
