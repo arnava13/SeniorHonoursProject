@@ -219,7 +219,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         
         self.labels = labels
         #tf.print(self.labels)
-        self.labels_dict = tf.lookup.StaticHashTable(initializer=tf.lookup.KeyValueTensorInitializer(list(self.labels_dict.keys()), list(self.labels_dict.values())), default_value=-1, name="labels_dict_mapping")
+        self.labels_dict = tf.lookup.StaticHashTable(initializer=tf.lookup.KeyValueTensorInitializer(list(labels_dict.keys()), list(labels_dict.values())), default_value=-1, name="labels_dict_mapping")
         self.inv_labels_dict={value:key for key,value in zip(labels_dict.keys(), labels_dict.values())}
 
         #tf.print(self.inv_labels_dict)
