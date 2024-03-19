@@ -497,7 +497,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print('Storing at position %s in the data' %self.i_ind)
             tf.print('Dimension of data: %s' %str(expanded.shape))
         # swap axis if using one dim array in multiple channels 
-        expanded = expanded[:,:,0,:]
         if self.swap_axes:
             if self.Verbose:
                 tf.print('Reshaping')
