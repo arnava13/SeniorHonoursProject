@@ -365,7 +365,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     tf.print('Loading file %s' %fname)
         loaded_all = self.read_file(fname, dtype=tf.float32)
         def loop_over_noise(i_noise):
-            P_noisy = P_original
             if self.Verbose:
                 tf.print('Noise realization %s' %i_noise.numpy())
             # add noise if selected
@@ -386,6 +385,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
                 self.k_range = tf.convert_to_tensor(k, dtype=tf.float32)
                 if self.add_noise:
+                    P_noisy = P_original
                     tf.map_fn(loop_over_noise, tf.range(self.n_noisy_samples))
                     
         else:
@@ -406,6 +406,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
             P_noise = tf.gather(self.norm_data, self.z_bins, axis=1)
             if self.add_noise:
+                P_noisy = P_original
                 tf.map_fn(loop_over_noise, tf.range(self.n_noisy_samples))
 
         if self.add_noise and self.add_sys:
