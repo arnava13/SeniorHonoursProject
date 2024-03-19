@@ -375,7 +375,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                                                 add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
                 noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
                 P_noisy = P_noisy + noise_cosVar
-            return P_noisy
+            return tf.cast(P_noisy, dtype=tf.float32)
         if self.TPU:
             with self.strategy.scope(): 
                 P_original = loaded_all[:, 1:]
@@ -426,6 +426,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     # multiply with normalisation spectrum
 
                     noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * P_noise
+                    noise_sys = tf.cast(noise_sys, dtype=tf.float32)
 
 
                     if self.rescale_curves == 'uniform':
