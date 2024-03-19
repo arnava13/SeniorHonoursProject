@@ -529,16 +529,12 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 if self.Verbose:
                     tf.print('axes not swapped')
                     tf.print('Dimension of NORM data:', tf.shape(divisor))
-        def set_shapes():
-            self.xshape = X.shape
-            self.yshape = y.shape
-            return True
-        tf.cond(tf.equal(self.i_ind, 0), set_shapes, lambda: False)
+        self.xshape = X.shape
+        self.yshape = y.shape
         if self.save_processed_spectra and not self.TPU:
             # new matrix for spectra, first column is class_idx, first row is k-values
-            X_save = tf.Variable(tf.zeros((self.batch_size*self.n_batches+1, len(self.k_range)+1)))
-            X_save[1:,0].assign(y)
-            X_save[0,1:].assign(self.k_range)
+            self.X_save[1:,0].assign(y)
+            self.X_save[0,1:].assign(self.k_range)
             def write_spectra(z_bins, X, X_save):
                 def condition(i, z_bins, X, X_save):
                     return i < tf.size(z_bins)
@@ -551,7 +547,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     return [tf.add(i, 1), z_bins, X, X_save]
                 i = tf.constant(0)
                 tf.while_loop(condition, body, [i, z_bins, X, X_save])
-            write_spectra(self.z_bins, X, X_save)
+            write_spectra(self.z_bins, X, self.X_save)
                 
         if self.swap_axes:
             X = X[:,:,0,:]
@@ -606,7 +602,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             if not tf.io.gfile.exists(self.name_spectra_folder):
                 tf.print('Creating directory %s' %  self.name_spectra_folder)
                 tf.io.gfile.makedirs(self.name_spectra_folder)
-            return True
+            self.X_save = tf.Variable(tf.zeros((self.batch_size*self.n_batches+1, len(self.k_range)+1)))
         elif self.TPU:
             tf.print("WARNING: Cannot save processed spectra in TPU mode.")
 
