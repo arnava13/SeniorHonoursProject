@@ -371,7 +371,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         def loop_over_noise(i_noise):
             P_noisy = P_original
             if self.Verbose:
-                tf.print('Noise realization %s' %i_noise.numpy())
+                tf.print('Noise realization %s' %i_noise)
             # add noise if selected
             if self.add_cosvar:
                 noise_scale = generate_noise(k, P_noise, self.pi, sys_scaled=self.sys_scaled,
