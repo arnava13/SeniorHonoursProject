@@ -617,7 +617,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
         else:
             global_batchsize = self.batch_size
-        global_batchsize = tf.convert_to_tensor(global_batchsize, dtype=tf.int64)
+        global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
         dataset = dataset.batch(global_batchsize)
 
         #Prefetch for improved performance
