@@ -407,7 +407,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             if self.Verbose:
                 tf.print('dimension P_original: %s' %str(P_original.shape))    
                 tf.print('P_original first 10:') 
-                tf.print(P_original[10].numpy())
+                tf.print(P_original[10])
 
             P_noise = tf.gather(self.norm_data, self.z_bins, axis=1)
             if self.add_noise:
