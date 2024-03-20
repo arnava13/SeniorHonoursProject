@@ -160,7 +160,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         tf.print('Normalisation file is %s' %self.norm_data_path)
         self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)
         self.all_ks = tf.cast(self.all_ks, dtype=tf.float32)
-        self.original_k_range = self.all_ks
+        self.original_k_len = tf.cast(tf.size(self.all_ks).numpy(), tf.int32)
         if self.sample_pace !=1:
                 self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)[::self.sample_pace]
         
@@ -598,7 +598,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         # Load n_noisy_samples random sys noise curves
         if self.add_noise and self.add_sys:
-            self.curves_loaded = tf.zeros((self.n_noisy_samples, self.original_k_range, self.n_channels + 1), dtype=tf.float32)
+            self.curves_loaded = tf.zeros((self.n_noisy_samples, self.original_k_len, self.n_channels + 1), dtype=tf.float32)
             for i in range(self.n_noisy_samples.numpy()):
                 curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
                 curve_file = tf.io.gfile.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
