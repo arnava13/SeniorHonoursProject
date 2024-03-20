@@ -54,31 +54,30 @@ def generate_noise(k, P, pi,
 class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
     @tf.function
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
-        with tf.device('/cpu:0'):
-            file_content = tf.io.read_file(file_path)
+        file_content = tf.io.read_file(file_path)
 
-            file_content = tf.strings.regex_replace(file_content, "\r\n", "\n")
-            file_content = tf.strings.regex_replace(file_content, "\r", "\n")
-            lines = tf.strings.split([file_content], '\n').values
-            lines = tf.cond(tf.equal(lines[-1], ""), lambda: lines[:-1], lambda: lines)
+        file_content = tf.strings.regex_replace(file_content, "\r\n", "\n")
+        file_content = tf.strings.regex_replace(file_content, "\r", "\n")
+        lines = tf.strings.split([file_content], '\n').values
+        lines = tf.cond(tf.equal(lines[-1], ""), lambda: lines[:-1], lambda: lines)
 
-            def extract_columns(line):
-                # Normalize spaces (convert tabs or multiple spaces to single space)
-                line = tf.strings.regex_replace(line, "\s+", " ")
-                line = tf.strings.strip(line)  # Strip leading/trailing whitespace
-                columns = tf.strings.split([line], ' ').values
-                if column_indices is not None:
-                    selected_columns = tf.gather(columns, column_indices)
-                else:
-                    selected_columns = columns
-        
-                return tf.strings.to_number(selected_columns, out_type=dtype)
+        def extract_columns(line):
+            # Normalize spaces (convert tabs or multiple spaces to single space)
+            line = tf.strings.regex_replace(line, "\s+", " ")
+            line = tf.strings.strip(line)  # Strip leading/trailing whitespace
+            columns = tf.strings.split([line], ' ').values
+            if column_indices is not None:
+                selected_columns = tf.gather(columns, column_indices)
+            else:
+                selected_columns = columns
+    
+            return tf.strings.to_number(selected_columns, out_type=dtype)
 
-            columns_values = tf.map_fn(extract_columns, lines, fn_output_signature=dtype)
-            if isinstance(columns_values, tf.RaggedTensor):
-                # Convert the ragged tensor to a regular tensor with padding
-                columns_values = columns_values.to_tensor()
-            return columns_values
+        columns_values = tf.map_fn(extract_columns, lines, fn_output_signature=dtype)
+        if isinstance(columns_values, tf.RaggedTensor):
+            # Convert the ragged tensor to a regular tensor with padding
+            columns_values = columns_values.to_tensor()
+        return columns_values
 
     def __init__(self, list_IDs, labels, labels_dict, batch_size=32, 
                 data_root = 'data/', dim=(500, 4), n_channels=1,
@@ -108,260 +107,260 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
       
         tf.print('Data Generator Initialization')
         tf.print('CWD: ', os.getcwd())
-        
-        self.one_vs_all=one_vs_all
-        self.dataset_balanced=dataset_balanced
-        self.sigma_sys=sigma_sys
-        self.add_shot=add_shot
-        self.add_sys=add_sys
-        self.add_cosvar=add_cosvar
-        self.sys_scaled=sys_scaled
-        self.sys_factor=tf.constant(sys_factor, tf.float32)
-        self.pi = tf.constant(np.pi, dtype=tf.float32)
-        self.sys_max=sys_max
-        if group_lab_dict:
-            self.group_lab_dict = tf.lookup.StaticHashTable(initializer=tf.lookup.KeyValueTensorInitializer(list(group_lab_dict.keys()), list(group_lab_dict.values())), default_value="", name="group_lab_mapping")
-        else:
-            self.group_lab_dict = None
-        self.fine_tune=fine_tune
-        self.c_0=c_0
-        self.c_1=c_1
-        self.fname = fname # name model
-        #self.fname_user=fname_user
-        self.curves_folder=curves_folder 
-        self.sigma_curves = tf.constant(sigma_curves, tf.float32)
-        self.sigma_curves_default = tf.constant(sigma_curves_default, tf.float32)
-        self.save_processed_spectra = save_processed_spectra
-        self.rescale_curves = rescale_curves
-        self.models_dir = models_dir
-        self.name_spectra_folder = os.fsdecode(os.path.join(self.models_dir, self.fname, 'processed_spectra'))
-        self.seed = seed
-        self.rng = tf.random.Generator.from_seed(self.seed)
-        self.swap_axes = swap_axes 
+        with tf.device('/cpu:0'):
+            self.one_vs_all=one_vs_all
+            self.dataset_balanced=dataset_balanced
+            self.sigma_sys=sigma_sys
+            self.add_shot=add_shot
+            self.add_sys=add_sys
+            self.add_cosvar=add_cosvar
+            self.sys_scaled=sys_scaled
+            self.sys_factor=tf.constant(sys_factor, tf.float32)
+            self.pi = tf.constant(np.pi, dtype=tf.float32)
+            self.sys_max=sys_max
+            if group_lab_dict:
+                self.group_lab_dict = tf.lookup.StaticHashTable(initializer=tf.lookup.KeyValueTensorInitializer(list(group_lab_dict.keys()), list(group_lab_dict.values())), default_value="", name="group_lab_mapping")
+            else:
+                self.group_lab_dict = None
+            self.fine_tune=fine_tune
+            self.c_0=c_0
+            self.c_1=c_1
+            self.fname = fname # name model
+            #self.fname_user=fname_user
+            self.curves_folder=curves_folder 
+            self.sigma_curves = tf.constant(sigma_curves, tf.float32)
+            self.sigma_curves_default = tf.constant(sigma_curves_default, tf.float32)
+            self.save_processed_spectra = save_processed_spectra
+            self.rescale_curves = rescale_curves
+            self.models_dir = models_dir
+            self.name_spectra_folder = os.fsdecode(os.path.join(self.models_dir, self.fname, 'processed_spectra'))
+            self.seed = seed
+            self.rng = tf.random.Generator.from_seed(self.seed)
+            self.swap_axes = swap_axes 
 
-        self.TPU=TPU
-        self.strategy = strategy
-        
-        self.k_max=k_max
-        self.k_min=k_min
-        self.i_max=i_max
-        self.i_min=i_min
-        self.sample_pace=sample_pace
-        if sample_pace ==1:
-          self.dim = dim
-        else:
-          self.dim = (tf.cast((dim[0]/sample_pace), tf.int32), tf.cast(dim[1], tf.int32)) 
-        self.n_channels = tf.convert_to_tensor(n_channels, tf.int32)
-        self.z_bins=tf.convert_to_tensor(z_bins, dtype=tf.int32)
-        
-        tf.print('Using z bins %s' %z_bins)
-        if not self.swap_axes:
-            if self.z_bins.shape[0]!=self.dim[1]:
-                raise ValueError('Number of z bins does not match dimension 1 of the data.')
-        else:
-            if self.z_bins.shape[0]!=self.n_channels:
-                raise ValueError('Number of z bins does not match n_channels.')
-        
-        self.data_root=data_root
-        self.norm_data_path = tf.io.gfile.join(self.data_root, norm_data_name)
-        tf.print('Data root dir is %s' %self.data_root)
-        tf.print('Normalisation file is %s' %self.norm_data_path)
-        self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)
-        self.all_ks = tf.cast(self.all_ks, dtype=tf.float32)
-        self.original_k_len = tf.cast(tf.size(self.all_ks).numpy(), tf.int32)
-        if self.sample_pace !=1:
-                self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)[::self.sample_pace]
-        
-
-        # Select points from k_max or i_max
-
-        if self.k_max is not None:
-            tf.print('Specified k_max is %s' %self.k_max)
-            self.i_max, k_max_res = find_nearest(self.all_ks, self.k_max) 
-            tf.print('Corresponding i_max is %s' %self.i_max.numpy())
-            tf.print('Closest k to k_max is %s' %k_max_res.numpy())
-
-        elif self.i_max is not None:
-            self.k_max = tf.gather(self.all_ks, self.i_max)
-            tf.print('Specified i_max is %s' %self.i_max)
-            tf.print('Corresponding k_max is %s' %self.k_max.numpy())
+            self.TPU=TPU
+            self.strategy = strategy
             
-        elif self.i_max is not None and self.k_max is not None:
-            tf.print('Specified i_max is %s' %self.i_max)
-            tf.print('Specified k_max is %s' %self.k_max)
+            self.k_max=k_max
+            self.k_min=k_min
+            self.i_max=i_max
+            self.i_min=i_min
+            self.sample_pace=sample_pace
+            if sample_pace ==1:
+                self.dim = dim
+            else:
+                self.dim = (tf.cast((dim[0]/sample_pace), tf.int32), tf.cast(dim[1], tf.int32)) 
+                self.n_channels = tf.convert_to_tensor(n_channels, tf.int32)
+                self.z_bins=tf.convert_to_tensor(z_bins, dtype=tf.int32)
+                
+            tf.print('Using z bins %s' %z_bins)
+            if not self.swap_axes:
+                if self.z_bins.shape[0]!=self.dim[1]:
+                    raise ValueError('Number of z bins does not match dimension 1 of the data.')
+            else:
+                if self.z_bins.shape[0]!=self.n_channels:
+                    raise ValueError('Number of z bins does not match n_channels.')
             
-            i_max, k_max = find_nearest(self.all_ks, self.k_max)
-            assert(i_max==self.i_max)
-
-        else:
-            self.i_max = -1
-            tf.print('No max in k. k_max=%s' %tf.gather(self.all_ks, self.i_max))
-
-        # Select points from k_min or i_min
-
-        if self.k_min is not None:
-            tf.print('Specified k_min is %s' %self.k_min)
-            self.i_min, k_min_res = find_nearest(self.all_ks, self.k_min) 
-            tf.print('Corresponding i_min is %s' %self.i_min.numpy())
-            tf.print('Closest k to k_min is %s' %k_min_res.numpy())
-
-        elif self.i_min is not None:
-            self.k_min = tf.gather(self.all_ks, self.i_min)
-            tf.print('Specified i_min is %s' %self.i_min)
-            tf.print('Corresponding k_min is %s' %self.k_min.numpy())
+            self.data_root=data_root
+            self.norm_data_path = tf.io.gfile.join(self.data_root, norm_data_name)
+            tf.print('Data root dir is %s' %self.data_root)
+            tf.print('Normalisation file is %s' %self.norm_data_path)
+            self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)
+            self.all_ks = tf.cast(self.all_ks, dtype=tf.float32)
+            self.original_k_len = tf.cast(tf.size(self.all_ks).numpy(), tf.int32)
+            if self.sample_pace !=1:
+                    self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)[::self.sample_pace]
             
-        elif self.i_min is not None and self.k_min is not None:
-            tf.print('Specified i_min is %s' %self.i_min)
-            tf.print('Specified k_min is %s' %self.k_min)
-            
-            i_min, k_min = find_nearest(self.all_ks, self.k_min)
-            assert(i_min==self.i_min)
 
-        else:
-            self.i_min = 0
-            tf.print('No min in k. k_min=%s' %tf.gather(self.all_ks, self.i_min))
+            # Select points from k_max or i_max
 
-        self.all_ks = self.all_ks[self.i_min:self.i_max]
-        self.dim = (tf.cast(self.all_ks.shape[0], tf.int32), self.dim[1])
-        tf.print('New data dim: %s' %(str(self.dim[0].numpy()) + "," + str(self.dim[1].numpy())))
-        tf.print('Final i_max used is %s' %(self.i_max.numpy()))
-        tf.print('Final i_min used is %s' %(self.i_min.numpy()))
-  
-        self.batch_size = tf.convert_to_tensor(batch_size, tf.int32)
-        
-        self.labels = labels
-        #tf.print(self.labels)
-        self.labels_dict = tf.lookup.StaticHashTable(initializer=tf.lookup.KeyValueTensorInitializer(list(labels_dict.keys()), list(labels_dict.values())), default_value=-1, name="labels_dict_mapping")
-        self.inv_labels_dict={value:key for key,value in zip(labels_dict.keys(), labels_dict.values())}
+            if self.k_max is not None:
+                tf.print('Specified k_max is %s' %self.k_max)
+                self.i_max, k_max_res = find_nearest(self.all_ks, self.k_max) 
+                tf.print('Corresponding i_max is %s' %self.i_max.numpy())
+                tf.print('Closest k to k_max is %s' %k_max_res.numpy())
 
-        #tf.print(self.inv_labels_dict)
+            elif self.i_max is not None:
+                self.k_max = tf.gather(self.all_ks, self.i_max)
+                tf.print('Specified i_max is %s' %self.i_max)
+                tf.print('Corresponding k_max is %s' %self.k_max.numpy())
+                
+            elif self.i_max is not None and self.k_max is not None:
+                tf.print('Specified i_max is %s' %self.i_max)
+                tf.print('Specified k_max is %s' %self.k_max)
+                
+                i_max, k_max = find_nearest(self.all_ks, self.k_max)
+                assert(i_max==self.i_max)
 
-        self.list_IDs = list_IDs
-        if len(self.list_IDs)==1:
-            self.list_IDs_dict = {label:list_IDs+i for i,label in enumerate(labels)}
-            tf.print('Ids dict to use in data gen: %s' %str(self.list_IDs_dict))
-        else:
-            self.list_IDs_dict = {label:list_IDs for label in labels}
+            else:
+                self.i_max = -1
+                tf.print('No max in k. k_max=%s' %tf.gather(self.all_ks, self.i_max))
+
+            # Select points from k_min or i_min
+
+            if self.k_min is not None:
+                tf.print('Specified k_min is %s' %self.k_min)
+                self.i_min, k_min_res = find_nearest(self.all_ks, self.k_min) 
+                tf.print('Corresponding i_min is %s' %self.i_min.numpy())
+                tf.print('Closest k to k_min is %s' %k_min_res.numpy())
+
+            elif self.i_min is not None:
+                self.k_min = tf.gather(self.all_ks, self.i_min)
+                tf.print('Specified i_min is %s' %self.i_min)
+                tf.print('Corresponding k_min is %s' %self.k_min.numpy())
+                
+            elif self.i_min is not None and self.k_min is not None:
+                tf.print('Specified i_min is %s' %self.i_min)
+                tf.print('Specified k_min is %s' %self.k_min)
+                
+                i_min, k_min = find_nearest(self.all_ks, self.k_min)
+                assert(i_min==self.i_min)
+
+            else:
+                self.i_min = 0
+                tf.print('No min in k. k_min=%s' %tf.gather(self.all_ks, self.i_min))
+
+            self.all_ks = self.all_ks[self.i_min:self.i_max]
+            self.dim = (tf.cast(self.all_ks.shape[0], tf.int32), self.dim[1])
+            tf.print('New data dim: %s' %(str(self.dim[0].numpy()) + "," + str(self.dim[1].numpy())))
+            tf.print('Final i_max used is %s' %(self.i_max.numpy()))
+            tf.print('Final i_min used is %s' %(self.i_min.numpy()))
     
-        
-        self.base_case_dataset = not((self.fine_tune and self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and self.dataset_balanced))
-        tf.print('one_vs_all: %s' %str(self.one_vs_all))
-        tf.print('dataset_balanced: %s' %str(self.dataset_balanced))
-        tf.print('base_case_dataset: %s' %str(self.base_case_dataset))
-        
-        
-        self.n_classes_out = tf.constant(len(self.labels), dtype=tf.int32)
-        if not self.base_case_dataset:
-            self.n_classes = 2*(tf.constant(len(self.c_1), dtype=tf.int32))
-        elif (self.fine_tune and not self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and not self.dataset_balanced):
-            self.n_classes = tf.constant(len(self.c_1), dtype=tf.int32)+tf.constant(len(self.c_0), dtype=tf.int32)
-        else:
-            # regular 5 labels case
-            self.n_classes =tf.constant(len(self.labels), dtype=tf.int32)
-        
-        
-        tf.print('N. classes: %s' %self.n_classes.numpy()) 
-        tf.print('N. n_classes in output: %s' %self.n_classes_out.numpy()) #number of labels to predict
-        tf.print('LABELS:', self.labels)
+            self.batch_size = tf.convert_to_tensor(batch_size, tf.int32)
             
-        self.shuffle = shuffle
-        #tf.print('Batch size: %s' %self.batch_size)
-        #tf.print('N. samples used for each different label: %s' %self.n_indexes)
-        self.save_indexes = save_indexes
-        self.normalization=normalization
-        
-        if self.normalization=='stdcosmo':
-          self.norm_data = self.read_file(self.norm_data_path, dtype=tf.float32)[:, 1:]
-          self.norm_data = tf.cast(self.norm_data, dtype=tf.float32)
+            self.labels = labels
+            #tf.print(self.labels)
+            self.labels_dict = tf.lookup.StaticHashTable(initializer=tf.lookup.KeyValueTensorInitializer(list(labels_dict.keys()), list(labels_dict.values())), default_value=-1, name="labels_dict_mapping")
+            self.inv_labels_dict={value:key for key,value in zip(labels_dict.keys(), labels_dict.values())}
 
-          if self.sample_pace !=1:
-            self.norm_data = self.norm_data[0::self.sample_pace, :]
-          self.norm_data = self.norm_data[self.i_min:self.i_max]
+            #tf.print(self.inv_labels_dict)
+
+            self.list_IDs = list_IDs
+            if len(self.list_IDs)==1:
+                self.list_IDs_dict = {label:list_IDs+i for i,label in enumerate(labels)}
+                tf.print('Ids dict to use in data gen: %s' %str(self.list_IDs_dict))
+            else:
+                self.list_IDs_dict = {label:list_IDs for label in labels}
         
-        self.pad=pad
-        self.add_noise=add_noise
-        if not self.add_noise:
-          self.n_noisy_samples = 1
-        else:
-          self.n_noisy_samples = n_noisy_samples
-        self.n_noisy_samples = tf.convert_to_tensor(self.n_noisy_samples, dtype=tf.int32)
-        
-        ######
-        # Consistency checks
-        ######
-        
-        if not self.base_case_dataset:
-            if self.batch_size%(self.n_classes*self.n_noisy_samples):
-                tf.print('batch_size,n_classes, len(c_1), n_noisy_samples= %s, %s, %s, %s '%(self.batch_size.numpy(), self.n_classes.numpy(), len(self.c_1), self.n_noisy_samples.numpy()))
-                raise ValueError('batch size must be multiple of n_classes x len(c_1) x n_noisy_samples')
-        elif not(self.fine_tune and self.dataset_balanced) or not(not self.fine_tune and self.one_vs_all and self.dataset_balanced):
-            if self.batch_size%(self.n_classes*self.n_noisy_samples):
-                raise ValueError('batch size must be multiple of n_classes x n_noisy_samples')
-        else:
-            raise ValueError('check dataset_balanced and one_vs_all compatibility')
             
-        if not self.base_case_dataset:
-            if self.batch_size%(self.n_classes*self.n_noisy_samples)!=0:
+            self.base_case_dataset = not((self.fine_tune and self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and self.dataset_balanced))
+            tf.print('one_vs_all: %s' %str(self.one_vs_all))
+            tf.print('dataset_balanced: %s' %str(self.dataset_balanced))
+            tf.print('base_case_dataset: %s' %str(self.base_case_dataset))
+            
+            
+            self.n_classes_out = tf.constant(len(self.labels), dtype=tf.int32)
+            if not self.base_case_dataset:
+                self.n_classes = 2*(tf.constant(len(self.c_1), dtype=tf.int32))
+            elif (self.fine_tune and not self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and not self.dataset_balanced):
+                self.n_classes = tf.constant(len(self.c_1), dtype=tf.int32)+tf.constant(len(self.c_0), dtype=tf.int32)
+            else:
+                # regular 5 labels case
+                self.n_classes =tf.constant(len(self.labels), dtype=tf.int32)
+            
+            
+            tf.print('N. classes: %s' %self.n_classes.numpy()) 
+            tf.print('N. n_classes in output: %s' %self.n_classes_out.numpy()) #number of labels to predict
+            tf.print('LABELS:', self.labels)
+                
+            self.shuffle = shuffle
+            #tf.print('Batch size: %s' %self.batch_size)
+            #tf.print('N. samples used for each different label: %s' %self.n_indexes)
+            self.save_indexes = save_indexes
+            self.normalization=normalization
+            
+            if self.normalization=='stdcosmo':
+                self.norm_data = self.read_file(self.norm_data_path, dtype=tf.float32)[:, 1:]
+                self.norm_data = tf.cast(self.norm_data, dtype=tf.float32)
+
+            if self.sample_pace !=1:
+                self.norm_data = self.norm_data[0::self.sample_pace, :]
+            self.norm_data = self.norm_data[self.i_min:self.i_max]
+            
+            self.pad=pad
+            self.add_noise=add_noise
+            if not self.add_noise:
+                self.n_noisy_samples = 1
+            else:
+                self.n_noisy_samples = n_noisy_samples
+                self.n_noisy_samples = tf.convert_to_tensor(self.n_noisy_samples, dtype=tf.int32)
+            
+            ######
+            # Consistency checks
+            ######
+            
+            if not self.base_case_dataset:
+                if self.batch_size%(self.n_classes*self.n_noisy_samples):
+                    tf.print('batch_size,n_classes, len(c_1), n_noisy_samples= %s, %s, %s, %s '%(self.batch_size.numpy(), self.n_classes.numpy(), len(self.c_1), self.n_noisy_samples.numpy()))
+                    raise ValueError('batch size must be multiple of n_classes x len(c_1) x n_noisy_samples')
+            elif not(self.fine_tune and self.dataset_balanced) or not(not self.fine_tune and self.one_vs_all and self.dataset_balanced):
+                if self.batch_size%(self.n_classes*self.n_noisy_samples):
+                    raise ValueError('batch size must be multiple of n_classes x n_noisy_samples')
+            else:
+                raise ValueError('check dataset_balanced and one_vs_all compatibility')
+                
+            if not self.base_case_dataset:
+                if self.batch_size%(self.n_classes*self.n_noisy_samples)!=0:
+                    tf.print('Batch size = %s' %self.batch_size.numpy())
+                    #tf.print('( n_labels x n_noisy_samples) = %s' %(self.n_classes*self.n_noisy_samples))
+                    raise ValueError('Batch size must be multiple of n_classes x len(c_1)  x (n_noisy_samples) ')
+                self.n_indexes = len(self.c_1)*self.batch_size//(self.n_classes*self.n_noisy_samples) #len(self.c_1)*
+                self.n_indexes = tf.convert_to_tensor(self.n_indexes, dtype=tf.int32)
+                tf.print('batch_size, n_classes, len(self.c_1), n_noisy_samples= %s, %s, %s, %s' %(self.batch_size.numpy(), self.n_classes.numpy(), len(self.c_1), self.n_noisy_samples.numpy()))
+                tf.print('n_indexes=len(self.c_1)*batch_size//(n_classes*n_noisy_samples)=%s' %self.n_indexes.numpy())
+                
+            else:
+                if self.batch_size%(self.n_classes*self.n_noisy_samples)!=0:
+                    tf.print('Batch size = %s' %self.batch_size.numpy())
+                    tf.print('( n_classes x n_noisy_samples) = %s' %(self.n_classes*self.n_noisy_samples).numpy())
+                    raise ValueError('Batch size must be multiple of (number of classes) x (n_noisy_samples) ')
+                self.n_indexes = self.batch_size//(self.n_classes*self.n_noisy_samples) # now many index files to read per each batch
+                self.n_indexes = tf.convert_to_tensor(self.n_indexes, dtype=tf.int32)
+            
+            self.n_batches = tf.convert_to_tensor(len(list_IDs)//(self.n_indexes))
+            tf.print('list_IDs length: %s' %len(list_IDs))
+            tf.print('n_indexes (n of file IDs read for each batch): %s' %self.n_indexes.numpy())
+            tf.print('batch size: %s' %self.batch_size.numpy())
+            tf.print('n_batches : %s' %self.n_batches.numpy())
+            if self.n_batches==tf.constant(0):
+                raise ValueError('Not enough examples to support this batch size ')
+    
+            tf.print('For each batch we read %s file IDs' %self.n_indexes.numpy())
+            if not self.fine_tune or not self.dataset_balanced:
+                tf.print('For each file ID we have %s labels' %(self.n_classes.numpy()))
+            else:
+                tf.print('We read %s IDs for label %s and 1 ID for each of the labels %s' %(str(len(self.c_1)), c_0[0],str( c_1)) )
+            if self.add_noise:
+                tf.print('For each ID, label we have %s realizations of noise' %self.n_noisy_samples.numpy())
+            
+            if self.base_case_dataset:
+                n_ex = self.n_indexes*self.n_classes*self.n_noisy_samples
+                n_check = tf.cast(self.n_classes*self.n_noisy_samples, tf.int32)
+            else:
+                n_ex = self.n_indexes*self.n_classes*self.n_noisy_samples/len(self.c_1)
+                n_check = tf.cast(self.n_classes*self.n_noisy_samples, tf.int32)#*len(self.c_1) # n_indexes must be a multiple of this x batch_size
+            
+            tf.print('In total, for each batch we have %s training examples' %(n_ex.numpy()))
+            tf.print('Input batch size: %s' %self.batch_size.numpy())
+            tf.print('N of batches to cover all file IDs: %s' %self.n_batches.numpy())
+            if n_ex!=self.batch_size:
+                raise ValueError('Effective batch size does not match input batch size')
+            
+            if self.n_indexes%tf.cast((self.batch_size/(n_check)), dtype=tf.int32)!=0:
                 tf.print('Batch size = %s' %self.batch_size.numpy())
-                #tf.print('( n_labels x n_noisy_samples) = %s' %(self.n_classes*self.n_noisy_samples))
-                raise ValueError('Batch size must be multiple of n_classes x len(c_1)  x (n_noisy_samples) ')
-            self.n_indexes = len(self.c_1)*self.batch_size//(self.n_classes*self.n_noisy_samples) #len(self.c_1)*
-            self.n_indexes = tf.convert_to_tensor(self.n_indexes, dtype=tf.int32)
-            tf.print('batch_size, n_classes, len(self.c_1), n_noisy_samples= %s, %s, %s, %s' %(self.batch_size.numpy(), self.n_classes.numpy(), len(self.c_1), self.n_noisy_samples.numpy()))
-            tf.print('n_indexes=len(self.c_1)*batch_size//(n_classes*n_noisy_samples)=%s' %self.n_indexes.numpy())
-             
-        else:
-            if self.batch_size%(self.n_classes*self.n_noisy_samples)!=0:
-                tf.print('Batch size = %s' %self.batch_size.numpy())
-                tf.print('( n_classes x n_noisy_samples) = %s' %(self.n_classes*self.n_noisy_samples).numpy())
-                raise ValueError('Batch size must be multiple of (number of classes) x (n_noisy_samples) ')
-            self.n_indexes = self.batch_size//(self.n_classes*self.n_noisy_samples) # now many index files to read per each batch
-            self.n_indexes = tf.convert_to_tensor(self.n_indexes, dtype=tf.int32)
-        
-        self.n_batches = tf.convert_to_tensor(len(list_IDs)//(self.n_indexes))
-        tf.print('list_IDs length: %s' %len(list_IDs))
-        tf.print('n_indexes (n of file IDs read for each batch): %s' %self.n_indexes.numpy())
-        tf.print('batch size: %s' %self.batch_size.numpy())
-        tf.print('n_batches : %s' %self.n_batches.numpy())
-        if self.n_batches==tf.constant(0):
-            raise ValueError('Not enough examples to support this batch size ')
-   
-        tf.print('For each batch we read %s file IDs' %self.n_indexes.numpy())
-        if not self.fine_tune or not self.dataset_balanced:
-            tf.print('For each file ID we have %s labels' %(self.n_classes.numpy()))
-        else:
-            tf.print('We read %s IDs for label %s and 1 ID for each of the labels %s' %(str(len(self.c_1)), c_0[0],str( c_1)) )
-        if self.add_noise:
-          tf.print('For each ID, label we have %s realizations of noise' %self.n_noisy_samples.numpy())
-         
-        if self.base_case_dataset:
-            n_ex = self.n_indexes*self.n_classes*self.n_noisy_samples
-            n_check = tf.cast(self.n_classes*self.n_noisy_samples, tf.int32)
-        else:
-            n_ex = self.n_indexes*self.n_classes*self.n_noisy_samples/len(self.c_1)
-            n_check = tf.cast(self.n_classes*self.n_noisy_samples, tf.int32)#*len(self.c_1) # n_indexes must be a multiple of this x batch_size
-        
-        tf.print('In total, for each batch we have %s training examples' %(n_ex.numpy()))
-        tf.print('Input batch size: %s' %self.batch_size.numpy())
-        tf.print('N of batches to cover all file IDs: %s' %self.n_batches.numpy())
-        if n_ex!=self.batch_size:
-            raise ValueError('Effective batch size does not match input batch size')
-        
-        if self.n_indexes%tf.cast((self.batch_size/(n_check)), dtype=tf.int32)!=0:
-          tf.print('Batch size = %s' %self.batch_size.numpy())
-          tf.print('( n_labels x n_noisy_samples) = %s' %(n_check*self.n_noisy_samples).numpy())
-          tf.print('n_indexes = %s' %self.n_indexes.numpy())
-          raise ValueError('Batch size should satisfy  m x Batch size /( n_labels x n_noisy_samples) =  n_indexes  with m a positive integer ')
-        
-        
-        if self.n_indexes!=tf.cast(tf.convert_to_tensor(len(list_IDs))/self.n_batches, dtype=tf.int32): 
-          tf.print('length of IDs = %s' %str(len(list_IDs)))
-          tf.print('n_batches = %s' %self.n_batches.numpy())
-          tf.print('n_indexes = %s' %self.n_indexes.numpy())
-          tf.print('len(list_IDs)/self.n_batches = %s' %(len(list_IDs)/self.n_batches).numpy())
-          raise ValueError('n_batches does not match length of IDs')
-        self.Verbose=Verbose
-        self.Verbose_2=Verbose_2
+                tf.print('( n_labels x n_noisy_samples) = %s' %(n_check*self.n_noisy_samples).numpy())
+                tf.print('n_indexes = %s' %self.n_indexes.numpy())
+                raise ValueError('Batch size should satisfy  m x Batch size /( n_labels x n_noisy_samples) =  n_indexes  with m a positive integer ')
+            
+            
+            if self.n_indexes!=tf.cast(tf.convert_to_tensor(len(list_IDs))/self.n_batches, dtype=tf.int32): 
+                tf.print('length of IDs = %s' %str(len(list_IDs)))
+                tf.print('n_batches = %s' %self.n_batches.numpy())
+                tf.print('n_indexes = %s' %self.n_indexes.numpy())
+                tf.print('len(list_IDs)/self.n_batches = %s' %(len(list_IDs)/self.n_batches).numpy())
+                raise ValueError('n_batches does not match length of IDs')
+            self.Verbose=Verbose
+            self.Verbose_2=Verbose_2
 
         self.dataset=self.__data_generation(self.list_IDs, self.list_IDs_dict)
          
@@ -486,7 +485,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
     @tf.function
     def process_file(self, ID, fname):
-        loaded_all = self.read_file(fname, dtype=tf.float32)
+        with tf.device('/cpu:0'):
+            loaded_all = self.read_file(fname, dtype=tf.float32)
 
         P_original = loaded_all[:, 1:]
         k = loaded_all[:, 0] 
@@ -581,51 +581,52 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
     
     def __data_generation(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
-        if not self.fine_tune and not self.one_vs_all:
-            fname_list=[]
-            ID_list=[]
-            for l in self.labels:
-                for ID in list_IDs_dict[l]:
-                    t_st =  self.data_root + '/'+l+ '/'+ str(ID) + '.txt' 
-                    fname_list.append(t_st)
-                    ID_list.append(ID)  
-        else:
-             fname_list = get_fname_list(self.c_0, self.c_1, list_IDs, self.data_root,  list_IDs_dict, dataset_balanced=self.dataset_balanced,)
-             ID_list = [int(fname.split('/')[-1].split('.')[0]) for fname in fname_list]
-        ID_list = tf.convert_to_tensor(ID_list, dtype=tf.int32)
-        if self.fine_tune and self.Verbose :
-            tf.print(fname_list)
-        
-        self.n_noisy_samples_numpy = self.n_noisy_samples.numpy()
-        self.n_ks = tf.size(self.all_ks)
+        with tf.device('/cpu:0'):
+            if not self.fine_tune and not self.one_vs_all:
+                fname_list=[]
+                ID_list=[]
+                for l in self.labels:
+                    for ID in list_IDs_dict[l]:
+                        t_st =  self.data_root + '/'+l+ '/'+ str(ID) + '.txt' 
+                        fname_list.append(t_st)
+                        ID_list.append(ID)  
+            else:
+                fname_list = get_fname_list(self.c_0, self.c_1, list_IDs, self.data_root,  list_IDs_dict, dataset_balanced=self.dataset_balanced,)
+                ID_list = [int(fname.split('/')[-1].split('.')[0]) for fname in fname_list]
+            ID_list = tf.convert_to_tensor(ID_list, dtype=tf.int32)
+            if self.fine_tune and self.Verbose :
+                tf.print(fname_list)
+            
+            self.n_noisy_samples_numpy = self.n_noisy_samples.numpy()
+            self.n_ks = tf.size(self.all_ks)
 
-        tf.print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size.numpy(), self.n_noisy_samples_numpy))
-        tf.debugging.assert_equal(tf.constant(len(fname_list), dtype=tf.int32), self.batch_size * self.n_batches // self.n_noisy_samples_numpy, message="Fname list != batch_size * n_batches // n_noisy_samples")
+            tf.print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size.numpy(), self.n_noisy_samples_numpy))
+            tf.debugging.assert_equal(tf.constant(len(fname_list), dtype=tf.int32), self.batch_size * self.n_batches // self.n_noisy_samples_numpy, message="Fname list != batch_size * n_batches // n_noisy_samples")
 
-        fname_list = tf.convert_to_tensor(fname_list, dtype=tf.string)
+            fname_list = tf.convert_to_tensor(fname_list, dtype=tf.string)
 
-        if self.Verbose_2:
-            tf.print("list_IDs_dict")
-            tf.print(list_IDs_dict)
+            if self.Verbose_2:
+                tf.print("list_IDs_dict")
+                tf.print(list_IDs_dict)
 
-        # Load n_noisy_samples random sys noise curves
-        if self.add_noise and self.add_sys:
-            self.curves_loaded = np.zeros((self.n_noisy_samples_numpy, self.original_k_len, self.n_channels +1), dtype=np.float32)
-            for i in range(self.n_noisy_samples_numpy):
-                curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-                curve_nr_string = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
-                curve_nr_string = curve_nr_string + '.txt'
-                curve_file = os.path.join(self.curves_folder, curve_nr_string)
-                curve_dat = np.loadtxt(curve_file)
-                self.curves_loaded[i] = curve_dat
-            self.curves_loaded = tf.convert_to_tensor(self.curves_loaded, dtype=tf.float32)
-        
-        if self.save_processed_spectra and not self.TPU:
-            if not tf.io.gfile.exists(self.name_spectra_folder):
-                tf.print('Creating directory %s' %  self.name_spectra_folder)
-                tf.io.gfile.makedirs(self.name_spectra_folder)
-        elif self.TPU:
-            tf.print("WARNING: Cannot save processed spectra in TPU mode.")
+            # Load n_noisy_samples random sys noise curves
+            if self.add_noise and self.add_sys:
+                self.curves_loaded = np.zeros((self.n_noisy_samples_numpy, self.original_k_len, self.n_channels +1), dtype=np.float32)
+                for i in range(self.n_noisy_samples_numpy):
+                    curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
+                    curve_nr_string = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
+                    curve_nr_string = curve_nr_string + '.txt'
+                    curve_file = os.path.join(self.curves_folder, curve_nr_string)
+                    curve_dat = np.loadtxt(curve_file)
+                    self.curves_loaded[i] = curve_dat
+                self.curves_loaded = tf.convert_to_tensor(self.curves_loaded, dtype=tf.float32)
+            
+            if self.save_processed_spectra and not self.TPU:
+                if not tf.io.gfile.exists(self.name_spectra_folder):
+                    tf.print('Creating directory %s' %  self.name_spectra_folder)
+                    tf.io.gfile.makedirs(self.name_spectra_folder)
+            elif self.TPU:
+                tf.print("WARNING: Cannot save processed spectra in TPU mode.")
 
         #Process spectrum files
         dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list))  
