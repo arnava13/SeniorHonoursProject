@@ -56,16 +56,29 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
     @tf.function
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
         file_content = tf.io.read_file(file_path)
+        # Normalize line breaks and strip potential trailing carriage return
+        file_content = tf.strings.regex_replace(file_content, "\r\n", "\n")
+        file_content = tf.strings.regex_replace(file_content, "\r", "\n")
         lines = tf.strings.split([file_content], '\n').values
+        # Remove empty last line if exists
         lines = tf.cond(tf.equal(lines[-1], ""), lambda: lines[:-1], lambda: lines)
+
         def extract_columns(line):
+            # Normalize spaces (convert tabs or multiple spaces to single space)
+            line = tf.strings.regex_replace(line, "\s+", " ")
+            line = tf.strings.strip(line)  # Strip leading/trailing whitespace
             columns = tf.strings.split([line], ' ').values
             if column_indices is not None:
                 selected_columns = tf.gather(columns, column_indices)
             else:
                 selected_columns = columns
+        
+            tf.print("Selected columns:", selected_columns)
+
+            # Convert to numbers, assuming they are all numeric
             return tf.strings.to_number(selected_columns, out_type=dtype)
-        columns_values = tf.map_fn(extract_columns, lines, dtype=dtype)
+
+        columns_values = tf.map_fn(extract_columns, lines, dtype=dtype, fn_output_signature=dtype)
         return columns_values
 
     
