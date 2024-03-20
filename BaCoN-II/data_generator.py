@@ -52,7 +52,7 @@ def generate_noise(k, P, pi,
     return tf.cast(sigma_noise, dtype=tf.float32)
 
 class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
-    @tf.function
+    #@tf.function
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
         file_content = tf.io.read_file(file_path)
 
@@ -370,7 +370,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         'I dont know what exactly I should put here - where is n_channels ??? '
         return((len(self.list_IDs), self.dim[0]/self.sample_pace, self.dim[1] ))
     
-    @tf.function
+    #@tf.function
     def noise_realisation(self, P_original, k, i_noise, P_noise, fname):
         if self.add_noise:
             P_noisy = P_original
