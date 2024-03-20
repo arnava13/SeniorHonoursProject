@@ -366,15 +366,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         'I dont know what exactly I should put here - where is n_channels ??? '
         return((len(self.list_IDs), self.dim[0]/self.sample_pace, self.dim[1] ))
     
-    @tf.py_function(Tout=tf.float32)
-    def load_sys(self, i_noise):
-        curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-        curve_random_nr = tf.strings.as_string(curve_random_nr)
-        curve_file = tf.io.gfile.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
-        curve_dat = self.read_file(curve_file, dtype=tf.float32)
-        curve_dat = tf.cast(curve_dat, dtype=tf.float32)
-        return curve_dat
-        
     @tf.function
     def noise_realisation(self, P_original, k, i_noise, P_noise, fname):
         if self.add_noise:
@@ -622,8 +613,17 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         # Load n_noisy_samples random sys noise curves
         if self.add_noise and self.add_sys:
-            self.curves_loaded = tf.map_fn(self.load_sys, tf.range(self.n_noisy_samples))
-            
+            curves_list = []
+            for i in tf.range(self.n_noisy_samples_numpy):
+                tf.print("Loading sys noise curve %s" %i)
+                curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
+                curve_random_nr = tf.strings.as_string(curve_random_nr)
+                curve_file = tf.io.gfile.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
+                curve_dat = self.read_file(curve_file, dtype=tf.float32)
+                curve_dat = tf.cast(curve_dat, dtype=tf.float32)
+                curves_list.append(curve_dat)
+            self.curves_loaded = tf.stack(curves_list)
+
         dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list))                
         dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         
