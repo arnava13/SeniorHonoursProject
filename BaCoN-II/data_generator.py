@@ -53,6 +53,7 @@ def generate_noise(k, P, pi,
 
 class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
     
+    @tf.function
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
         file_content = tf.io.read_file(file_path)
         lines = tf.strings.split([file_content], '\n').values
@@ -597,7 +598,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         # Load n_noisy_samples random sys noise curves
         if self.add_noise and self.add_sys:
-            self.curves_loaded = tf.zeros((self.n_noisy_samples.numpy, self.original_k_range, self.n_channels + 1), dtype=tf.float32)
+            self.curves_loaded = tf.zeros((self.n_noisy_samples, self.original_k_range, self.n_channels + 1), dtype=tf.float32)
             for i in range(self.n_noisy_samples.numpy):
                 curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
                 curve_file = tf.io.gfile.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
