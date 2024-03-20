@@ -645,7 +645,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         data_list = []
 
         for ID, fname in zip(ID_list, fname_list):
-            processed_file = self.process_file((ID, fname))
+            processed_file = self.process_file(ID, fname)
             normalized_and_onehot = self.normalize_and_onehot(processed_file)
             data_list.append((ID, fname, normalized_and_onehot))
 
