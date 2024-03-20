@@ -484,7 +484,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
     #@tf.function
     def process_file(self, ID, fname):
-        fname_numpy = fname.numpy().decode('utf-8')
+        fname_numpy = tf.strings.as_string(fname)
         tf.print('Processing file %s' %fname_numpy)
         loaded_all = self.read_file(fname, dtype=tf.float32)
 
@@ -496,8 +496,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             k = k[::self.sample_pace]
         P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
 
-        tf.print('dimension P_original: %s' %str(P_original.shape)) 
-        tf.print('dimension of k: %s' %str(k.shape))
+        tf.print('dimension P_original: %s' %str(tf.shape(P_original))) 
+        tf.print('dimension of k: %s' %str(tf.shape(k)))
         
         if self.Verbose:
             tf.print('dimension P_original: %s' %str(P_original.shape))    
