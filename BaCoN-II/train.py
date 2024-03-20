@@ -163,7 +163,7 @@ def my_train(model, optimizer, loss,
         for IDs, x_batch_train, y_batch_train in train_generator.dataset:
             train_on_batch(IDs, x_batch_train, y_batch_train, train_generator, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, val_generator.batch_size, TPU=False)
         for IDs, x_batch_val, y_batch_val in val_generator.dataset:
-            val_step(IDs, x_batch_train, y_batch_train, train_generator, epoch, model, loss, val_acc_metric, val_loss_metric, bayesian, n_val_example, val_generator.batch_size, TPU=False)
+            val_step(IDs, x_batch_train, y_batch_train, train_generator, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian, n_val_example, val_generator.batch_size, TPU=False)
         train_acc_metric = train_acc_metric.result()
         train_loss_metric = train_loss_metric.result()
         val_loss_value = val_loss_metric.result()
