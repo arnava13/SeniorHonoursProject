@@ -625,8 +625,10 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print(list_IDs_dict)
 
         # Load n_noisy_samples random sys noise curves
+        tf.config.run_functions_eagerly(True)
         if self.add_noise and self.add_sys:
             self.curves_loaded = tf.map_fn(self.load_sys_curve, tf.range(self.n_noisy_samples), dtype=tf.float32)
+        tf.config.run_functions_eagerly(False)
 
         # Take first 10 examples from ID list and fname_list
         ID_list = ID_list[:10]
