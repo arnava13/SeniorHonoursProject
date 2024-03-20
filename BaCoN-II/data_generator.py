@@ -614,7 +614,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         # Load n_noisy_samples random sys noise curves
         if self.add_noise and self.add_sys:
-            self.curves_loaded = np.zeros((self.n_noisy_samples_numpy, self.n_ks, 1 + self.n_channels), dtype=np.float32)
+            self.curves_loaded = np.zeros((self.n_noisy_samples_numpy, self.original_k_len, 1 + self.n_channels), dtype=np.float32)
             for i in range(self.n_noisy_samples_numpy):
                 curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
                 curve_random_str = tf.strings.as_string(curve_random_nr)
