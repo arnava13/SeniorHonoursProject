@@ -606,6 +606,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 ID_value = tf.cast(ID, dtype=tf.int32)
                 ID_array = ID_array.write(i, ID_value)
                 i += 1
+            print("ID Here: ", ID_list[:10])
             ID_list = ID_array.stack()
         if self.fine_tune and self.Verbose :
             tf.print(fname_list)
