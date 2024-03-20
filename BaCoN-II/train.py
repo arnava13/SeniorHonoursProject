@@ -149,6 +149,7 @@ def my_train(model, optimizer, loss,
     train_acc_metric.reset_states()
     val_loss_metric.reset_states()
     val_acc_metric.reset_states()
+    epoch = tf.constant(epoch, dtype=tf.int32)
     if TPU:
         with strategy.scope():
             for IDs, x_batch_train, y_batch_train in train_generator.dataset:

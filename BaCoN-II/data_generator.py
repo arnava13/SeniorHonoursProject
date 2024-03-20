@@ -223,8 +223,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.all_ks = self.all_ks[self.i_min:self.i_max]
         self.dim = (tf.cast(self.all_ks.shape[0], tf.int32), self.dim[1])
         tf.print('New data dim: %s' %(str(self.dim[0].numpy()) + "," + str(self.dim[1].numpy())))
-        tf.print('Final i_max used is %s' %(self.i_max.numpy() if type(self.i_max) is tf.Tensor else self.i_max))
-        tf.print('Final i_min used is %s' %(self.i_min.numpy() if type(self.i_min) is tf.Tensor else self.i_min))
+        tf.print('Final i_max used is %s' %(self.i_max.numpy()))
+        tf.print('Final i_min used is %s' %(self.i_min.numpy()))
   
         self.batch_size = tf.convert_to_tensor(batch_size, tf.int32)
         
@@ -322,7 +322,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         tf.print('n_indexes (n of file IDs read for each batch): %s' %self.n_indexes.numpy())
         tf.print('batch size: %s' %self.batch_size.numpy())
         tf.print('n_batches : %s' %self.n_batches.numpy())
-        if self.n_batches==0:
+        if self.n_batches=tf.constant(0):
             raise ValueError('Not enough examples to support this batch size ')
    
         tf.print('For each batch we read %s file IDs' %self.n_indexes.numpy())
@@ -654,6 +654,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         return dataset
     
     def write_indexes(self, batch_ID, indices):
+        batch_ID = batch_ID.numpy()
         indices = indices.numpy()
         idx_files_dir = tf.io.gfile.join(self.models_dir, 'idx_files')
         if not tf.io.gfile.exists(idx_files_dir):
