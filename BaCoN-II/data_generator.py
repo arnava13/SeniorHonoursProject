@@ -322,7 +322,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         tf.print('n_indexes (n of file IDs read for each batch): %s' %self.n_indexes.numpy())
         tf.print('batch size: %s' %self.batch_size.numpy())
         tf.print('n_batches : %s' %self.n_batches.numpy())
-        if self.n_batches=tf.constant(0):
+        if self.n_batches==tf.constant(0):
             raise ValueError('Not enough examples to support this batch size ')
    
         tf.print('For each batch we read %s file IDs' %self.n_indexes.numpy())
