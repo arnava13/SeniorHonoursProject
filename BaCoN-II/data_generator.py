@@ -505,7 +505,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             def body(i, X, y):
                 X, y = self.noise_realisation(P_original, k, i, P_noise, fname)
                 return [tf.add(i, 1), X, y]
-            shape_invariants = [i_noise.get_shape(), tf.TensorShape([self.all_ks, None, self.n_channels]),y.get_shape()]
+            shape_invariants = [i_noise.get_shape(), tf.TensorShape([self.all_ks.shape(0), None, self.n_channels]),y.get_shape()]
             i_noise, X, y = tf.while_loop(condition, body, [i_noise, X, y], shape_invariants=shape_invariants)
             return X, y
 
