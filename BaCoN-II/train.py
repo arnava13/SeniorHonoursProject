@@ -199,6 +199,7 @@ def my_train(model, optimizer, loss,
     val_acc = val_acc_metric.numpy()
     val_loss = val_loss_value.numpy()
     history['val_loss'].append(val_loss)
+    history['val_accuracy'].append(val_acc)
     
 
     if epoch==0:
