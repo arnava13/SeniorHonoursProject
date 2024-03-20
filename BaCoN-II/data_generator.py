@@ -573,15 +573,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         return ID, X, y
     
-    @tf.function
-    def load_sys_curve(self, i):
-            curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-            curve_random_str = tf.strings.as_string(curve_random_nr)
-            curve_file = tf.strings.join([self.curves_folder, '/' + curve_random_str + '.txt'])
-            curve_dat = self.read_file(curve_file, dtype=tf.float32)
-            return curve_dat
-
-    
     def __data_generation(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
         ID_array = tf.TensorArray(dtype=tf.int32, size=0, dynamic_size=True)
@@ -623,7 +614,14 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         # Load n_noisy_samples random sys noise curves
         if self.add_noise and self.add_sys:
-            self.curves_loaded = tf.map_fn(self.load_sys_curve, tf.range(self.n_noisy_samples), dtype=tf.float32)
+            self.curves_loaded = np.zeros((self.n_noisy_samples_numpy, self.n_ks, 1 + self.n_channels), dtype=np.float32)
+            for i in range(self.n_noisy_samples_numpy):
+                curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
+                curve_random_str = tf.strings.as_string(curve_random_nr)
+                curve_file = tf.strings.join([self.curves_folder, '/' + curve_random_str + '.txt'])
+                curve_dat = np.loadtxt(curve_file.numpy().decode('utf-8'))
+                self.curves_loaded[i, :, :] = curve_dat
+            self.curves_loaded = tf.convert_to_tensor(self.curves_loaded, dtype=tf.float32)
 
 
         # Take first 10 examples from ID list and fname_list
