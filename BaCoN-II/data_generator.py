@@ -499,7 +499,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.add_noise:
             P_noise = tf.gather(self.norm_data, self.z_bins, axis=1)
 
-        def loop_over_noise(i_noise, P_original, k, P_noise, fname):
+        def loop_over_noise(i_noise, X, y, k, P_noise, fname):
             def condition(i, X, y):
                 return i < self.n_noisy_samples
             def body(i, X, y):
@@ -509,7 +509,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             return X, y
 
         i_noise = tf.constant(0, dtype=tf.int32)
-        X, y = loop_over_noise(i_noise, P_original, k, P_noise, fname)
+        y = None
+        X, y = loop_over_noise(i_noise, P_original, y, k, P_noise, fname)
 
         ID = tf.convert_to_tensor(ID)
         ID = tf.cast(ID, dtype=tf.int32)
