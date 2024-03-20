@@ -60,7 +60,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         lines = tf.cond(tf.equal(lines[-1], ""), lambda: lines[:-1], lambda: lines)
         columns = tf.strings.split(lines, ' ')
         columns_values = tf.strings.to_number(columns, out_type=dtype)
-        columns_values = tf.to_tensor(columns_values)
+        columns_values = columns_values.to_tensor()
         return columns_values
 
     
