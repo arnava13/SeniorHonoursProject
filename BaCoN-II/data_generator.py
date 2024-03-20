@@ -483,9 +483,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
     @tf.function
     def process_file(self, ID, fname):
-        fname = tf.cast(fname, dtype=tf.string)
-        if self.Verbose:
-            print('Loading file %s' %fname)
+        print('Loading file %s' %fname)
         loaded_all = self.read_file(fname, dtype=tf.float32)
         loaded_all = tf.cast(loaded_all, dtype=tf.float32)
         P_original = loaded_all[:, 1:]
@@ -597,7 +595,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         else:
              fname_list = get_fname_list(self.c_0, self.c_1, list_IDs, self.data_root,  list_IDs_dict, dataset_balanced=self.dataset_balanced,)
              ID_list = [int(fname.split('.')[0].split('/')[-2]+'/'+fname.split('.')[0].split('/')[-1]) for fname in fname_list]
-        tf.print(fname_list)
         ID_list = tf.convert_to_tensor(ID_list, dtype=tf.int32)
         if self.fine_tune and self.Verbose :
             tf.print(fname_list)
@@ -608,7 +605,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         tf.print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size.numpy(), self.n_noisy_samples_numpy))
         tf.debugging.assert_equal(tf.constant(len(fname_list), dtype=tf.int32), self.batch_size * self.n_batches // self.n_noisy_samples_numpy, message="Fname list != batch_size * n_batches // n_noisy_samples")
 
-        fname_list = tf.constant(fname_list, dtype=tf.string)
+        fname_list = tf.convert_to_tensor(fname_list, dtype=tf.string)
+        print('fname_list' + str(fname_list.numpy()))
 
         if self.Verbose_2:
             tf.print("list_IDs_dict")
