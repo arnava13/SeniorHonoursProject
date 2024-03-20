@@ -505,7 +505,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             def body(i, X, y):
                 X, y = self.noise_realisation(P_original, k, i, P_noise, fname)
                 return [tf.add(i, 1), X, y]
-            shape_invariants = [i_noise.get_shape(), tf.TensorShape([self.all_ks.shape(0), None, self.n_channels]),y.get_shape()]
+            shape_invariants = [i_noise.get_shape(), tf.TensorShape([self.n_ks, None, self.n_channels]), y.get_shape()]
             i_noise, X, y = tf.while_loop(condition, body, [i_noise, X, y], shape_invariants=shape_invariants)
             return X, y
 
@@ -604,6 +604,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print(fname_list)
         
         self.n_noisy_samples_numpy = self.n_noisy_samples.numpy()
+        self.n_ks = tf.size(self.all_ks)
 
         tf.print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size.numpy(), self.n_noisy_samples_numpy))
         tf.debugging.assert_equal(tf.constant(len(fname_list), dtype=tf.int32), self.batch_size * self.n_batches // self.n_noisy_samples_numpy, message="Fname list != batch_size * n_batches // n_noisy_samples")
