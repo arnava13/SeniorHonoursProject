@@ -74,6 +74,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             return tf.strings.to_number(selected_columns, out_type=dtype)
 
         columns_values = tf.map_fn(extract_columns, lines, fn_output_signature=dtype)
+        if isinstance(columns_values, tf.RaggedTensor):
+            # Convert the ragged tensor to a regular tensor with padding
+            columns_values = columns_values.to_tensor()
         return columns_values
 
     def __init__(self, list_IDs, labels, labels_dict, batch_size=32, 
@@ -625,7 +628,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print("WARNING: Cannot save processed spectra in TPU mode.")
 
         #Process spectrum files
-        dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list))                
+        dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list))
+        for ID, fname in dataset.take(3):
+            print("ID:", ID.numpy(), "Filename:", fname.numpy())               
         dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         # Normalize and one-hot encode 
