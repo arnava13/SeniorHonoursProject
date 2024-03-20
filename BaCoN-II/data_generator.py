@@ -366,7 +366,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         'I dont know what exactly I should put here - where is n_channels ??? '
         return((len(self.list_IDs), self.dim[0]/self.sample_pace, self.dim[1] ))
     
-    @tf.function
+    @tf.py_function(Tout=tf.float32)
     def load_sys(self, i_noise):
         curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
         curve_random_nr = tf.strings.as_string(curve_random_nr)
