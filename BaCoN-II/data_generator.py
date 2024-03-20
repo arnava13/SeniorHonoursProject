@@ -374,7 +374,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         'I dont know what exactly I should put here - where is n_channels ??? '
         return((len(self.list_IDs), self.dim[0]/self.sample_pace, self.dim[1] ))
     
-    #@tf.function
+    @tf.function
     def noise_realisation(self, P_original, k, i_noise, P_noise, fname):
         if self.add_noise:
             P_noisy = P_original
@@ -396,7 +396,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
                     P_noisy = P_noisy + noise_cosVar
             if self.add_sys:
-                noise_sys, k_sys = self.curves_loaded[i_noise,:, 1:], self.curves_loaded[i_noise,:, 0]
+                curves_loaded = self.curves_loaded[i_noise]
+                noise_sys, k_sys = curves_loaded[:, 1:], curves_loaded[:, 0]
                 if self.sample_pace!=1:
                     noise_sys = noise_sys[0::self.sample_pace, :]
                     k_sys = k_sys[0::self.sample_pace]
@@ -482,7 +483,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         y = tf.cast(encoding, tf.int32)
         return X, y
 
-    #@tf.function
+    @tf.function
     def process_file(self, ID, fname):
         fname = tf.cast(fname, dtype=tf.string)
         if self.Verbose:
@@ -527,7 +528,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         return ID, X, y
 
-    #@tf.function
+    @tf.function
     def normalize_and_onehot(self, ID, X, y):
         if self.normalization == 'batch':
             mu_batch = tf.reduce_mean(X, axis=0)
