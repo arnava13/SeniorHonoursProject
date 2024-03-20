@@ -52,7 +52,7 @@ def generate_noise(k, P, pi,
     return tf.cast(sigma_noise, dtype=tf.float32)
 
 class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
-    
+    """
     @tf.function
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
         file_content = tf.io.read_file(file_path)
@@ -75,6 +75,21 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             return tf.strings.to_number(selected_columns, out_type=dtype)
 
         columns_values = tf.map_fn(extract_columns, lines, fn_output_signature=dtype)
+        return columns_values
+    """
+    @tf.function
+    def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
+        file_content = tf.io.read_file(file_path)
+        lines = tf.strings.split([file_content], '\n').values
+        lines = tf.cond(tf.equal(lines[-1], ""), lambda: lines[:-1], lambda: lines)
+        def extract_columns(line):
+            columns = tf.strings.split([line], ' ').values
+            if column_indices is not None:
+                selected_columns = tf.gather(columns, column_indices)
+            else:
+                selected_columns = columns
+            return tf.strings.to_number(selected_columns, out_type=dtype)
+        columns_values = tf.map_fn(extract_columns, lines, dtype=dtype)
         return columns_values
 
     
@@ -483,9 +498,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
     @tf.function
     def process_file(self, ID, fname):
-        print('Loading file %s' %fname)
         loaded_all = self.read_file(fname, dtype=tf.float32)
-        loaded_all = tf.cast(loaded_all, dtype=tf.float32)
+
         P_original = loaded_all[:, 1:]
         k = loaded_all[:, 0] 
 
@@ -518,9 +532,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         i_noise = tf.constant(0, dtype=tf.int32)
         y = tf.constant(0, dtype=tf.int32)
         X, y = loop_over_noise(i_noise, P_original, y, k, P_noise, fname)
-
-        ID = tf.convert_to_tensor(ID)
-        ID = tf.cast(ID, dtype=tf.int32)
 
         return ID, X, y
 
@@ -578,7 +589,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             X = X[:,:,0,:]
             X = X[0,:,:]
         y = tf.one_hot(y, depth=self.n_classes_out)
-        ID = ID
 
         return ID, X, y
     
@@ -594,7 +604,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     ID_list.append(ID)  
         else:
              fname_list = get_fname_list(self.c_0, self.c_1, list_IDs, self.data_root,  list_IDs_dict, dataset_balanced=self.dataset_balanced,)
-             ID_list = [int(fname.split('.')[0].split('/')[-2]+'/'+fname.split('.')[0].split('/')[-1]) for fname in fname_list]
+             ID_list = [int(fname.split('/')[-1].split('.')[0]) for fname in fname_list]
         ID_list = tf.convert_to_tensor(ID_list, dtype=tf.int32)
         if self.fine_tune and self.Verbose :
             tf.print(fname_list)
@@ -606,7 +616,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         tf.debugging.assert_equal(tf.constant(len(fname_list), dtype=tf.int32), self.batch_size * self.n_batches // self.n_noisy_samples_numpy, message="Fname list != batch_size * n_batches // n_noisy_samples")
 
         fname_list = tf.convert_to_tensor(fname_list, dtype=tf.string)
-        print('fname_list' + str(fname_list.numpy()))
 
         if self.Verbose_2:
             tf.print("list_IDs_dict")
