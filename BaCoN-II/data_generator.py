@@ -496,6 +496,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             k = k[::self.sample_pace]
         P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
 
+        tf.print('dimension P_original: %s' %str(P_original.shape)) 
+        tf.print('dimension of k: %s' %str(k.shape)
+        
         if self.Verbose:
             tf.print('dimension P_original: %s' %str(P_original.shape))    
             tf.print('P_original first 10:') 
