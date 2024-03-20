@@ -52,7 +52,7 @@ def generate_noise(k, P, pi,
     return tf.cast(sigma_noise, dtype=tf.float32)
 
 class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
-    #@tf.function
+    @tf.function
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
         file_content = tf.io.read_file(file_path)
 
@@ -373,7 +373,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         'I dont know what exactly I should put here - where is n_channels ??? '
         return((len(self.list_IDs), self.dim[0]/self.sample_pace, self.dim[1] ))
     
-    #@tf.function
+    @tf.function
     def noise_realisation(self, P_original, k, i_noise, P_noise, fname):
         if self.add_noise:
             P_noisy = P_original
@@ -401,8 +401,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     noise_sys = noise_sys[0::self.sample_pace, :]
                     k_sys = k_sys[0::self.sample_pace]
                 noise_sys, k_sys = noise_sys[self.i_min:self.i_max], k_sys[self.i_min:self.i_max]
-                #if tf.reduce_any(tf.math.not_equal(k, k_sys)):
-                    #tf.print('ERROR: k-values in spectrum and theory-error curve file not identical')
+                """if tf.reduce_any(tf.math.not_equal(k, k_sys)): WONT WORK ANYMORE
+                    tf.print('ERROR: k-values in spectrum and theory-error curve file not identical')
+                    """
                 # rescale noise_sys curves according to error (10% default from production curves), 
                 # rescale by Gaussian with sigma = 1
                 # multiply with normalisation spectrum
@@ -458,8 +459,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 tf.print('expanded first 5:') 
                 tf.print(expanded[5])
             # now shape of expanded is (1, n_data_points (k values), 1, n_channels)
-        if self.Verbose:
-            tf.print('Dimension of data before normalising: %s' %str(expanded.shape))
+        #if self.Verbose:
+        tf.print('Dimension of data before normalising: %s' %str(expanded.shape))
         X = expanded
         X = tf.cast(X, dtype=tf.float32)              
         if self.Verbose:
@@ -482,10 +483,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         y = tf.cast(encoding, tf.int32)
         return X, y
 
-    #@tf.function
+    @tf.function
     def process_file(self, ID, fname):
-        fname_numpy = tf.strings.as_string(fname)
-        tf.print('Processing file %s' %fname_numpy)
         loaded_all = self.read_file(fname, dtype=tf.float32)
 
         P_original = loaded_all[:, 1:]
@@ -496,13 +495,12 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             k = k[::self.sample_pace]
         P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
 
-        tf.print('dimension P_original: %s' %str(tf.shape(P_original))) 
-        tf.print('dimension of k: %s' %str(tf.shape(k)))
-        
+        """ WONT WORK ANYMORE
         if self.Verbose:
             tf.print('dimension P_original: %s' %str(P_original.shape))    
             tf.print('P_original first 10:') 
             tf.print(P_original[10])
+        """
         
         if self.add_noise:
             P_noise = tf.gather(self.norm_data, self.z_bins, axis=1)
