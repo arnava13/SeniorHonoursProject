@@ -500,8 +500,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             k = k[::self.sample_pace]
         P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
 
-        if self.Verbose:
-            tf.print('Dimension of original data: %s' %str(P_original.shape))
+        tf.print('Dimension of original data: %s' %str(P_original.shape))
+        tf.print('Dimension of k from spectrum: %s' %str(k.shape))
         
         if self.Verbose:
             tf.print('dimension P_original: %s' %str(P_original.shape))    
