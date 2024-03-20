@@ -53,7 +53,7 @@ def generate_noise(k, P, pi,
 
 class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
     
-    @tf.function
+    @tf.function(reduce_retracing=True)
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
         file_content = tf.io.read_file(file_path)
         lines = tf.strings.split([file_content], '\n').values
@@ -473,7 +473,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print('dimension P_original: %s' %str(P_original.shape))    
             tf.print('P_original first 10:') 
             tf.print(P_original[10])
-        P_noise = tf.gather(self.norm_data, self.z_bins, axis=1)
+        zbins = tf.cast(self.z_bins, dtype=tf.int32)
+        P_noise = tf.gather(self.norm_data, zbins, axis=1)
         X = tf.map_fn(lambda x: self.loop_over_noise(x, P_original, P_noise, k), tf.range(self.n_noisy_samples))
         X = tf.cast(X, dtype=tf.float32)              
         if self.Verbose:
