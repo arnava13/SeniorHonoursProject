@@ -454,7 +454,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             X = expanded  
             return X
 
-    @tf.py_function(tout = (tf.int32, tf.float32, tf.int32))
+    @tf.py_function(Tout = [tf.int32, tf.float32, tf.int32])
     def process_file(self, ID, fname):
         fname = tf.cast(fname, dtype=tf.string)
         loaded_all = self.read_file(fname, dtype=tf.float32)
