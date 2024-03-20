@@ -28,7 +28,7 @@ def train_on_batch(IDs, x, y, train_generator, epoch, model, optimizer, loss, tr
         logits = x
         if bayesian:
             # Assuming model.losses are appropriately scaled
-            kl = tf.reduce_sum(model.losses) / n_train_example
+            kl = tf.reduce_sum(model.losses) / tf.cast(n_train_example, tf.float32)
             loss_value = loss(y, logits, kl, batch_size=batch_size, TPU=TPU)
         else:
             loss_value = loss(y, logits, batch_size=batch_size, TPU=TPU)
@@ -49,7 +49,7 @@ def train_on_batch(IDs, x, y, train_generator, epoch, model, optimizer, loss, tr
 def val_step(IDs, x, y, val_generator, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian=False, n_val_example=10000, batch_size=2500, save_indexes=False, TPU = False):
     val_logits = model(x, training=False)
     if bayesian:
-       val_kl = tf.reduce_sum(model.losses)/n_val_example
+       val_kl = tf.reduce_sum(model.losses)/ tf.cast(n_val_example, tf.float32)
        val_loss_value = loss(y, val_logits, val_kl, TPU = TPU)
     else:
          val_loss_value = loss(y, val_logits, TPU = TPU)
