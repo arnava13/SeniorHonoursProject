@@ -634,6 +634,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 curve_file = os.path.join(self.curves_folder, curve_nr_string)
                 curve_dat = np.loadtxt(curve_file)
                 self.curves_loaded[i] = curve_dat
+            self.curves_loaded = tf.convert_to_tensor(self.curves_loaded, dtype=tf.float32)
 
 
         # Take first 10 examples from ID list and fname_list
