@@ -616,6 +616,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print(list_IDs_dict)
 
         # Load n_noisy_samples random sys noise curves
+        print(self.n_noisy_samples_numpy)
         if self.add_noise and self.add_sys:
             curves_list = []
             for i in range(self.n_noisy_samples_numpy):
