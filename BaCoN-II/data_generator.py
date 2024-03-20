@@ -366,7 +366,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         'I dont know what exactly I should put here - where is n_channels ??? '
         return((len(self.list_IDs), self.dim[0]/self.sample_pace, self.dim[1] ))
     
-    @tf.function
     def loop_over_noise(self, i_noise, P_original, P_noise, k):
             if self.add_noise:
                 P_noisy = P_original
@@ -455,7 +454,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             X = expanded  
             return X
 
-    @tf.function
     def process_file(self, ID, fname):
         fname = tf.cast(fname, dtype=tf.string)
         loaded_all = self.read_file(fname, dtype=tf.float32)
@@ -611,7 +609,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         # Generate data
         self.i_ind=tf.constant(0, dtype=tf.int32)
     
-        dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.map(lambda ID, x, y: tf.py_function(func = self.process_file, inp=[ID, x, y]), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         
         if self.save_processed_spectra and not self.TPU:
             if not tf.io.gfile.exists(self.name_spectra_folder):
