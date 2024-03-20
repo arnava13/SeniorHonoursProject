@@ -595,6 +595,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             i = 0
             for fname in fname_list:
                 ID = int(fname.split('.')[0].split('/')[-2]+'/'+fname.split('.')[0].split('/')[-1])
+                tf.print("ID HERE: " + ID)
                 ID_value = tf.cast(ID, dtype=tf.int32)
                 ID_array = ID_array.write(i, ID_value)
                 i += 1
