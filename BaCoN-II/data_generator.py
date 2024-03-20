@@ -57,10 +57,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
         file_content = tf.io.read_file(file_path)
 
-        # Normalize line breaks and strip potential trailing carriage return
         file_content = tf.strings.regex_replace(file_content, "\r\n", "\n")
         file_content = tf.strings.regex_replace(file_content, "\r", "\n")
-
         lines = tf.strings.split([file_content], '\n').values
         lines = tf.cond(tf.equal(lines[-1], ""), lambda: lines[:-1], lambda: lines)
 
@@ -498,9 +496,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             k = k[::self.sample_pace]
         P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
 
-        tf.print('Dimension of original data: %s' %str(P_original.shape))
-        tf.print('Dimension of k from spectrum: %s' %str(k.shape))
-        
         if self.Verbose:
             tf.print('dimension P_original: %s' %str(P_original.shape))    
             tf.print('P_original first 10:') 
@@ -636,11 +631,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 curve_dat = np.loadtxt(curve_file)
                 self.curves_loaded[i] = curve_dat
             self.curves_loaded = tf.convert_to_tensor(self.curves_loaded, dtype=tf.float32)
-
-
-        # Take first 10 examples from ID list and fname_list
-        ID_list = ID_list[:10]
-        fname_list = fname_list[:10]
         
         if self.save_processed_spectra and not self.TPU:
             if not tf.io.gfile.exists(self.name_spectra_folder):
