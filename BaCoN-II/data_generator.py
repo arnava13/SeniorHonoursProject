@@ -53,22 +53,13 @@ def generate_noise(k, P, pi,
 
 class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
     
-    #@tf.function(reduce_retracing=True)
-    def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
+    @tf.function()
+    def read_file(self, file_path, *, dtype=tf.float32):
         file_content = tf.io.read_file(file_path)
         lines = tf.strings.split([file_content], '\n').values
         lines = tf.cond(tf.equal(lines[-1], ""), lambda: lines[:-1], lambda: lines)
-
-        def extract_columns(line):
-            columns = tf.strings.split([line], ' ').values
-            if column_indices is not None:
-                selected_columns = tf.gather(columns, column_indices)
-            else:
-                selected_columns = columns
-            # Convert to numbers, assuming they are all numeric
-            return tf.strings.to_number(selected_columns, out_type=dtype)
-
-        columns_values = tf.map_fn(extract_columns, lines, dtype=dtype)
+        columns = tf.strings.split(lines, ' ')
+        columns_values = tf.strings.to_number(columns, out_type=dtype)
         return columns_values
 
     
@@ -158,11 +149,11 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.norm_data_path = tf.io.gfile.join(self.data_root, norm_data_name)
         tf.print('Data root dir is %s' %self.data_root)
         tf.print('Normalisation file is %s' %self.norm_data_path)
-        self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)
+        self.all_ks = self.read_file(self.norm_data_path, dtype=tf.float32)[:,0]
         self.all_ks = tf.cast(self.all_ks, dtype=tf.float32)
         self.original_k_len = tf.cast(tf.size(self.all_ks).numpy(), tf.int32)
         if self.sample_pace !=1:
-                self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)[::self.sample_pace]
+                self.all_ks = self.read_file(self.norm_data_path, dtype=tf.float32)[:, 0][::self.sample_pace]
         
 
         # Select points from k_max or i_max
@@ -625,10 +616,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print(list_IDs_dict)
 
         # Load n_noisy_samples random sys noise curves
-        tf.config.run_functions_eagerly(True)
         if self.add_noise and self.add_sys:
             self.curves_loaded = tf.map_fn(self.load_sys_curve, tf.range(self.n_noisy_samples), dtype=tf.float32)
-        tf.config.run_functions_eagerly(False)
 
         # Take first 10 examples from ID list and fname_list
         ID_list = ID_list[:10]
