@@ -458,7 +458,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 tf.print('expanded first 5:') 
                 tf.print(expanded[5])
             # now shape of expanded is (1, n_data_points (k values), 1, n_channels)
-        tf.print('Dimension of data before normalising: %s' %str(expanded.shape))
+        if self.Verbose:
+            tf.print('Dimension of data before normalising: %s' %str(expanded.shape))
         X = expanded
         X = tf.cast(X, dtype=tf.float32)              
         if self.Verbose:
@@ -583,14 +584,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         ID = ID
 
         return ID, X, y
-
-    @tf.function
-    def load_sys(self, i):
-        curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-        curve_nr_string = tf.strings.as_string(curve_random_nr)
-        curve_file = tf.strings.join([self.curves_folder, '/', curve_nr_string, '.txt'])
-        curve_dat = self.read_file(curve_file, dtype=tf.float32)
-        return curve_dat
     
     def __data_generation(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
@@ -633,7 +626,13 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         # Load n_noisy_samples random sys noise curves
         if self.add_noise and self.add_sys:
-            self.curves_loaded = tf.map_fn(self.load_sys, tf.range(self.n_noisy_samples), dtype=tf.float32)
+            self.curves_loaded = np.zeros((self.n_noisy_samples_numpy, self.original_k_len, self.n_channels +1), dtype=np.float32)
+            for i in range(self.n_noisy_samples_numpy):
+                curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
+                curve_nr_string = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
+                curve_file = os.path.join(self.curves_folder, curve_nr_string, '.txt')
+                curve_dat = np.loadtxt(curve_file)
+                self.curves_loaded[i] = curve_dat
 
 
         # Take first 10 examples from ID list and fname_list
