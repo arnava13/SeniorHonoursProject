@@ -532,23 +532,37 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.xshape = X.shape
         self.yshape = y.shape
         if self.save_processed_spectra and not self.TPU:
-            # new matrix for spectra, first column is class_idx, first row is k-values
-            self.X_save[1:,0].assign(y)
-            self.X_save[0,1:].assign(self.all_ks)
+            X_save = tf.zeros_like(self.X_save)
+            class_indices = tf.range(1, tf.shape(y)[0] + 1)[:, tf.newaxis]
+            X_save = tf.tensor_scatter_nd_update(X_save, class_indices, y)
+            k_values_indices = tf.range(1, tf.shape(self.all_ks)[0] + 1)[tf.newaxis, :]
+            all_ks_updates = tf.reshape(self.all_ks, [1, -1]) 
+            X_save = tf.tensor_scatter_nd_update(X_save, k_values_indices, all_ks_updates)
+
             def write_spectra(z_bins, X, X_save):
                 loop_len = tf.size(z_bins)
+
                 def condition(i, X, X_save):
                     return i < loop_len
+
                 def body(i, X, X_save):
-                    X_save = X_save[1:, 1:].assign(X[:, :, 0, i])
-                    spectra_file = tf.io.gfile.join(self.name_spectra_folder, f'processed_spectra_zbin{i}.txt')
-                    tf.print(f'Saving processed (noisy and normalised) spectra in {spectra_file}')
-                    X_save_string = tf.strings.reduce_join(tf.strings.as_string(X_save), separator=' ', axis=-1)
+                    batch_indices = tf.range(1, self.batch_size * self.n_batches + 1)[:, tf.newaxis]
+                    z_indices = tf.fill([self.batch_size * self.n_batches, 1], i + 1)  # i + 1 because we skip the first row
+                    indices = tf.concat([batch_indices, z_indices], axis=1)
+                    updates = tf.reshape(X[:, :, 0, z_bins[i]], [-1])
+                    X_save_updated = tf.tensor_scatter_nd_update(X_save, indices, updates)
+                    spectra_file = tf.io.gfile.join(self.name_spectra_folder, f'processed_spectra_zbin{z_bins[i]}.txt')
+                    tf.print(f'Saving processed (noisy and normalized) spectra in {spectra_file}')
+                    X_save_string = tf.strings.reduce_join(tf.strings.as_string(X_save_updated), separator=' ', axis=-1)
                     tf.io.write_file(spectra_file, X_save_string)
-                    return [tf.add(i, 1), X, X_save]
+
+                    return [tf.add(i, 1), X, X_save_updated]
+
                 i = tf.constant(0, dtype=tf.int32)
                 tf.while_loop(condition, body, [i, X, X_save])
-                write_spectra(self.z_bins, X, self.X_save)
+
+        write_spectra(self.z_bins, X, X_save)
+
                 
         if self.swap_axes:
             X = X[:,:,0,:]
@@ -615,7 +629,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             if not tf.io.gfile.exists(self.name_spectra_folder):
                 tf.print('Creating directory %s' %  self.name_spectra_folder)
                 tf.io.gfile.makedirs(self.name_spectra_folder)
-            self.X_save = tf.Variable(tf.zeros((self.batch_size*self.n_batches+1, len(self.all_ks)+1)))
+            self.X_save = tf.zeros((self.batch_size * self.n_batches + 1, len(self.all_ks) + 1), dtype=tf.float32)
         elif self.TPU:
             tf.print("WARNING: Cannot save processed spectra in TPU mode.")
 
