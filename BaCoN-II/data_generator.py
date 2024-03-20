@@ -512,7 +512,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         i_noise = tf.constant(0, dtype=tf.int32)
         y = tf.constant(0, dtype=tf.int32)
         X, y = loop_over_noise(i_noise, P_original, y, k, P_noise, fname)
-        y = y[:, 0, :]
 
         ID = tf.convert_to_tensor(ID)
         ID = tf.cast(ID, dtype=tf.int32)
