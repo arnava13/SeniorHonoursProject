@@ -541,15 +541,15 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 def condition(i, X, X_save):
                     return i < loop_len
                 def body(i, X, X_save):
-                    X_save[1:,1:].assign(X[:,:,0,i])
-                    spectra_file = tf.io.gfile.join(self.name_spectra_folder, 'processed_spectra_zbin{}.txt'.format(i))
-                    tf.print('Saving processed (noisy and normalised) spectra in %s' % spectra_file)
+                    X_save = X_save[1:, 1:].assign(X[:, :, 0, i])
+                    spectra_file = tf.io.gfile.join(self.name_spectra_folder, f'processed_spectra_zbin{i}.txt')
+                    tf.print(f'Saving processed (noisy and normalised) spectra in {spectra_file}')
                     X_save_string = tf.strings.reduce_join(tf.strings.as_string(X_save), separator=' ', axis=-1)
                     tf.io.write_file(spectra_file, X_save_string)
-                    return tf.add(i, 1)
+                    return [tf.add(i, 1), X, X_save]
                 i = tf.constant(0, dtype=tf.int32)
                 tf.while_loop(condition, body, [i, X, X_save])
-            write_spectra(self.z_bins, X, self.X_save)
+                write_spectra(self.z_bins, X, self.X_save)
                 
         if self.swap_axes:
             X = X[:,:,0,:]
