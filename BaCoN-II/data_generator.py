@@ -619,8 +619,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             curves_list = []
             for i in tf.range(self.n_noisy_samples_numpy):
                 curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-                curve_random_nr = tf.strings.as_string(curve_random_nr).numpy().decode("utf-8")
-                curve_file = tf.io.gfile.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
+                curve_random_str = tf.strings.as_string(curve_random_nr)
+                curve_file = tf.strings.join([self.curves_folder, curve_random_str + '.txt'])
                 curve_dat = self.read_file(curve_file, dtype=tf.float32)
                 curve_dat = tf.cast(curve_dat, dtype=tf.float32)
                 curves_list.append(curve_dat)
