@@ -588,7 +588,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
     def load_sys(self, i):
         curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
         curve_nr_string = tf.strings.as_string(curve_random_nr)
-        curve_file = tf.strings.join(self.curves_folder, '/{}.txt'.format(curve_nr_string))
+        curve_file = tf.strings.join([self.curves_folder, '/', curve_nr_string, '.txt'])
         curve_dat = self.read_file(curve_file, dtype=tf.float32)
         return curve_dat
     
