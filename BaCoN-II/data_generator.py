@@ -58,7 +58,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             return sum(1 for line in file)
     
     @tf.function
-    def read_file(self, file_path, *, column_indices=None):
+    def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
         file_content = tf.io.read_file(file_path)
         lines = tf.strings.split([file_content], '\n').values
         lines = tf.cond(tf.equal(lines[-1], ""), lambda: lines[:-1], lambda: lines)
@@ -68,8 +68,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 selected_columns = tf.gather(columns, column_indices)
             else:
                 selected_columns = columns
-            return tf.strings.to_number(selected_columns)
-        columns_values = tf.map_fn(extract_columns, lines)
+            return tf.strings.to_number(selected_columns, out_type=dtype)
+        columns_values = tf.map_fn(extract_columns, lines, dtype=dtype)
         return columns_values
     
     def __init__(self, list_IDs, labels, labels_dict, batch_size=32, 
@@ -158,12 +158,11 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.norm_data_path = tf.io.gfile.join(self.data_root, norm_data_name)
         tf.print('Data root dir is %s' %self.data_root)
         tf.print('Normalisation file is %s' %self.norm_data_path)
-        self.all_ks = self.read_file(self.norm_data_path, column_indices=[0])
+        self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)
         self.all_ks = tf.cast(self.all_ks, dtype=tf.float32)
         self.original_k_range = self.all_ks
         if self.sample_pace !=1:
-                self.all_ks = self.read_file(self.norm_data_path, column_indices=[0])[::self.sample_pace]
-                self.all_ks = tf.cast(self.all_ks, dtype=tf.float32)
+                self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)[::self.sample_pace]
         
 
         # Select points from k_max or i_max
@@ -264,7 +263,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.normalization=normalization
         
         if self.normalization=='stdcosmo':
-          self.norm_data = self.read_file(self.norm_data_path)[:, 1:]
+          self.norm_data = self.read_file(self.norm_data_path, dtype=tf.float32)[:, 1:]
           self.norm_data = tf.cast(self.norm_data, dtype=tf.float32)
 
           if self.sample_pace !=1:
@@ -463,7 +462,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             fname_string = tf.strings.unicode_decode(fname, 'UTF8')
             fname_string = tf.strings.reduce_join(tf.strings.as_string(fname_string))
             tf.print('Loading file %s' %fname_string)
-        loaded_all = self.read_file(fname)
+        loaded_all = self.read_file(fname, dtype=tf.float32)
         loaded_all = tf.cast(loaded_all, dtype=tf.float32)
         P_original = loaded_all[:, 1:]
         k = loaded_all[:, 0] 
@@ -602,7 +601,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
                 curve_file = tf.io.gfile.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
                 curve_file = tf.io.gfile.join(curve_file)
-                curve_dat = self.read_file(curve_file)
+                curve_dat = self.read_file(curve_file, dtype=tf.float32)
                 curve_dat = tf.cast(curve_dat, dtype=tf.float32)
                 self.curves_loaded[i] = curve_dat
 
