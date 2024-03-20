@@ -54,30 +54,31 @@ def generate_noise(k, P, pi,
 class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
     @tf.function
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
-        file_content = tf.io.read_file(file_path)
+        with tf.device('/cpu:0'):
+            file_content = tf.io.read_file(file_path)
 
-        file_content = tf.strings.regex_replace(file_content, "\r\n", "\n")
-        file_content = tf.strings.regex_replace(file_content, "\r", "\n")
-        lines = tf.strings.split([file_content], '\n').values
-        lines = tf.cond(tf.equal(lines[-1], ""), lambda: lines[:-1], lambda: lines)
+            file_content = tf.strings.regex_replace(file_content, "\r\n", "\n")
+            file_content = tf.strings.regex_replace(file_content, "\r", "\n")
+            lines = tf.strings.split([file_content], '\n').values
+            lines = tf.cond(tf.equal(lines[-1], ""), lambda: lines[:-1], lambda: lines)
 
-        def extract_columns(line):
-            # Normalize spaces (convert tabs or multiple spaces to single space)
-            line = tf.strings.regex_replace(line, "\s+", " ")
-            line = tf.strings.strip(line)  # Strip leading/trailing whitespace
-            columns = tf.strings.split([line], ' ').values
-            if column_indices is not None:
-                selected_columns = tf.gather(columns, column_indices)
-            else:
-                selected_columns = columns
-    
-            return tf.strings.to_number(selected_columns, out_type=dtype)
+            def extract_columns(line):
+                # Normalize spaces (convert tabs or multiple spaces to single space)
+                line = tf.strings.regex_replace(line, "\s+", " ")
+                line = tf.strings.strip(line)  # Strip leading/trailing whitespace
+                columns = tf.strings.split([line], ' ').values
+                if column_indices is not None:
+                    selected_columns = tf.gather(columns, column_indices)
+                else:
+                    selected_columns = columns
+        
+                return tf.strings.to_number(selected_columns, out_type=dtype)
 
-        columns_values = tf.map_fn(extract_columns, lines, fn_output_signature=dtype)
-        if isinstance(columns_values, tf.RaggedTensor):
-            # Convert the ragged tensor to a regular tensor with padding
-            columns_values = columns_values.to_tensor()
-        return columns_values
+            columns_values = tf.map_fn(extract_columns, lines, fn_output_signature=dtype)
+            if isinstance(columns_values, tf.RaggedTensor):
+                # Convert the ragged tensor to a regular tensor with padding
+                columns_values = columns_values.to_tensor()
+            return columns_values
 
     def __init__(self, list_IDs, labels, labels_dict, batch_size=32, 
                 data_root = 'data/', dim=(500, 4), n_channels=1,
