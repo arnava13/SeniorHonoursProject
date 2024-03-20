@@ -484,7 +484,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
     #@tf.function
     def process_file(self, ID, fname):
-        print('Processing file %s' %fname)
+        tf.print('Processing file %s' %fname)
         loaded_all = self.read_file(fname, dtype=tf.float32)
 
         P_original = loaded_all[:, 1:]
@@ -628,10 +628,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print("WARNING: Cannot save processed spectra in TPU mode.")
 
         #Process spectrum files
-        dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list))
-        for ID, fname in dataset.take(3):
-            tf.print("ID:", ID.numpy(), "Filename:", fname.numpy())        
-        """       
+        dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list))  
         dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         # Normalize and one-hot encode 
@@ -654,7 +651,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         # Distribute the dataset within the strategy scope if TPU mode
         if self.TPU:
             dataset = self.strategy.experimental_distribute_dataset(dataset)
-        """
 
         return dataset
     
