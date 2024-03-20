@@ -531,6 +531,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     tf.print('Dimension of NORM data:', tf.shape(divisor))
         self.xshape = X.shape
         self.yshape = y.shape
+        """
         if self.save_processed_spectra and not self.TPU:
             X_save = tf.zeros_like(self.X_save)
             class_indices = tf.range(1, tf.shape(y)[0] + 1)[:, tf.newaxis]
@@ -562,7 +563,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 tf.while_loop(condition, body, [i, X, X_save])
 
         write_spectra(self.z_bins, X, X_save)
-
+        """
                 
         if self.swap_axes:
             X = X[:,:,0,:]
@@ -624,7 +625,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.i_ind=tf.constant(0, dtype=tf.int32)
     
         dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        
+        """
         if self.save_processed_spectra and not self.TPU:
             if not tf.io.gfile.exists(self.name_spectra_folder):
                 tf.print('Creating directory %s' %  self.name_spectra_folder)
@@ -632,6 +633,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             self.X_save = tf.zeros((self.batch_size * self.n_batches + 1, len(self.all_ks) + 1), dtype=tf.float32)
         elif self.TPU:
             tf.print("WARNING: Cannot save processed spectra in TPU mode.")
+            """
+        if self.save_processed_spectra:
+            print("WARNING: The saving of processed spectra is not implemented")
 
         # Normalize and one-hot encode 
         dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
