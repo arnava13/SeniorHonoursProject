@@ -583,6 +583,35 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         ID = ID
 
         return ID, X, y
+
+    @tf.function
+    def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
+        file_content = tf.io.read_file(file_path)
+        # Normalize line breaks and strip potential trailing carriage return
+        file_content = tf.strings.regex_replace(file_content, "\r\n", "\n")
+        file_content = tf.strings.regex_replace(file_content, "\r", "\n")
+        lines = tf.strings.split([file_content], '\n').values
+        # Remove empty last line if exists
+        lines = tf.cond(tf.equal(lines[-1], ""), lambda: lines[:-1], lambda: lines)
+
+        def extract_columns(line):
+            # Normalize spaces (convert tabs or multiple spaces to single space)
+            line = tf.strings.regex_replace(line, "\s+", " ")
+            line = tf.strings.strip(line)  # Strip leading/trailing whitespace
+            columns = tf.strings.split([line], ' ').values
+            if column_indices is not None:
+                selected_columns = tf.gather(columns, column_indices)
+            else:
+                selected_columns = columns
+            
+            # Debug print
+            # tf.print("Selected columns:", selected_columns)
+
+            # Convert to numbers, assuming they are all numeric
+            return tf.strings.to_number(selected_columns, out_type=dtype)
+
+        columns_values = tf.map_fn(extract_columns, lines, dtype=dtype, fn_output_signature=dtype)
+        return columns_values
     
     def __data_generation(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
@@ -625,23 +654,12 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         # Load n_noisy_samples random sys noise curves
         if self.add_noise and self.add_sys:
-            self.curves_loaded = np.zeros((self.n_noisy_samples_numpy, self.original_k_len, 1 + self.n_channels), dtype=np.float32)
-            for i in range(self.n_noisy_samples_numpy):
-                curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-                curve_random_str = tf.strings.as_string(curve_random_nr)
-                curve_file = tf.strings.join([self.curves_folder, '/' + curve_random_str + '.txt'])
-                curve_dat = np.loadtxt(curve_file.numpy().decode('utf-8'))
-                self.curves_loaded[i, :, :] = curve_dat
-            self.curves_loaded = tf.convert_to_tensor(self.curves_loaded, dtype=tf.float32)
+            self.curves_loaded = tf.map_fn(self.load_sys, tf.range(self.n_noisy_samples))
 
 
         # Take first 10 examples from ID list and fname_list
         ID_list = ID_list[:10]
         fname_list = fname_list[:10]
-         
-
-        #dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list))                
-        #dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         
         if self.save_processed_spectra and not self.TPU:
             if not tf.io.gfile.exists(self.name_spectra_folder):
@@ -650,25 +668,10 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         elif self.TPU:
             tf.print("WARNING: Cannot save processed spectra in TPU mode.")
 
-        data_list = []
+        #Process spectrum files
+        dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list))                
+        dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-        for ID, fname in zip(ID_list, fname_list):
-            processed_file = self.process_file(ID, fname)
-            normalized_and_onehot = self.normalize_and_onehot(processed_file)
-            data_list.append((ID, fname, normalized_and_onehot))
-
-        # Convert the list into a TensorFlow Dataset
-        dataset = tf.data.Dataset.from_tensor_slices(data_list)
-        if self.TPU:
-            global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
-        else:
-            global_batchsize = self.batch_size
-        global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
-        dataset = dataset.batch(global_batchsize)
-
-        # Return the dataset
-        return dataset
-        """
         # Normalize and one-hot encode 
         dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
@@ -689,7 +692,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         # Distribute the dataset within the strategy scope if TPU mode
         if self.TPU:
             dataset = self.strategy.experimental_distribute_dataset(dataset)
-        """
+            
         return dataset
     
     def write_indexes(self, batch_ID, indices):
