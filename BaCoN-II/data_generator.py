@@ -58,7 +58,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             return sum(1 for line in file)
     
     @tf.function
-    def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
+    def read_file(self, file_path, *, column_indices=None):
         file_content = tf.io.read_file(file_path)
         lines = tf.strings.split([file_content], '\n').values
         lines = tf.cond(tf.equal(lines[-1], ""), lambda: lines[:-1], lambda: lines)
@@ -68,8 +68,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 selected_columns = tf.gather(columns, column_indices)
             else:
                 selected_columns = columns
-            return tf.strings.to_number(selected_columns, out_type=dtype)
-        columns_values = tf.map_fn(extract_columns, lines, dtype=dtype)
+            return tf.strings.to_number(selected_columns)
+        columns_values = tf.map_fn(extract_columns, lines)
         return columns_values
     
     def __init__(self, list_IDs, labels, labels_dict, batch_size=32, 
@@ -158,10 +158,13 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.norm_data_path = tf.io.gfile.join(self.data_root, norm_data_name)
         tf.print('Data root dir is %s' %self.data_root)
         tf.print('Normalisation file is %s' %self.norm_data_path)
-        self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)
+        self.all_ks = self.read_file(self.norm_data_path, column_indices=[0])
+        self.all_ks = tf.cast(self.all_ks, dtype=tf.float32)
+        self.original_k_range = self.all_ks
         if self.sample_pace !=1:
-                self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)[::self.sample_pace]
-        self.k_range = self.all_ks
+                self.all_ks = self.read_file(self.norm_data_path, column_indices=[0])[::self.sample_pace]
+                self.all_ks = tf.cast(self.all_ks, dtype=tf.float32)
+        
 
         # Select points from k_max or i_max
 
@@ -261,7 +264,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.normalization=normalization
         
         if self.normalization=='stdcosmo':
-          self.norm_data = self.read_file(self.norm_data_path, dtype=tf.float32)[:, 1:]
+          self.norm_data = self.read_file(self.norm_data_path)[:, 1:]
+          self.norm_data = tf.cast(self.norm_data, dtype=tf.float32)
 
           if self.sample_pace !=1:
             self.norm_data = self.norm_data[0::self.sample_pace, :]
@@ -385,11 +389,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                         noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
                         P_noisy = P_noisy + noise_cosVar
                 if self.add_sys:
-                    curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-                    curve_file = tf.io.gfile.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
-                    curve_file = tf.io.gfile.join(curve_file)
-                    curves_loaded = self.read_file(curve_file, dtype=tf.float32)
-                    noise_sys, k_sys = curves_loaded[:, 1:], curves_loaded[:, 0]
+                    noise_sys, k_sys = self.curves_loaded[i_noise,:, 1:], self.curves_loaded[i_noise,:, 0]
                     if self.sample_pace!=1:
                         noise_sys = noise_sys[0::self.sample_pace, :]
                         k_sys = k_sys[0::self.sample_pace]
@@ -412,7 +412,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     else:
                         noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * P_noise
                         noise_sys = tf.cast(noise_sys, dtype=tf.float32)
-
 
                         if self.rescale_curves == 'uniform':
                             noise_sys = noise_sys * self.rng.uniform(shape=noise_sys.shape, minval=0, maxval=1, dtype=tf.float32)
@@ -461,15 +460,17 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
     def process_file(self, ID, fname):
         fname = tf.cast(fname, dtype=tf.string)
         if self.Verbose:
-                    tf.print('Loading file %s' %fname)
-        loaded_all = self.read_file(fname, dtype=tf.float32)
+            fname_string = tf.strings.unicode_decode(fname, 'UTF8')
+            fname_string = tf.strings.reduce_join(tf.strings.as_string(fname_string))
+            tf.print('Loading file %s' %fname_string)
+        loaded_all = self.read_file(fname)
+        loaded_all = tf.cast(loaded_all, dtype=tf.float32)
         P_original = loaded_all[:, 1:]
         k = loaded_all[:, 0] 
         if self.sample_pace != 1:
             P_original = P_original[::self.sample_pace]
             k = k[::self.sample_pace]
         P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
-        self.k_range = k
         if self.Verbose:
             tf.print('Dimension of original data: %s' %str(P_original.shape))
         
@@ -534,19 +535,20 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.save_processed_spectra and not self.TPU:
             # new matrix for spectra, first column is class_idx, first row is k-values
             self.X_save[1:,0].assign(y)
-            self.X_save[0,1:].assign(self.k_range)
+            self.X_save[0,1:].assign(self.all_ks)
             def write_spectra(z_bins, X, X_save):
-                def condition(i, z_bins, X, X_save):
-                    return i < tf.size(z_bins)
-                def body(i_z, z_bins, X, X_save):
+                loop_len = tf.size(z_bins)
+                def condition(i, X, X_save):
+                    return i < loop_len
+                def body(i_z, X, X_save):
                     X_save[1:,1:].assign(X[:,:,0,i_z])
                     spectra_file = tf.io.gfile.join(self.name_spectra_folder, 'processed_spectra_zbin{}.txt'.format(i_z))
                     tf.print('Saving processed (noisy and normalised) spectra in %s' % spectra_file)
                     X_save_string = tf.strings.reduce_join(tf.strings.as_string(X_save), separator=' ', axis=-1)
                     tf.io.write_file(spectra_file, X_save_string)
-                    return [tf.add(i, 1), z_bins, X, X_save]
-                i = tf.constant(0)
-                tf.while_loop(condition, body, [i, z_bins, X, X_save])
+                    return tf.add(i_z, 1)
+                i = tf.constant(0, dtype=tf.int32)
+                tf.while_loop(condition, body, [i, X, X_save])
             write_spectra(self.z_bins, X, self.X_save)
                 
         if self.swap_axes:
@@ -593,16 +595,28 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print("list_IDs_dict")
             tf.print(list_IDs_dict)
 
+        # Load n_noisy_samples random sys noise curves
+        if self.add_noise and self.add_sys:
+            self.curves_loaded = tf.zeros((self.n_noisy_samples.numpy, self.original_k_range, self.n_channels + 1), dtype=tf.float32)
+            for i in range(self.n_noisy_samples.numpy):
+                curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
+                curve_file = tf.io.gfile.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
+                curve_file = tf.io.gfile.join(curve_file)
+                curve_dat = self.read_file(curve_file)
+                curve_dat = tf.cast(curve_dat, dtype=tf.float32)
+                self.curves_loaded[i] = curve_dat
+
         dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list))                
         # Generate data
         self.i_ind=tf.constant(0, dtype=tf.int32)
+    
         dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         
         if self.save_processed_spectra and not self.TPU:
             if not tf.io.gfile.exists(self.name_spectra_folder):
                 tf.print('Creating directory %s' %  self.name_spectra_folder)
                 tf.io.gfile.makedirs(self.name_spectra_folder)
-            self.X_save = tf.Variable(tf.zeros((self.batch_size*self.n_batches+1, len(self.k_range)+1)))
+            self.X_save = tf.Variable(tf.zeros((self.batch_size*self.n_batches+1, len(self.all_ks)+1)))
         elif self.TPU:
             tf.print("WARNING: Cannot save processed spectra in TPU mode.")
 
