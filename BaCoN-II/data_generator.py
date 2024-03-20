@@ -532,25 +532,28 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.xshape = X.shape
         self.yshape = y.shape
         if self.save_processed_spectra and not self.TPU:
-            X_save = tf.zeros((self.batch_size*self.n_batches+1, len(self.all_ks)+1))
-            # new matrix for spectra, first column is class_idx, first row is k-values
-            X_save[1:,0] = y
-            X_save[0,1:] = self.all_ks
+            X_save_init = tf.zeros((self.batch_size * self.n_batches + 1, len(self.all_ks) + 1), dtype=tf.float32)
+            y_expanded = tf.expand_dims(tf.concat([[0], y], axis=0), axis=-1)
+            all_ks_expanded = tf.expand_dims(tf.concat([[0], self.all_ks], axis=0), axis=0)
+            X_save = tf.tensor_scatter_nd_update(X_save_init, tf.range(tf.shape(y_expanded)[0])[:, tf.newaxis], y_expanded)
+            X_save = tf.tensor_scatter_nd_update(X_save, tf.range(tf.shape(all_ks_expanded)[0])[tf.newaxis, :], all_ks_expanded)
             def write_spectra(z_bins, X, X_save):
                 loop_len = tf.size(z_bins)
-                z = z_bins[i]
                 def condition(i, X, X_save):
                     return i < loop_len
                 def body(i, X, X_save):
-                    X_save[1:,1:] = X[:,:,0,i]
-                    spectra_file = tf.io.gfile.join(self.name_spectra_folder, f'processed_spectra_zbin{i}.txt')
+                    z = z_bins[i]
+                    X_slice = X[:, :, 0, z]
+                    X_save_updated = tf.tensor_scatter_nd_update(X_save, tf.range(1, tf.shape(X_slice)[1] + 1)[:, tf.newaxis], X_slice)
+                    spectra_file = tf.strings.join([self.name_spectra_folder, f'processed_spectra_zbin{i}.txt'], separator='/')
                     tf.print(f'Saving processed (noisy and normalised) spectra in {spectra_file}')
-                    X_save_string = tf.strings.reduce_join(tf.strings.as_string(X_save), separator=' ', axis=-1)
+                    X_save_string = tf.strings.reduce_join(tf.strings.as_string(X_save_updated), separator=' ', axis=-1)
                     tf.io.write_file(spectra_file, X_save_string)
                     return [tf.add(i, 1), X, X_save]
                 i = tf.constant(0, dtype=tf.int32)
                 tf.while_loop(condition, body, [i, X, X_save])
-                write_spectra(self.z_bins, X, self.X_save)
+            write_spectra(self.z_bins, X, X_save)
+
                 
         if self.swap_axes:
             X = X[:,:,0,:]
@@ -598,15 +601,15 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         # Load n_noisy_samples random sys noise curves
         if self.add_noise and self.add_sys:
-            self.curves_loaded = tf.zeros((self.n_noisy_samples, self.original_k_len, self.n_channels + 1), dtype=tf.float32)
+            curves_list = []
             for i in range(self.n_noisy_samples.numpy()):
                 curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
                 curve_file = tf.io.gfile.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
-                curve_file = tf.io.gfile.join(curve_file)
                 curve_dat = self.read_file(curve_file, dtype=tf.float32)
                 curve_dat = tf.cast(curve_dat, dtype=tf.float32)
-                self.curves_loaded[i] = curve_dat
-
+                curves_list.append(curve_dat)
+            self.curves_loaded = tf.stack(curves_list)
+            
         dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list))                
         # Generate data
         self.i_ind=tf.constant(0, dtype=tf.int32)
