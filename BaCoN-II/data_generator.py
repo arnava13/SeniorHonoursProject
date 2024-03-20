@@ -454,6 +454,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             X = expanded  
             return X
 
+    @tf.py_function(tout = (tf.int32, tf.float32, tf.int32))
     def process_file(self, ID, fname):
         fname = tf.cast(fname, dtype=tf.string)
         loaded_all = self.read_file(fname, dtype=tf.float32)
@@ -609,7 +610,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         # Generate data
         self.i_ind=tf.constant(0, dtype=tf.int32)
     
-        dataset = dataset.map(lambda ID, fname: tf.py_function(func = self.process_file, inp=[ID, fname]), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         
         if self.save_processed_spectra and not self.TPU:
             if not tf.io.gfile.exists(self.name_spectra_folder):
