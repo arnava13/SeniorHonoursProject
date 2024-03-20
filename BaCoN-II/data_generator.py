@@ -484,7 +484,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
     #@tf.function
     def process_file(self, ID, fname):
-        tf.print('Processing file %s' %fname)
+        fname_numpy = fname.numpy().decode('utf-8')
+        tf.print('Processing file %s' %fname_numpy)
         loaded_all = self.read_file(fname, dtype=tf.float32)
 
         P_original = loaded_all[:, 1:]
