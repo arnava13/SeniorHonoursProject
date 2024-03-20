@@ -403,8 +403,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     k_sys = k_sys[0::self.sample_pace]
                 noise_sys, k_sys = noise_sys[self.i_min:self.i_max], k_sys[self.i_min:self.i_max]
                 if tf.reduce_any(tf.math.not_equal(k, k_sys)):
-                    tf.print('k: %s' %k[:10])
-                    tf.print('k_sys: %s' %k_sys[:10])
                     tf.print('ERROR: k-values in spectrum and theory-error curve file not identical')
                 # rescale noise_sys curves according to error (10% default from production curves), 
                 # rescale by Gaussian with sigma = 1
