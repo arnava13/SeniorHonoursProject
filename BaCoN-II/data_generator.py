@@ -581,6 +581,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
     
     def __data_generation(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
+        tf.config.run_functions_eagerly(True)
         if not self.fine_tune and not self.one_vs_all:
             fname_list=[]
             ID_list=[]
@@ -630,7 +631,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         #Process spectrum files
         dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list))
         for ID, fname in dataset.take(3):
-            print("ID:", ID.numpy(), "Filename:", fname.numpy())               
+            print("ID:", ID.numpy(), "Filename:", fname.numpy())        
+        """       
         dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         # Normalize and one-hot encode 
@@ -653,6 +655,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         # Distribute the dataset within the strategy scope if TPU mode
         if self.TPU:
             dataset = self.strategy.experimental_distribute_dataset(dataset)
+        """
 
         return dataset
     
