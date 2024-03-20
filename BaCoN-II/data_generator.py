@@ -52,7 +52,6 @@ def generate_noise(k, P, pi,
     return tf.cast(sigma_noise, dtype=tf.float32)
 
 class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
-    """
     @tf.function
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
         file_content = tf.io.read_file(file_path)
@@ -76,23 +75,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         columns_values = tf.map_fn(extract_columns, lines, fn_output_signature=dtype)
         return columns_values
-    """
-    @tf.function
-    def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
-        file_content = tf.io.read_file(file_path)
-        lines = tf.strings.split([file_content], '\n').values
-        lines = tf.cond(tf.equal(lines[-1], ""), lambda: lines[:-1], lambda: lines)
-        def extract_columns(line):
-            columns = tf.strings.split([line], ' ').values
-            if column_indices is not None:
-                selected_columns = tf.gather(columns, column_indices)
-            else:
-                selected_columns = columns
-            return tf.strings.to_number(selected_columns, out_type=dtype)
-        columns_values = tf.map_fn(extract_columns, lines, dtype=dtype)
-        return columns_values
 
-    
     def __init__(self, list_IDs, labels, labels_dict, batch_size=32, 
                 data_root = 'data/', dim=(500, 4), n_channels=1,
                 shuffle=True, normalization='stdcosmo',
@@ -496,8 +479,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         y = tf.cast(encoding, tf.int32)
         return X, y
 
-    @tf.function
+    #@tf.function
     def process_file(self, ID, fname):
+        print('Processing file %s' %fname)
         loaded_all = self.read_file(fname, dtype=tf.float32)
 
         P_original = loaded_all[:, 1:]
