@@ -53,7 +53,7 @@ def generate_noise(k, P, pi,
 
 class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
     
-    @tf.function(reduce_retracing=True)
+    #@tf.function(reduce_retracing=True)
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
         file_content = tf.io.read_file(file_path)
         lines = tf.strings.split([file_content], '\n').values
