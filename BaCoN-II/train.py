@@ -483,14 +483,16 @@ def main():
     
     print('\n------------ CREATING DATA GENERATORS ------------')
     if FLAGS.TPU:
-        training_generator, validation_generator = create_generators(FLAGS, strategy=strategy)
+        with tf.device('/CPU:0'):
+            training_generator, validation_generator = create_generators(FLAGS, strategy=strategy)
     else:
         training_generator, validation_generator = create_generators(FLAGS)
     
     if FLAGS.fine_tune:
         print('\n------------ CREATING ORIGINAL DATA GENERATORS FOR CHECK------------')
         if FLAGS.TPU:
-            or_training_generator, or_validation_generator = create_generators(FLAGS_ORIGINAL, strategy=strategy)
+            with tf.device('/CPU:0'):
+                or_training_generator, or_validation_generator = create_generators(FLAGS_ORIGINAL, strategy=strategy)
         else:
             or_training_generator, or_validation_generator = create_generators(FLAGS_ORIGINAL)
         n_classes = or_training_generator.n_classes_out # in order to build correctly original model
