@@ -470,7 +470,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             # regular 5 labels case
             encoding = self.labels_dict.lookup(label)
         
-        y = encoding
+        y = tf.cast(encoding, tf.int32)
         return X, y
 
     @tf.function
@@ -618,7 +618,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if self.add_noise and self.add_sys:
             curves_list = []
             for i in tf.range(self.n_noisy_samples_numpy):
-                tf.print("Loading sys noise curve %s" %i)
                 curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
                 curve_random_nr = tf.strings.as_string(curve_random_nr).numpy().decode("utf-8")
                 curve_file = tf.io.gfile.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
