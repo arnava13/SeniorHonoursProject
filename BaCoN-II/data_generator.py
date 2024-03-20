@@ -585,33 +585,12 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         return ID, X, y
 
     @tf.function
-    def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
-        file_content = tf.io.read_file(file_path)
-        # Normalize line breaks and strip potential trailing carriage return
-        file_content = tf.strings.regex_replace(file_content, "\r\n", "\n")
-        file_content = tf.strings.regex_replace(file_content, "\r", "\n")
-        lines = tf.strings.split([file_content], '\n').values
-        # Remove empty last line if exists
-        lines = tf.cond(tf.equal(lines[-1], ""), lambda: lines[:-1], lambda: lines)
-
-        def extract_columns(line):
-            # Normalize spaces (convert tabs or multiple spaces to single space)
-            line = tf.strings.regex_replace(line, "\s+", " ")
-            line = tf.strings.strip(line)  # Strip leading/trailing whitespace
-            columns = tf.strings.split([line], ' ').values
-            if column_indices is not None:
-                selected_columns = tf.gather(columns, column_indices)
-            else:
-                selected_columns = columns
-            
-            # Debug print
-            # tf.print("Selected columns:", selected_columns)
-
-            # Convert to numbers, assuming they are all numeric
-            return tf.strings.to_number(selected_columns, out_type=dtype)
-
-        columns_values = tf.map_fn(extract_columns, lines, dtype=dtype, fn_output_signature=dtype)
-        return columns_values
+    def load_sys(self, i):
+        curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
+        curve_nr_string = tf.strings.as_string(curve_random_nr)
+        curve_file = tf.strings.join(self.curves_folder, '/{}.txt'.format(curve_nr_string))
+        curve_dat = self.read_file(curve_file, dtype=tf.float32)
+        return curve_dat
     
     def __data_generation(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
@@ -692,7 +671,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         # Distribute the dataset within the strategy scope if TPU mode
         if self.TPU:
             dataset = self.strategy.experimental_distribute_dataset(dataset)
-            
+
         return dataset
     
     def write_indexes(self, batch_ID, indices):
