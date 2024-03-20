@@ -81,7 +81,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 #fname_user='my_model',
                 curves_folder = 'curve_files_sys/curve_files_train1k_sysFactor0o04_start0o03_dirChange0',
                 sample_pace = 4, pad=False, 
-                Verbose=True, Verbose_2=False,
+                Verbose=False, Verbose_2=False,
                 k_max=2.5, i_max = None,
                 k_min=0.0, i_min = None,
                 add_noise=True, n_noisy_samples = 10, 
@@ -458,10 +458,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
     @tf.function
     def process_file(self, ID, fname):
         fname = tf.cast(fname, dtype=tf.string)
-        if self.Verbose:
-            fname_string = tf.strings.unicode_decode(fname, 'UTF8')
-            fname_string = tf.strings.reduce_join(tf.strings.as_string(fname_string))
-            tf.print('Loading file %s' %fname_string)
         loaded_all = self.read_file(fname, dtype=tf.float32)
         loaded_all = tf.cast(loaded_all, dtype=tf.float32)
         P_original = loaded_all[:, 1:]
