@@ -177,7 +177,6 @@ def my_train(model, optimizer, loss,
     val_acc_metric.reset_states()
     epoch = tf.constant(epoch, dtype=tf.int32)
     if TPU:
-        
         for IDs, x_batch_train, y_batch_train in train_dataset.dataset:
             with strategy.scope():
                 train_on_batch(IDs, x_batch_train, y_batch_train, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, n_train_example = n_train_example, batch_size = train_dataset.batch_size, TPU = True, strategy=strategy, save_indexes=save_indexes, bayesian=bayesian)
@@ -191,9 +190,9 @@ def my_train(model, optimizer, loss,
             val_acc_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_acc_metric.result(), axis=None)
     else:
         for IDs, x_batch_train, y_batch_train in train_dataset.dataset:
-            train_on_batch(IDs, x_batch_train, y_batch_train, train_dataset, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian=bayesian, n_train_example = n_train_example, batch_size= val_dataset.batch_size, TPU=False, save_indexes=save_indexes)
+            train_on_batch(IDs, x_batch_train, y_batch_train, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian=bayesian, n_train_example = n_train_example, batch_size= val_dataset.batch_size, TPU=False, save_indexes=save_indexes)
         for IDs, x_batch_val, y_batch_val in val_dataset.dataset:
-            val_step(IDs, x_batch_train, y_batch_train, train_dataset, epoch, model, loss, val_loss_metric, val_acc_metric, n_val_example=n_val_example, batch_size=val_dataset.batch_size, TPU=False, save_indexes=save_indexes, bayesian = bayesian)
+            val_step(IDs, x_batch_train, y_batch_train, epoch, model, loss, val_loss_metric, val_acc_metric, n_val_example=n_val_example, batch_size=val_dataset.batch_size, TPU=False, save_indexes=save_indexes, bayesian = bayesian)
         train_acc_value = train_acc_metric.result()
         train_loss_value = train_loss_metric.result()
         val_loss_value = val_loss_metric.result()
