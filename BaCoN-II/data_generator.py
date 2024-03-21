@@ -540,13 +540,6 @@ class DataSet(): # need to add new variable to 'params' further down
             print("list_IDs_dict")
             print(list_IDs_dict)
 
-        def data_generator(fname_list):
-            for fname in fname_list:
-                X, y = self.process_file(ID, fname.decode('utf-8'))
-                yield ID, X, y
-
-        
-
         n_ks = tf.constant(len(self.all_ks), dtype=tf.int32)
 
         if self.swap_axes:
@@ -554,12 +547,17 @@ class DataSet(): # need to add new variable to 'params' further down
         else:
             x_shape = (n_ks, self.n_channels, 1)
 
+        def data_generator(fname_list):
+            for fname in fname_list:
+                X, y = self.process_file(ID, fname.decode('utf-8'))
+                yield X, y
+
         dataset = tf.data.Dataset.from_generator(data_generator,
         output_signature=(
                 tf.TensorSpec(shape=x_shape, dtype=tf.float32),
                 tf.TensorSpec(shape=(), dtype=tf.int32)
             ),
-            args=(fname_list)
+            args=(fname_list,)
         )
 
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
