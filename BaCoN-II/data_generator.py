@@ -654,10 +654,10 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             dataset = dataset.batch(global_batchsize)
             dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
-        if os.path.exists('/tmp/cache.tf-data'):
-            dataset = dataset.cache('/tmp/train_cache.tf-data')
-        else:
+        if os.path.exists('/tmp/train_cache.tf-data'):
             dataset = dataset.cache('/tmp/val_cache.tf-data')
+        else:
+            dataset = dataset.cache('/tmp/train_cache.tf-data')
 
         self.xshape = ((self.batch_size * self.n_batches).numpy(),) + tuple(self.xshape_file)
         self.yshape = ((self.batch_size * self.n_batches).numpy(),) + tuple(self.yshape_file)
