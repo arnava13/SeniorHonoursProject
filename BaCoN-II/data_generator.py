@@ -468,7 +468,7 @@ class DataSet(): # need to add new variable to 'params' further down
             X = (X - mu_batch) / std_batch
         elif self.normalization == 'stdcosmo':
             if self.swap_axes:
-                divisor = tf.expand_dims(tf.expand_dims(self.norm_data, axis=0), axis=-1)
+                divisor = tf.gather(tf.expand_dims(tf.expand_dims(self.norm_data, axis=0), axis=2), self.z_bins, axis = 3)
                 X = X / divisor - 1
                 if self.Verbose:
                     tf.print('axes swapped')
@@ -506,7 +506,6 @@ class DataSet(): # need to add new variable to 'params' further down
             write_spectra(zbins, X, X_save)
         if self.swap_axes:
             X = X[:,:,0,:]
-            X = X[0,:,:]
         y = tf.one_hot(y, depth=self.n_classes_out)
 
         self.xshape_file = X.shape
@@ -548,11 +547,16 @@ class DataSet(): # need to add new variable to 'params' further down
                 ID, X, y = self.process_file(ID, fname)
                 yield ID, X, y
 
+        if self.swap_axes:
+            x_shape = (1, n_ks, 1, self.n_channels)
+        else:
+            x_shape = (1, n_ks, self.n_channels, 1)
+
         n_ks = tf.constant(len(self.all_ks), dtype=tf.int32)
         dataset = tf.data.Dataset.from_generator(data_generator,
         output_signature=(
                 tf.TensorSpec(shape=(), dtype=tf.int32),
-                tf.TensorSpec(shape=(n_ks, self.n_channels), dtype=tf.float32),
+                tf.TensorSpec(shape=x_shape, dtype=tf.float32),
                 tf.TensorSpec(shape=(), dtype=tf.int32)
             ),
             args=(ID_list, fname_list)
