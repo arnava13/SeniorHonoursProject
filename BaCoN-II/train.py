@@ -729,12 +729,18 @@ def main():
                 bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None, save_indexes = FLAGS.save_indexes #not(FLAGS.test_mode)
             )
     
-    #Delete cached dataset
-    if os.path.exists('/tmp/cache.tf-data'):
-        os.remove('/tmp/cache.tf-data')
-        print(f"Cache file deleted.")
+    #Delete cached datasets
+    if os.path.exists('/tmp/train_cache.tf-data'):
+        os.remove('/tmp/train_cache.tf-data')
+        print(f"Training cache file deleted.")
     else:
-        print(f"Cache file does not exist.")
+        print(f"Training cache file does not exist.")
+    
+    if os.path.exists('/tmp/val_cache.tf-data'):
+        os.remove('/tmp/val_cache.tf-data')
+        print(f"Validation cache file deleted.")
+    else:
+        print(f"Validation cache file does not exist.")
 
 
     hist_path =  out_path+'/hist.png'
