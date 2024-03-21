@@ -205,6 +205,8 @@ class DataSet(): # need to add new variable to 'params' further down
         if len(self.list_IDs)==1:
             self.list_IDs_dict = {label:list_IDs+i for i,label in enumerate(labels)}
             print('Ids dict to use in data gen: %s' %str(self.list_IDs_dict))
+        else:
+            self.list_IDs_dict = {label:list_IDs for label in labels}
     
         
         self.base_case_dataset = not((self.fine_tune and self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and self.dataset_balanced))
