@@ -37,7 +37,6 @@ def write_indexes(self, batch_ID, indices):
         for idx in idx_list:
             file.write(tf.strings.as_string(idx) + '\n')
 
-@tf.function
 def train_on_batch(IDs, x, y, epoch, model, train_acc_metric, train_loss_metric, save_indexes=False, TPU = False, strategy = None):
     def step_fn(x, y):
         # Compute loss and update metrics
@@ -60,7 +59,6 @@ def train_on_batch(IDs, x, y, epoch, model, train_acc_metric, train_loss_metric,
     elif save_indexes and TPU:
         print("CANNOT SAVE INDEXES IN TPU MODE")
 
-@tf.function
 def val_step(IDs, x, y, epoch, model, val_loss_metric, val_acc_metric, save_indexes=False, TPU = False, strategy = None):
     def val_step_fn(x, y):
         # Compute loss and update metrics
