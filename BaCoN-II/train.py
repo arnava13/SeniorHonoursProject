@@ -744,20 +744,13 @@ def main():
     
     #Delete cached datasets
     try:
-        os.remove('cache/train_cache.tf-data')
-        print(f"Train cache file deleted.")
+        os.remove('cache')
+        print(f"Cache folder deleted.")
     except FileNotFoundError:
-        print(f"Train cache file does not exist.")
+        print(f"Cache folder does not exist.")
     except Exception as e:
-        print(f"Error deleting train cache file.")
+        print(f"Error deleting cache folder.")
     
-    try:
-        os.remove('cache/val_cache.tf-data')
-        print(f"Val cache file deleted.")
-    except FileNotFoundError:
-        print(f"Val cache file does not exist.")
-    except Exception as e:
-        print(f"Error deleting val cache file.")
 
 
     hist_path =  out_path+'/hist.png'
