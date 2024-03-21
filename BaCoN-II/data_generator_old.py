@@ -584,7 +584,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
                   file.write(idx+'\n')
             
         if self.swap_axes:# 
-            X = X[:,:,0,:] 
+            X = X[:,:,0,:]
 
         return X, tf.keras.utils.to_categorical(y, num_classes=self.n_classes_out)
     

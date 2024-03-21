@@ -16,40 +16,40 @@ from utils import cut_sample, get_all_indexes, get_fname_list, find_nearest
 
 
 
-def generate_noise(k, P, pi,
+def generate_noise(k, P, 
                    add_shot=True,
                    add_sys=True,
                    add_cosvar=True,
                    sys_scaled=False,
                    sys_factor=0.03,
                    sys_max=False,
-                   V=tf.constant([10.43, 6.27, 3.34, 0.283]), 
-                   nbar=tf.constant([0.000358, 0.000828, 0.00103, 0.00128]),
-                   delta_k=0.055, sigma_sys=15, quadrature=True):
-
-    sigma_noise = tf.zeros(P.shape)
-    sigma_hat_noise = (2 * pi / ((k[:, None]) * tf.sqrt(V * (1e3)**3 * delta_k)))
-    if add_cosvar:
-        sigma_noise = tf.abs(P * sigma_hat_noise)
+                   V=np.array([10.43, 6.27, 3.34, 0.283]), 
+                   nbar=np.array([0.000358, 0.000828, 0.00103, 0.00128]),
+                   delta_k = 0.055,  sigma_sys=15, quadrature=True):
+  
+  sigma_noise = np.zeros(P.shape)
+  sigma_hat_noise = (2*np.pi/((k[:, None])*np.sqrt(V*(1e3)**3*delta_k)))
+  if add_cosvar:
+      sigma_noise = np.abs(P*sigma_hat_noise)
       
-    if add_shot:
-        sigma_noise_shot = (sigma_hat_noise / tf.convert_to_tensor(nbar, dtype=tf.float32))
-        sigma_noise = sigma_noise + sigma_noise_shot
-    if add_sys:
-        if sys_scaled:
-            if quadrature:
-                sigma_noise = tf.sqrt(sigma_noise**2 + (P * sys_factor)**2)
-            else:
-                sigma_noise = sigma_noise + tf.abs(P * sys_factor)
-        elif sys_max:
-            sigma_noise = tf.maximum(sigma_noise, tf.abs(P * sys_factor))
+  if add_shot:
+      sigma_noise_shot=(sigma_hat_noise/np.array(nbar))
+      sigma_noise = sigma_noise+sigma_noise_shot
+  if add_sys:
+      if sys_scaled:
+        if quadrature:
+          sigma_noise = np.sqrt(sigma_noise**2+(P*sys_factor)**2)
         else:
-            if quadrature:
-                sigma_noise = tf.sqrt(sigma_noise**2 + sigma_sys**2)
-            else:
-                sigma_noise = sigma_noise + sigma_sys
+          sigma_noise = sigma_noise+np.abs(P*sys_factor)
+      elif sys_max:
+        sigma_noise = np.maximum(sigma_noise, np.abs(P*sys_factor))
+      else:
+        if quadrature:
+          sigma_noise =np.sqrt(sigma_noise**2+sigma_sys**2 )
+        else:
+          sigma_noise =sigma_noise+sigma_sys
      
-    return sigma_noise
+  return sigma_noise
 
 
 class DataSet(): # need to add new variable to 'params' further down
@@ -338,10 +338,11 @@ class DataSet(): # need to add new variable to 'params' further down
 
     def process_file(self, ID, fname):
         if self.Verbose:
-                    print('Loading file %s' %fname)
+            print('Loading file %s' %fname)
+
         loaded_all = np.loadtxt(fname)
-        P_original = tf.convert_to_tensor(loaded_all[:, 1:], dtype=tf.float32)
-        k = tf.convert_to_tensor(loaded_all[:, 0], dtype=tf.float32)
+
+        P_original, k = loaded_all[:, 1:], loaded_all[:, 0]
 
         if self.sample_pace != 1:
             P_original = P_original[::self.sample_pace]
@@ -398,20 +399,20 @@ class DataSet(): # need to add new variable to 'params' further down
                         noise_sys = noise_sys * np.random.normal(loc=0, scale = 1)
 
                     P_noisy = P_noisy + noise_sys
-                    
+
                 if self.add_shot:
                     noise_scale = generate_noise(k,self.norm_data[: , self.z_bins], self.pi, sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
                     noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
                     P_noisy = P_noisy + noise_shot
 
 
-                expanded = tf.expand_dims(P_noisy, axis=2)
+                expanded = np.expand_dims(P_noisy, axis=2)
 
 
             else:
                 if self.Verbose:
                     print('No noise')
-                expanded = tf.expand_dims(P_original, axis=2)
+                expanded = np.expand_dims(P_original, axis=2)
 
             # Store sample
             if self.Verbose:
@@ -420,11 +421,10 @@ class DataSet(): # need to add new variable to 'params' further down
             if self.swap_axes:
                 if self.Verbose:
                     print('Reshaping')
-                expanded = tf.transpose(expanded, perm=[0, 2, 1])
+                expanded = np.swapaxes(expanded, 2, 1)
                 if self.Verbose:
                     print('New dimension of data: %s' %str(expanded.shape))
-                zbins = tf.convert_to_tensor(self.z_bins, dtype=tf.int32)
-                expanded = tf.gather(expanded, zbins, axis=2)
+                expanded = expanded[:,:,self.z_bins]
                 if self.Verbose:
                     print('Final dimension of data: %s' %str(expanded.shape))
                     print('expanded first 10:') 
@@ -454,7 +454,8 @@ class DataSet(): # need to add new variable to 'params' further down
                 print('Encoding: %s' % encoding)
             
             y = encoding
-
+        X = tf.convert_to_tensor(X, dtype=tf.float32)
+        y = tf.convert_to_tensor(y, dtype=tf.int32)    
 
         return ID, X, y
 
