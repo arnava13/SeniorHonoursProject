@@ -460,7 +460,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         return X, y
 
     @tf.function
-    def process_spectra(self, ID, spectrum):
+    def process_spectra(self, ID, spectrum, fname):
         P_original = spectrum[:, 1:]
         k = spectrum[:, 0] 
         if ID == 1:
@@ -598,7 +598,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print("WARNING: Cannot save processed spectra in TPU mode.")
 
         #Process spectrum files
-        dataset = tf.data.Dataset.from_tensor_slices((ID_list, all_spectra)) 
+        dataset = tf.data.Dataset.from_tensor_slices((ID_list, all_spectra, fname_list)) 
         if self.TPU:
             with self.strategy.scope():
                 dataset = dataset.map(self.process_spectra, num_parallel_calls=tf.data.experimental.AUTOTUNE)
