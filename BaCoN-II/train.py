@@ -485,16 +485,14 @@ def main():
     
     print('\n------------ CREATING DATA GENERATORS ------------')
     if FLAGS.TPU:
-        with tf.device('/CPU:0'):
-            training_generator, validation_generator = create_generators(FLAGS, strategy=strategy)
+        training_generator, validation_generator = create_generators(FLAGS, strategy=strategy)
     else:
         training_generator, validation_generator = create_generators(FLAGS)
     
     if FLAGS.fine_tune:
         print('\n------------ CREATING ORIGINAL DATA GENERATORS FOR CHECK------------')
         if FLAGS.TPU:
-            with tf.device('/CPU:0'):
-                or_training_generator, or_validation_generator = create_generators(FLAGS_ORIGINAL, strategy=strategy)
+            or_training_generator, or_validation_generator = create_generators(FLAGS_ORIGINAL, strategy=strategy)
         else:
             or_training_generator, or_validation_generator = create_generators(FLAGS_ORIGINAL)
         n_classes = or_training_generator.n_classes_out # in order to build correctly original model
@@ -686,11 +684,10 @@ def main():
         if FLAGS.test_mode:
             ckpt_name+='_test'
         
-    with tf.device('/CPU:0'):
-        manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
-                                            max_to_keep=2, 
-                                            checkpoint_name=ckpt_name)
-    
+    manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
+                                        max_to_keep=2, 
+                                        checkpoint_name=ckpt_name)
+
     if FLAGS.TPU:
         with strategy.scope():
             train_acc_metric = tf.keras.metrics.Accuracy()
