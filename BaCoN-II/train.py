@@ -190,6 +190,12 @@ def my_train(model, optimizer, loss,
             print('Max patience reached. ')
             break
     
+    if epoch == 0:
+        if not os.path.exists('cache/train_cache.tf-data'):
+            print('Train cache not created')
+        if not os.path.exists('cache/val_cache.tf-data'):
+            print('Val cache not created')
+    
     
     
     ckpt.step.assign_add(1)
@@ -495,11 +501,6 @@ def main():
     
     training_generator.dataset = training_generator.dataset.cache('cache/train_cache.tf-data')
     validation_generator.dataset = validation_generator.dataset.cache('cache/val_cache.tf-data')
-
-    if not os.path.exists('cache/train_cache.tf-data'):
-        print('Train cache not created')
-    if not os.path.exists('cache/val_cache.tf-data'):
-        print('Val cache not created')
     
     if FLAGS.fine_tune:
         print('\n------------ CREATING ORIGINAL DATA GENERATORS FOR CHECK------------')
