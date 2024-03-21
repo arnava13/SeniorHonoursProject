@@ -618,7 +618,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         # Load n_noisy_samples random sys noise curves
         if self.add_noise and self.add_sys:
-            self.curves_loaded = tf.map_fn(self.load_sys, tf.range(self.n_noisy_samples))
+            self.curves_loaded = tf.map_fn(self.load_sys, tf.range(self.n_noisy_samples), dtype=tf.float32)
         
         if self.save_processed_spectra and not self.TPU:
             if not tf.io.gfile.exists(self.name_spectra_folder):
