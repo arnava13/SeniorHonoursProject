@@ -460,7 +460,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         return X, y
 
     @tf.function
-    def process_spectra(self, ID, P_original, k):
+    def process_spectra(self, ID, spectrum):
+        P_original = spectrum[:, 1:]
+        k = spectrum[:, 0] 
         if ID == 1:
             tf.print('dimension P_original: %s' %str(P_original.shape))
             tf.print('dimension of k in original spectra: %s' %str(k.shape))    
