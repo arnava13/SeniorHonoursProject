@@ -52,7 +52,6 @@ def generate_noise(k, P, pi,
     return tf.cast(sigma_noise, dtype=tf.float32)
 
 class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
-    """
     @tf.function
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
         with tf.device('/cpu:0'):
@@ -79,7 +78,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         if isinstance(columns_values, tf.RaggedTensor):
             # Convert the ragged tensor to a regular tensor with padding
             columns_values = columns_values.to_tensor()
-        return columns_values"""
+        return columns_values
 
     def __init__(self, list_IDs, labels, labels_dict, batch_size=32, 
                 data_root = 'data/', dim=(500, 4), n_channels=1,
@@ -134,7 +133,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.save_processed_spectra = save_processed_spectra
         self.rescale_curves = rescale_curves
         self.models_dir = models_dir
-        self.name_spectra_folder = os.path.join(self.models_dir, self.fname, 'processed_spectra')
+        self.name_spectra_folder = os.fsdecode(os.path.join(self.models_dir, self.fname, 'processed_spectra'))
         self.seed = seed
         self.rng = tf.random.Generator.from_seed(self.seed)
         self.swap_axes = swap_axes 
@@ -163,14 +162,14 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 raise ValueError('Number of z bins does not match n_channels.')
         
         self.data_root=data_root
-        self.norm_data_path = os.path.join(self.data_root, norm_data_name)
+        self.norm_data_path = tf.io.gfile.join(self.data_root, norm_data_name)
         tf.print('Data root dir is %s' %self.data_root)
         tf.print('Normalisation file is %s' %self.norm_data_path)
-        self.all_ks = tf.convert_to_tensor(np.loadtxt(self.norm_data_path)[:, 0], tf.float32)
+        self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)
+        self.all_ks = tf.cast(self.all_ks, dtype=tf.float32)
         self.original_k_len = tf.cast(tf.size(self.all_ks).numpy(), tf.int32)
         if self.sample_pace !=1:
-                self.all_ks = np.loadtxt(self.norm_data_path, dtype=tf.float32)[::self.sample_pace, 0]
-                self.all_ks = tf.convert_to_tensor(self.all_ks, tf.float32)
+                self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)[::self.sample_pace]
     
 
         # Select points from k_max or i_max
@@ -271,7 +270,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.normalization=normalization
         
         if self.normalization=='stdcosmo':
-            self.norm_data = tf.convert_to_tensor(np.loadtxt(self.norm_data_path)[:, 1:], dtype=tf.float32)
+            self.norm_data = self.read_file(self.norm_data_path, dtype=tf.float32)[:, 1:]
+            self.norm_data = tf.cast(self.norm_data, dtype=tf.float32)
 
         if self.sample_pace !=1:
             self.norm_data = self.norm_data[0::self.sample_pace, :]
@@ -393,9 +393,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                     noise_sys = noise_sys[0::self.sample_pace, :]
                     k_sys = k_sys[0::self.sample_pace]
                 noise_sys, k_sys = noise_sys[self.i_min:self.i_max], k_sys[self.i_min:self.i_max]
-                if tf.reduce_any(tf.math.not_equal(k, k_sys)): 
+                """if tf.reduce_any(tf.math.not_equal(k, k_sys)): WONT WORK ANYMORE
                     tf.print('ERROR: k-values in spectrum and theory-error curve file not identical')
-                    
+                    """
                 # rescale noise_sys curves according to error (10% default from production curves), 
                 # rescale by Gaussian with sigma = 1
                 # multiply with normalisation spectrum
@@ -460,7 +460,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         return X, y
 
     @tf.function
-    def process_file(self, ID, loaded_all):
+    def process_file(self, ID, fname):
+        loaded_all = self.read_file(fname, dtype=tf.float32)
+
         P_original = loaded_all[:, 1:]
         k = loaded_all[:, 0] 
 
@@ -469,12 +471,12 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             k = k[::self.sample_pace]
         P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
 
-        if ID == 1:
-            tf.print('dimension P_original: %s' %str(P_original.shape))
-            tf.print('dimension of k in original spectra: %s' %str(k.shape))    
+        """ WONT WORK ANYMORE
         if self.Verbose:
+            tf.print('dimension P_original: %s' %str(P_original.shape))    
             tf.print('P_original first 10:') 
             tf.print(P_original[10])
+        """
         
         if self.add_noise:
             P_noise = tf.gather(self.norm_data, self.z_bins, axis=1)
@@ -550,6 +552,15 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print('Dimension of labels after one-hot encoding: %s' %str(y.shape))
         return ID, X, y
     
+    @tf.function
+    def load_sys(self, i):
+        curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
+        curve_nr_string = tf.strings.as_string(curve_random_nr)
+        curve_nr_string = tf.strings.join([curve_nr_string, '.txt'])
+        curve_file = tf.strings.join([self.curves_folder, curve_nr_string], separator='/')
+        curve_dat = self.read_file(curve_file, dtype=tf.float32)
+        return curve_dat
+
     def __data_generation(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
         if not self.fine_tune and not self.one_vs_all:
@@ -573,13 +584,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         tf.print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size.numpy(), self.n_noisy_samples_numpy))
         tf.debugging.assert_equal(tf.constant(len(fname_list), dtype=tf.int32), self.batch_size * self.n_batches // self.n_noisy_samples_numpy, message="Fname list != batch_size * n_batches // n_noisy_samples")
 
-        all_spectra = np.zeros((len(fname_list), self.n_ks, self.n_channels), dtype=np.float32)
-        for i, fname in enumerate(fname_list):
-            spectrum = np.loadtxt(fname)
-            all_spectra[i] = spectrum
-        
-        all_spectra = tf.convert_to_tensor(all_spectra, dtype=tf.float32)
-        
+        fname_list = tf.convert_to_tensor(fname_list, dtype=tf.string)
 
         if self.Verbose_2:
             tf.print("list_IDs_dict")
@@ -587,24 +592,17 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         # Load n_noisy_samples random sys noise curves
         if self.add_noise and self.add_sys:
-            self.curves_loaded = np.zeros((self.n_noisy_samples_numpy, self.n_ks, self.n_channels + 1), dtype=np.float32)
-            for i in range(self.n_noisy_samples_numpy):
-                curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-                curve_nr_string = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
-                curve_nr_string = curve_nr_string + '.txt'
-                curve_file = os.path.join(self.curves_folder, curve_nr_string)
-                self.curves_loaded[i] = np.loadtxt(curve_file)
-        tf.convert_to_tensor(self.curves_loaded, dtype=tf.float32)
+            self.curves_loaded = tf.map_fn(self.load_sys, tf.range(self.n_noisy_samples), dtype=tf.float32)
         
         if self.save_processed_spectra and not self.TPU:
-            if not os.path.exists(self.name_spectra_folder):
+            if not tf.io.gfile.exists(self.name_spectra_folder):
                 tf.print('Creating directory %s' %  self.name_spectra_folder)
-                os.makedirs(self.name_spectra_folder)
+                tf.io.gfile.makedirs(self.name_spectra_folder)
         elif self.TPU:
             tf.print("WARNING: Cannot save processed spectra in TPU mode.")
 
         #Process spectrum files
-        dataset = tf.data.Dataset.from_tensor_slices((ID_list, all_spectra)) 
+        dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list)) 
         dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         if self.shuffle:
@@ -628,10 +626,10 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
     def write_indexes(self, batch_ID, indices):
         batch_ID = batch_ID.numpy()
         indices = indices.numpy()
-        idx_files_dir = os.path.join(self.models_dir, 'idx_files')
-        if not os.path.exists(idx_files_dir):
+        idx_files_dir = tf.io.gfile.join(self.models_dir, 'idx_files')
+        if not tf.io.gfile.exists(idx_files_dir):
             tf.print('Creating directory %s' % idx_files_dir)
-            os.makedirs(idx_files_dir)
+            tf.io.gfile.makedirs(idx_files_dir)
         idx_file = self.models_dir+'/idx_files/idx_file_batch'+ str(batch_ID)+'.txt'                  
         tf.print('Saving indexes in  %s' %idx_file)
         idx_list = indices

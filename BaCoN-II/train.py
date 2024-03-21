@@ -500,8 +500,7 @@ def main():
     
     print('\n------------ CREATING DATA GENERATORS ------------')
     if FLAGS.TPU:
-        with tf.device('/cpu:0'):
-            training_generator, validation_generator = create_generators(FLAGS, strategy=strategy)
+        training_generator, validation_generator = create_generators(FLAGS, strategy=strategy)
     else:
         training_generator, validation_generator = create_generators(FLAGS)
 
