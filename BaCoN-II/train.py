@@ -84,6 +84,7 @@ def val_step(IDs, x, y, epoch, model, loss, val_loss_metric, val_acc_metric, bay
         val_prediction = tf.argmax(val_proba, axis=1)
         val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
         val_loss_metric.update_state(val_loss_value)
+
     if TPU:
         strategy.run(val_step_fn, args=(x, y))
     else:
@@ -179,10 +180,10 @@ def my_train(model, optimizer, loss,
         
         for IDs, x_batch_train, y_batch_train in train_dataset.dataset:
             with strategy.scope():
-                train_on_batch(IDs, x_batch_train, y_batch_train, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, train_dataset.batch_size, TPU = True, strategy=strategy, save_indexes=save_indexes)
+                train_on_batch(IDs, x_batch_train, y_batch_train, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, n_train_example = n_train_example, batch_size = train_dataset.batch_size, TPU = True, strategy=strategy, save_indexes=save_indexes, bayesian=bayesian)
         for IDs, x_batch_val, y_batch_val in val_dataset.dataset:
             with strategy.scope():
-                val_step(IDs, x_batch_val, y_batch_val, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian, n_val_example, val_dataset.batch_size, TPU = True, strategy=strategy, save_indexes=save_indexes)
+                val_step(IDs, x_batch_val, y_batch_val, epoch, model, loss, val_loss_metric, val_acc_metric, n_val_example=n_val_example, batch_size=val_dataset.batch_size, TPU = True, strategy=strategy, save_indexes=save_indexes, bayesian=bayesian)
         with strategy.scope():
             train_acc_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_acc_metric.result(), axis=None)
             train_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_loss_metric.result(), axis=None)
@@ -190,9 +191,9 @@ def my_train(model, optimizer, loss,
             val_acc_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_acc_metric.result(), axis=None)
     else:
         for IDs, x_batch_train, y_batch_train in train_dataset.dataset:
-            train_on_batch(IDs, x_batch_train, y_batch_train, train_dataset, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, val_dataset.batch_size, TPU=False, save_indexes=save_indexes)
+            train_on_batch(IDs, x_batch_train, y_batch_train, train_dataset, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian=bayesian, n_train_example = n_train_example, batch_size= val_dataset.batch_size, TPU=False, save_indexes=save_indexes, bayesian=bayesian)
         for IDs, x_batch_val, y_batch_val in val_dataset.dataset:
-            val_step(IDs, x_batch_train, y_batch_train, train_dataset, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian, n_val_example, val_dataset.batch_size, TPU=False, save_indexes=save_indexes)
+            val_step(IDs, x_batch_train, y_batch_train, train_dataset, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, batch_size=val_dataset.batch_size, TPU=False, save_indexes=save_indexes, bayesian = bayesian)
         train_acc_value = train_acc_metric.result()
         train_loss_value = train_loss_metric.result()
         val_loss_value = val_loss_metric.result()
