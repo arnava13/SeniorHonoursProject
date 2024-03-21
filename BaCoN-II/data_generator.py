@@ -631,18 +631,18 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             tf.print("WARNING: Cannot save processed spectra in TPU mode.")
 
         #Process spectrum files
-        dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list))  
+        dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list)) 
+        dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         if self.TPU:
-                dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-                with self.strategy.scope():
-                    dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-                    if self.shuffle:
-                        dataset = dataset.shuffle(buffer_size=len(list_IDs))
-                    global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
-                    global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
-                    dataset = dataset.batch(global_batchsize)
-                    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-                    dataset = self.strategy.experimental_distribute_dataset(dataset)
+            with self.strategy.scope():
+                dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                if self.shuffle:
+                    dataset = dataset.shuffle(buffer_size=len(list_IDs))
+                global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
+                global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
+                dataset = dataset.batch(global_batchsize)
+                dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+                dataset = self.strategy.experimental_distribute_dataset(dataset)
 
         else:
             dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
