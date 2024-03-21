@@ -555,7 +555,7 @@ class DataSet(): # need to add new variable to 'params' further down
             x_shape = (1, n_ks, 1, self.n_channels)
         else:
             x_shape = (1, n_ks, self.n_channels, 1)
-            
+
         dataset = tf.data.Dataset.from_generator(data_generator,
         output_signature=(
                 tf.TensorSpec(shape=(), dtype=tf.int32),
@@ -586,8 +586,8 @@ class DataSet(): # need to add new variable to 'params' further down
             dataset = dataset.batch(global_batchsize)
             dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
        
-        self.xshape = ((self.batch_size * self.n_batches).numpy(),) + tuple(self.xshape_file)
-        self.yshape = ((self.batch_size * self.n_batches).numpy(),) + tuple(self.yshape_file)
+        self.xshape = ((self.batch_size * self.n_batches),) + tuple(self.xshape_file)
+        self.yshape = ((self.batch_size * self.n_batches),) + tuple(self.yshape_file)
 
         
         return dataset
