@@ -537,7 +537,7 @@ class DataSet(): # need to add new variable to 'params' further down
             print(fname_list)
             
         #print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size, self.n_noisy_samples))
-        assert len(fname_list)==self.batch_size*self.n_batches
+        assert len(fname_list)==self.batch_size*self.n_batches // self.n_noisy_samples
 
         fname_list = np.array(fname_list)
         ID_list = np.array(ID_list, dtype=int)
