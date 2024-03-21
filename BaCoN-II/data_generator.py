@@ -116,7 +116,6 @@ class DataSet(): # need to add new variable to 'params' further down
           self.dim = (int(dim[0]/sample_pace), dim[1]) 
         self.n_channels = n_channels
         self.z_bins=np.asarray(z_bins, dtype=int)
-        self.pi = tf.constant(np.pi, dtype=tf.float32)
         
         print('Using z bins %s' %z_bins)
         if not self.swap_axes:
@@ -367,7 +366,7 @@ class DataSet(): # need to add new variable to 'params' further down
                     print('Noise realization %s' %i_noise)
                 # add noise if selected
                 if self.add_cosvar:
-                    noise_scale = generate_noise(k, self.norm_data[:, self.z_bins], self.pi, sys_scaled=self.sys_scaled,
+                    noise_scale = generate_noise(k, self.norm_data[:, self.z_bins], sys_scaled=self.sys_scaled,
                                                     sys_factor=self.sys_factor,sys_max=self.sys_max,
                                                     add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
                     noise_cosvar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
@@ -401,7 +400,7 @@ class DataSet(): # need to add new variable to 'params' further down
                     P_noisy = P_noisy + noise_sys
 
                 if self.add_shot:
-                    noise_scale = generate_noise(k,self.norm_data[: , self.z_bins], self.pi, sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
+                    noise_scale = generate_noise(k,self.norm_data[: , self.z_bins], sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
                     noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
                     P_noisy = P_noisy + noise_shot
 
