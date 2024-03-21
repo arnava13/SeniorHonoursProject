@@ -633,8 +633,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         #Process spectrum files
         dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list)) 
         if self.TPU:
+            dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
             with self.strategy.scope():
-                dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
                 dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
                 if self.shuffle:
                     dataset = dataset.shuffle(buffer_size=len(list_IDs))
