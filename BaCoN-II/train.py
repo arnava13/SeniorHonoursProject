@@ -728,6 +728,15 @@ def main():
                 strategy=strategy, patience=FLAGS.patience, restore=FLAGS.restore, 
                 bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None, save_indexes = FLAGS.save_indexes #not(FLAGS.test_mode)
             )
+    
+    #Delete cached dataset
+    if os.path.exists('/tmp/cache.tf-data'):
+        os.remove('/tmp/cache.tf-data')
+        print(f"Cache file deleted.")
+    else:
+        print(f"Cache file does not exist.")
+
+
     hist_path =  out_path+'/hist.png'
     if FLAGS.fine_tune:
         if FLAGS.test_mode:
