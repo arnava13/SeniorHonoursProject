@@ -20,68 +20,6 @@ import sys
 import time
 import shutil
 
-
-@tf.function
-def write_indexes(self, batch_ID, indices):
-    batch_ID = batch_ID.numpy()
-    indices = indices.numpy()
-    idx_files_dir = tf.strings.join([self.models_dir, 'idx_files'])
-    if not tf.io.gfile.exists(idx_files_dir):
-        tf.print(tf.strings.format('Creating directory {}', idx_files_dir))
-        tf.io.gfile.makedirs(idx_files_dir)
-    idx_file = tf.strings.join([self.models_dir, '/idx_files/idx_file_batch', tf.strings.as_string(batch_ID), '.txt'])
-    tf.print(tf.strings.format('Saving indexes in {}', idx_file))
-    idx_list = indices
-    with tf.io.gfile.GFile(idx_file, 'w') as file:
-        tf.print(tf.strings.format('Opened {}', idx_file))
-        for idx in idx_list:
-            file.write(tf.strings.as_string(idx) + '\n')
-
-def train_on_batch(IDs, x, y, epoch, model, train_acc_metric, train_loss_metric, save_indexes=False, TPU = False, strategy = None):
-    def step_fn(x, y):
-        # Compute loss and update metrics
-        loss_value = model.train_on_batch(x, y)
-        logits = model.predict_on_batch(x)
-
-        # Compute accuracy
-        proba = tf.nn.softmax(logits)
-        prediction = tf.argmax(proba, axis=1)
-        train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
-        train_loss_metric.update_state(loss_value)
-
-    if TPU:
-        strategy.run(step_fn, args=(x, y))
-    else:
-        step_fn(x, y)
-
-    if save_indexes and not TPU:
-        write_indexes(epoch, IDs)
-    elif save_indexes and TPU:
-        print("CANNOT SAVE INDEXES IN TPU MODE")
-
-def val_step(IDs, x, y, epoch, model, val_loss_metric, val_acc_metric, save_indexes=False, TPU = False, strategy = None):
-    def val_step_fn(x, y):
-        # Compute loss and update metrics
-        val_loss_value = model.test_on_batch(x, y)
-        val_logits = model.predict_on_batch(x)
-
-        # Compute accuracy
-        val_proba = tf.nn.softmax(val_logits)
-        val_prediction = tf.argmax(val_proba, axis=1)
-        val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
-        val_loss_metric.update_state(val_loss_value)
-
-    if TPU:
-        strategy.run(val_step_fn, args=(x, y))
-    else:
-        val_step_fn(x, y)
-
-    if save_indexes and not TPU:
-        write_indexes(epoch, IDs)
-    elif save_indexes and TPU:
-        print("CANNOT SAVE INDEXES IN TPU MODE")
-
-
 @tf.function
 def my_loss(y, logits, TPU=False, batch_size=None):
     if TPU:
@@ -98,153 +36,134 @@ def my_loss(y, logits, TPU=False, batch_size=None):
 
     return loss
 
-
 @tf.function
 def ELBO(y, logits, kl, TPU=False, batch_size=None):
     neg_log_likelihood = my_loss(y, logits, TPU=TPU, batch_size=batch_size)
     elbo_loss = neg_log_likelihood + kl
     return elbo_loss
 
-def my_train(model,
-             epochs, 
-             train_dataset, 
-             val_dataset, manager, ckpt, train_loss_metric,            
-             train_acc_metric, val_loss_metric, val_acc_metric, TPU=False, strategy=None,
-             restore=False, patience=100,
-             save_ckpt=False, save_indexes = False
-              ):
-  fname_hist = manager.directory+'/hist'
-  fname_idxs_train = manager.directory+'/idxs_train.txt'
-  fname_idxs_val = manager.directory+'/idxs_val.txt'
-  if not restore:
-      history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy':[] }
-      best_loss=np.infty
-      print("Initializing checkpoint from scratch.")
-  else:
-      print('Restoring ckpt...')
-      ckpt.restore(manager.latest_checkpoint)
-      print('ckpt step: %s' %ckpt.step)
-      hist_start=int(ckpt.step)
-      print('Starting from history at step %s' %hist_start)
-      history = {'loss': np.loadtxt(fname_hist+'_loss.txt').tolist()[0:hist_start], 
-                 'val_loss': np.loadtxt(fname_hist+'_val_loss.txt').tolist()[0:hist_start], 
-                 'accuracy': np.loadtxt(fname_hist+'_accuracy.txt').tolist()[0:hist_start], 
-                 'val_accuracy':np.loadtxt(fname_hist+'_val_accuracy.txt').tolist()[0:hist_start] }
-      for key in history.keys():
-        fname = fname_hist+'_'+key+'.txt'
-        fname_new = fname_hist+'_'+key+'_original.txt'
-        os.rename(fname, fname_new)
-      print('Saved copy of original histories.')
-      if manager.latest_checkpoint:
-          print("Restoring checkpoint from {}".format(manager.latest_checkpoint))
-          best_train_loss = history['loss'][-1]
-          best_loss = history['val_loss'][-1]
-          print('Starting from  (loss, val_loss) =  %.4f, %.4f' %(best_train_loss, best_loss ))
-      else:
-          print("Checkpoint not found. Initializing checkpoint from scratch.")
-      
-      print('Last learning rate was %s' %ckpt.optimizer.learning_rate)
-  
-  n_val_example=val_dataset.batch_size*val_dataset.n_batches
-  n_train_example=train_dataset.batch_size*train_dataset.n_batches
-  count = 0
-  for _ in train_dataset.dataset:
-        pass
-  for _ in val_dataset.dataset:
-        pass
-  for epoch in range(epochs):
-    print("Epoch %d" % (epoch,))
-    start_time = time.time()
-    train_loss_metric.reset_states()
-    train_acc_metric.reset_states()
-    val_loss_metric.reset_states()
-    val_acc_metric.reset_states()
-    epoch = tf.constant(epoch, dtype=tf.int32)
-    if TPU:
-        for IDs, x_batch_train, y_batch_train in train_dataset.dataset:
-            with strategy.scope():
-                train_on_batch(IDs, x_batch_train, y_batch_train, epoch, model, train_acc_metric, train_loss_metric, TPU = True, strategy=strategy, save_indexes=save_indexes)
-        for IDs, x_batch_val, y_batch_val in val_dataset.dataset:
-            with strategy.scope():
-                val_step(IDs, x_batch_val, y_batch_val, epoch, model, val_loss_metric, val_acc_metric, TPU = True, strategy=strategy, save_indexes=save_indexes)
-            train_acc_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_acc_metric.result(), axis=None)
-            train_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_loss_metric.result(), axis=None)
-            val_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_loss_metric.result(), axis=None)
-            val_acc_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_acc_metric.result(), axis=None)
-    else:
-        for IDs, x_batch_train, y_batch_train in train_dataset.dataset:
-            train_on_batch(IDs, x_batch_train, y_batch_train, epoch, model, train_acc_metric, train_loss_metric,TPU=False, save_indexes=save_indexes)
-        for IDs, x_batch_val, y_batch_val in val_dataset.dataset:
-            val_step(IDs, x_batch_train, y_batch_train, epoch, model, val_loss_metric, val_acc_metric, TPU=False, save_indexes=save_indexes)
-        train_acc_value = train_acc_metric.result()
-        train_loss_value = train_loss_metric.result()
-        val_loss_value = val_loss_metric.result()
-        val_acc_value = val_acc_metric.result()
+class TrainingCallback(tf.keras.callbacks.Callback):
+    def __init__(self, ckpt, checkpoint_manager, fname_hist, patience=10, verbose=1, restore=False, history=None):
+        self.ckpt = ckpt
+        self.checkpoint_manager = checkpoint_manager
+        self.fname_hist = fname_hist
+        self.patience = patience
+        self.best_loss = float('inf')
+        self.count = 0
+        self.verbose = verbose
+        self.restore = restore
+        self.history = history or {}
+        # Ensure the checkpoint directory exists
+        tf.io.gfile.makedirs(checkpoint_manager.directory)
+        self.start_time = time.time()  # Overall training start time
 
-    if val_loss_value.numpy()<best_loss: #int(ckpt.step) % 10 == 0:
-        if save_ckpt and not TPU:
-            save_path = manager.save()
-            print("Validation loss decreased. Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
+    def on_epoch_begin(self, epoch, logs=None):
+        self.epoch_start_time = time.time()
+        if epoch == 0 and self.restore:
+            # Rewriting historical data if restoring
+            for key in self.history.keys():
+                fname = os.path.join(self.fname_hist, f'{key}.txt')
+                with open(fname, 'a') as fh:
+                    for el in self.history[key][:-1]:
+                        fh.write(str(el) + '\n')
+            print(f'Re-wrote histories until epoch {len(self.history["val_accuracy"][:-1])}')
+
+    def on_epoch_end(self, epoch, logs=None):
+        epoch_duration = time.time() - self.epoch_start_time
+        current_val_loss = logs.get('val_loss')
+        improvement_flag = False
+
+        if current_val_loss < self.best_loss:
+            self.best_loss = current_val_loss
+            save_path = self.checkpoint_manager.save()
+            improvement_flag = True
+            self.count = 0  # Reset counter after improvement
+            if self.verbose:
+                print(f"\nEpoch {epoch+1}: Validation loss decreased to {current_val_loss:.4f}. Checkpoint saved: {save_path}")
         else:
-            #print('Creating directory %s' %manager.directory)
-            tf.io.gfile.makedirs(manager.directory)
+            self.count += 1
+            if self.verbose:
+                print(f'\nEpoch {epoch+1}: Loss did not decrease. Count = {self.count}')
 
-        best_loss = val_loss_value.numpy()      
-        #print("New loss {:1.2f}".format(best_loss))
-        count = 0
-    else:
-        count +=1
-        print('Loss did not decrease. Count = %s' %count)
-        if count==patience:
-            print('Max patience reached. ')
-            break
+        # Early stopping check
+        if self.count >= self.patience:
+            if self.verbose:
+                print('Max patience reached. Stopping training.')
+            self.model.stop_training = True
 
-    
-    
-    
-    ckpt.step.assign_add(1)
+        # Increment the checkpoint step
+        self.ckpt.step.assign_add(1)
 
-    train_acc = train_acc_value.numpy()
-    train_loss = train_loss_value.numpy()
-    history['loss'].append(train_loss)
-    history['accuracy'].append(train_acc)
+        # Log metrics and epoch duration
+        for key in ['loss', 'val_loss', 'accuracy', 'val_accuracy']:  # Adjust according to your metrics
+            if key in logs:
+                fname = os.path.join(self.fname_hist, f'{key}.txt')
+                with open(fname, 'a') as fh:
+                    fh.write(f'{logs[key]}\n')
 
-    val_acc = val_acc_value.numpy()
-    val_loss = val_loss_value.numpy()
-    history['val_loss'].append(val_loss)
-    history['val_accuracy'].append(val_acc)
-    
+        # Print epoch summary
+        total_time = time.time() - self.start_time
+        print(f"Time:  {total_time:.2fs}, ---- Loss: {logs.get('loss', 0):.4f}, Acc.: {logs.get('accuracy', 0):.4f}, Val. Loss: {logs.get('val_loss', 0):.4f}, Val. Acc.: {logs.get('val_accuracy', 0):.4f}\n")
 
-    if epoch==0:
-        if restore:          
+def my_train(model, epochs, 
+             train_dataset, 
+             val_dataset, ckpt_path, ckpt, ckpt_manager, TPU=False, strategy=None,
+             restore=False, patience=100,
+             save_ckpt=False):
+    fname_hist = os.path.join(ckpt_path, 'hist')
+    if restore:
+        print('Restoring ckpt...')
+        if ckpt_manager.latest_checkpoint:
+            ckpt.restore(ckpt_manager.latest_checkpoint)
+            print("Restored checkpoint from {}".format(ckpt_manager.latest_checkpoint))
+            print('ckpt step: %s' % ckpt.step.numpy())
+
+            hist_start = int(ckpt.step)
+            print('Starting from history at step %s' % hist_start)
+
+            # Load history from files
+            history = {
+                key: np.loadtxt(fname_hist+'_'+key+'.txt').tolist()[0:hist_start] 
+                for key in ['loss', 'val_loss', 'accuracy', 'val_accuracy']
+            }
+
+            # Rename original history files to keep a backup
             for key in history.keys():
                 fname = fname_hist+'_'+key+'.txt'
-                with open(fname, 'a') as fh:
-                    for el in history[key][:-1]:
-                        fh.write(str(el) +'\n')
-            print('Re-wrote histories until epoch %s' %str(len(history['val_accuracy'][:-1])) )
-                    
-        with open(fname_idxs_train, 'a') as fit:
-            for ID in train_dataset.list_IDs:
-                fit.write(str(ID) +'\n')
-        with open(fname_idxs_val, 'a') as fiv:
-            for ID in val_dataset.list_IDs:   
-                fiv.write( str(ID) +'\n' )
-    
-    for key in history.keys():
-            fname = fname_hist+'_'+key+'.txt'
-            with open(fname, 'a') as fh:
-                fh.write(str(history[key][-1])+'\n') 
-                
-    ###
-    # Uncomment if training in a jupyter notebook, to print the status on epoch bar
-    ###
-    #epoch_bar.set_postfix(train_loss=loss_value.numpy(), val_loss=val_loss_value.numpy(), 
-    #                      train_accuracy = train_acc.numpy(), val_accuracy=val_acc.numpy())
-    #print("Time taken: %.2fs" % (time.time() - start_time))
-    print("Time:  %.2fs, ---- Loss: %.4f, Acc.: %.4f, Val. Loss: %.4f, Val. Acc.: %.4f\n" % (time.time() - start_time, train_loss, train_acc, val_loss, val_acc))
+                fname_new = fname_hist+'_'+key+'_original.txt'
+                os.rename(fname, fname_new)
+            print('Saved copy of original histories.')
+            
+            best_train_loss = history['loss'][-1]
+            best_loss = history['val_loss'][-1]
+            print(f"Starting from (loss, val_loss) = {best_train_loss:.4f}, {best_loss:.4f}")
 
-  return model, history
+            # Print last learning rate
+            print('Last learning rate was %s' % ckpt.optimizer.learning_rate.numpy())
+        else:
+            print("Checkpoint not found. Initializing checkpoint from scratch.")
+    else:
+        print("Initializing checkpoint from scratch.")
+        history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy':[] }
+        best_loss = np.infty
+    
+    callback = TrainingCallback(ckpt, ckpt_manager, fname_hist=fname_hist, patience=10, verbose=1)
+
+    for _ in train_dataset.dataset:
+            pass
+    for _ in val_dataset.dataset:
+            pass
+    if TPU:
+        with strategy.scope():
+            history = model.fit(train_dataset.dataset, epochs=epochs,
+                                validation_data=val_dataset.dataset,
+                                callbacks=[callback], steps_per_epoch=train_dataset.n_batches, validation_steps=val_dataset.n_batches)
+    else:
+        history = model.fit(train_dataset.dataset, epochs=epochs,
+                            validation_data=val_dataset.dataset,
+                            callbacks=[callback], steps_per_epoch=train_dataset.n_batches, validation_steps=val_dataset.n_batches)
+
+    return model, history
 
 
 def compute_loss(dataset, model, bayesian=False, TPU=False, strategy=None):
@@ -602,7 +521,7 @@ def main():
                         n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
                             )
 
-            model.compile(optimizer=optimizer, loss=loss, metrics=[train_acc_metric, train_loss_metric, val_acc_metric, val_loss_metric])
+            model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'loss'])
     else:
         model=make_model(     model_name=model_name,
                          drop=drop, 
@@ -644,7 +563,6 @@ def main():
     else:
         ckpts_path=out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name_base_unfreezing+'/'
     ckpt_name = 'ckpt'
-    ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
     
     if FLAGS.fine_tune:
         print('Loading ckpt from %s' %ckpts_path)
@@ -708,8 +626,6 @@ def main():
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm)
                 model.compile(optimizer=optimizer, loss=loss, metrics=[train_acc_metric, train_loss_metric, val_acc_metric, val_loss_metric], jit_compile=True)
         print(model.summary())
-
-        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
     elif FLAGS.one_vs_all:
         if not FLAGS.test_mode:
             ckpts_path = out_path+'/tf_ckpts'+add_ckpt_name+'/'
@@ -717,11 +633,12 @@ def main():
             ckpts_path = out_path+'/tf_ckpts_test'+add_ckpt_name+'/'
         ckpt_name = ckpt_name+add_ckpt_name
         if FLAGS.test_mode:
-            ckpt_name+='_test'
+            ckpt_name+='_test' 
         
+    ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
     manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
-                                        max_to_keep=2, 
-                                        checkpoint_name=ckpt_name)    
+                                         max_to_keep=2, 
+                                         checkpoint_name=ckpt_name)
     
     if FLAGS.GPU:
         device_name = tf.test.gpu_device_name()
@@ -740,8 +657,7 @@ def main():
     model, history = my_train(model,
                 FLAGS.n_epochs, 
                 training_dataset, 
-                validation_dataset, manager, ckpt, train_loss_metric,
-                train_acc_metric, val_loss_metric, val_acc_metric, TPU=FLAGS.TPU,
+                validation_dataset, ckpts_path, ckpt, manager, TPU=FLAGS.TPU,
                 strategy=strategy, patience=FLAGS.patience, restore=FLAGS.restore, 
                 save_ckpt=FLAGS.save_ckpt, save_indexes = FLAGS.save_indexes #not(FLAGS.test_mode)
             )

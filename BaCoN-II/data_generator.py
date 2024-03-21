@@ -336,7 +336,7 @@ class DataSet(): # need to add new variable to 'params' further down
         'I dont know what exactly I should put here - where is n_channels ??? '
         return((len(self.list_IDs), self.dim[0]/self.sample_pace, self.dim[1] ))
 
-    def process_file(self, ID, fname):
+    def process_file(self, fname):
         if self.Verbose:
             print('Loading file %s' %fname)
 
@@ -456,14 +456,13 @@ class DataSet(): # need to add new variable to 'params' further down
                 print('Encoding: %s' % encoding)
             
             y = encoding
-        ID = tf.convert_to_tensor(ID, dtype=tf.int32)
         X = tf.convert_to_tensor(X, dtype=tf.float32)
         y = tf.convert_to_tensor(y, dtype=tf.int32)    
 
-        return ID, X, y
+        return X, y
 
     @tf.function
-    def normalize_and_onehot(self, ID, X, y):
+    def normalize_and_onehot(self, X, y):
         if self.normalization == 'batch':
             mu_batch = tf.reduce_mean(X, axis=0)
             std_batch = tf.math.reduce_std(X, axis=0)
@@ -517,21 +516,18 @@ class DataSet(): # need to add new variable to 'params' further down
         if self.Verbose:
             tf.print('Dimension of data after normalising: %s' %str(X.shape))
             tf.print('Dimension of labels after one-hot encoding: %s' %str(y.shape))
-        return ID, X, y
+        return X, y
 
     def __data_generation(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
         if not self.fine_tune and not self.one_vs_all:
             fname_list=[]
-            ID_list=[]
             for l in self.labels:
                 for ID in list_IDs_dict[l]:
                     t_st =  self.data_root + '/'+l+ '/'+ str(ID) + '.txt' 
                     fname_list.append(str(t_st))
-                    ID_list.append(ID)  
         else:
              fname_list = get_fname_list(self.c_0, self.c_1, list_IDs, self.data_root,  list_IDs_dict, dataset_balanced=self.dataset_balanced,)
-             ID_list = [int(fname.split('/')[-1].split('.')[0]) for fname in fname_list]
         if self.fine_tune and self.Verbose :
             print(fname_list)
             
@@ -539,15 +535,14 @@ class DataSet(): # need to add new variable to 'params' further down
         assert len(fname_list)==self.batch_size*self.n_batches // self.n_noisy_samples
 
         fname_list = np.array(fname_list, dtype=str)
-        ID_list = np.array(ID_list, dtype=int)
 
         if self.Verbose_2:
             print("list_IDs_dict")
             print(list_IDs_dict)
 
-        def data_generator(ID_list, fname_list):
-            for ID, fname in zip(ID_list, fname_list):
-                ID, X, y = self.process_file(ID, fname.decode('utf-8'))
+        def data_generator(fname_list):
+            for fname in fname_list:
+                X, y = self.process_file(ID, fname.decode('utf-8'))
                 yield ID, X, y
 
         
@@ -561,11 +556,10 @@ class DataSet(): # need to add new variable to 'params' further down
 
         dataset = tf.data.Dataset.from_generator(data_generator,
         output_signature=(
-                tf.TensorSpec(shape=(), dtype=tf.int32),
                 tf.TensorSpec(shape=x_shape, dtype=tf.float32),
                 tf.TensorSpec(shape=(), dtype=tf.int32)
             ),
-            args=(ID_list, fname_list)
+            args=(fname_list)
         )
 
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
