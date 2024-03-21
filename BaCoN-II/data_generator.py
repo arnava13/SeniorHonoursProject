@@ -615,8 +615,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
         dataset = dataset.batch(global_batchsize)
         dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-        #if self.TPU:
-            #dataset = self.strategy.experimental_distribute_dataset(dataset)
+        if self.TPU:
+            dataset = self.strategy.experimental_distribute_dataset(dataset)
 
         self.xshape = ((self.batch_size * self.n_batches).numpy(),) + tuple(self.xshape_file)
         self.yshape = ((self.batch_size * self.n_batches).numpy(),) + tuple(self.yshape_file)

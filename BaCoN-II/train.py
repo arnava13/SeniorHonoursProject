@@ -143,6 +143,13 @@ def my_train(model, optimizer, loss,
   n_val_example=val_generator.batch_size*val_generator.n_batches
   n_train_example=train_generator.batch_size*train_generator.n_batches
   count = 0
+  if TPU:
+    train_generator.dataset = train_generator.dataset.cache()
+    val_generator.dataset = val_generator.dataset.cache()
+    for _ in train_generator.dataset:
+        pass
+    for _ in val_generator.dataset:
+        pass
   for epoch in range(epochs):
     print("Epoch %d" % (epoch,))
     start_time = time.time()
@@ -152,6 +159,7 @@ def my_train(model, optimizer, loss,
     val_acc_metric.reset_states()
     epoch = tf.constant(epoch, dtype=tf.int32)
     if TPU:
+        
         for IDs, x_batch_train, y_batch_train in train_generator.dataset:
             with strategy.scope():
                 strategy.run(train_on_batch, args=(IDs, x_batch_train, y_batch_train, train_generator, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, train_generator.batch_size), kwargs={'TPU': True})
@@ -499,9 +507,6 @@ def main():
     cache_dir = 'cache'
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
-    
-    training_generator.dataset = training_generator.dataset.cache()
-    validation_generator.dataset = validation_generator.dataset.cache()
     
     if FLAGS.fine_tune:
         print('\n------------ CREATING ORIGINAL DATA GENERATORS FOR CHECK------------')
