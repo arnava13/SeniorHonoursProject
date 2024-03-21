@@ -54,8 +54,8 @@ def generate_noise(k, P, pi,
 class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
     @tf.function
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
-        """with tf.device('/cpu:0'):
-            file_content = tf.io.read_file(file_path)"""
+        """with tf.device('/cpu:0'):"""
+        file_content = tf.io.read_file(file_path)
 
         file_content = tf.strings.regex_replace(file_content, "\r\n", "\n")
         file_content = tf.strings.regex_replace(file_content, "\r", "\n")
