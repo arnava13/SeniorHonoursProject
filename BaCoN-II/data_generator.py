@@ -54,8 +54,8 @@ def generate_noise(k, P, pi,
 class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
     @tf.function
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
-        with tf.device('/cpu:0'):
-            file_content = tf.io.read_file(file_path)
+        """with tf.device('/cpu:0'):
+            file_content = tf.io.read_file(file_path)"""
 
         file_content = tf.strings.regex_replace(file_content, "\r\n", "\n")
         file_content = tf.strings.regex_replace(file_content, "\r", "\n")
@@ -633,8 +633,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         #Process spectrum files
         dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list)) 
         if self.TPU:
-            dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
             with self.strategy.scope():
+                dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
                 dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
                 if self.shuffle:
                     dataset = dataset.shuffle(buffer_size=len(list_IDs))
