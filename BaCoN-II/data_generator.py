@@ -460,15 +460,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         return X, y
 
     @tf.function
-    def process_file(self, ID, loaded_all):
-        P_original = loaded_all[:, 1:]
-        k = loaded_all[:, 0] 
-
-        if self.sample_pace != 1:
-            P_original = P_original[::self.sample_pace]
-            k = k[::self.sample_pace]
-        P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
-
+    def process_spectra(self, ID, P_original, k):
         if ID == 1:
             tf.print('dimension P_original: %s' %str(P_original.shape))
             tf.print('dimension of k in original spectra: %s' %str(k.shape))    
@@ -573,12 +565,11 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         tf.print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size.numpy(), self.n_noisy_samples_numpy))
         tf.debugging.assert_equal(tf.constant(len(fname_list), dtype=tf.int32), self.batch_size * self.n_batches // self.n_noisy_samples_numpy, message="Fname list != batch_size * n_batches // n_noisy_samples")
 
-        all_spectra = np.zeros((len(fname_list), self.n_ks, self.n_channels), dtype=np.float32)
+        all_spectra = np.zeros((len(fname_list), self.original_k_len, self.n_channels + 1), dtype=np.float32)
         for i, fname in enumerate(fname_list):
             spectrum = np.loadtxt(fname)
             all_spectra[i] = spectrum
         
-        all_spectra = tf.convert_to_tensor(all_spectra, dtype=tf.float32)
         
 
         if self.Verbose_2:
@@ -605,7 +596,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         #Process spectrum files
         dataset = tf.data.Dataset.from_tensor_slices((ID_list, all_spectra)) 
-        dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.map(self.process_spectra, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         if self.shuffle:
             dataset = dataset.shuffle(buffer_size=len(list_IDs))
