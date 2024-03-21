@@ -236,7 +236,6 @@ class DataSet(): # need to add new variable to 'params' further down
         
         if self.normalization=='stdcosmo':
           self.norm_data = np.loadtxt(self.norm_data_path)[:, 1:]
-          self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
           if self.sample_pace !=1:
             self.norm_data = self.norm_data[0::self.sample_pace, :]
           self.norm_data = self.norm_data[self.i_min:self.i_max]
@@ -554,6 +553,7 @@ class DataSet(): # need to add new variable to 'params' further down
 
         dataset = tf.data.Dataset.from_tensor_slices(data_list)
 
+        self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
         
         if self.TPU:
             with self.strategy.scope():
@@ -579,20 +579,7 @@ class DataSet(): # need to add new variable to 'params' further down
 
         
         return dataset
-    
-    def __iter__(self):
-        # Create a fresh iterator at the start of each epoch
-        self.iterator = iter(self.dataset)
-        return self
 
-    def __next__(self):
-        try:
-            return next(self.iterator)
-        except StopIteration:
-            # Reset iterator for the next epoch
-            self.iterator = iter(self.dataset)
-            raise StopIteration
-        
 
 
 
