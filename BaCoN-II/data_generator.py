@@ -165,13 +165,12 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.norm_data_path = tf.io.gfile.join(self.data_root, norm_data_name)
         tf.print('Data root dir is %s' %self.data_root)
         tf.print('Normalisation file is %s' %self.norm_data_path)
-        with tf.device('/cpu:0'):
-            self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)
-            self.all_ks = tf.cast(self.all_ks, dtype=tf.float32)
-            self.original_k_len = tf.cast(tf.size(self.all_ks).numpy(), tf.int32)
-            if self.sample_pace !=1:
-                    self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)[::self.sample_pace]
-        
+        self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)
+        self.all_ks = tf.cast(self.all_ks, dtype=tf.float32)
+        self.original_k_len = tf.cast(tf.size(self.all_ks).numpy(), tf.int32)
+        if self.sample_pace !=1:
+                self.all_ks = self.read_file(self.norm_data_path, column_indices=[0], dtype=tf.float32)[::self.sample_pace]
+    
 
         # Select points from k_max or i_max
 
