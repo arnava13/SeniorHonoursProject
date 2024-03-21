@@ -20,8 +20,25 @@ import sys
 import time
 import shutil
 
+
 @tf.function
-def train_on_batch(IDs, x, y, train_dataset, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian=False, n_train_example=60000, batch_size=2500, save_indexes=False, TPU = False):
+def write_indexes(self, batch_ID, indices):
+    batch_ID = batch_ID.numpy()
+    indices = indices.numpy()
+    idx_files_dir = tf.strings.join([self.models_dir, 'idx_files'])
+    if not tf.io.gfile.exists(idx_files_dir):
+        tf.print(tf.strings.format('Creating directory {}', idx_files_dir))
+        tf.io.gfile.makedirs(idx_files_dir)
+    idx_file = tf.strings.join([self.models_dir, '/idx_files/idx_file_batch', tf.strings.as_string(batch_ID), '.txt'])
+    tf.print(tf.strings.format('Saving indexes in {}', idx_file))
+    idx_list = indices
+    with tf.io.gfile.GFile(idx_file, 'w') as file:
+        tf.print(tf.strings.format('Opened {}', idx_file))
+        for idx in idx_list:
+            file.write(tf.strings.as_string(idx) + '\n')
+
+@tf.function
+def train_on_batch(IDs, x, y, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian=False, n_train_example=60000, batch_size=2500, save_indexes=False, TPU = False):
     with tf.GradientTape() as tape:
         tape.watch(model.trainable_variables)
         for layer in model.layers:  # Supports frozen weights
@@ -42,12 +59,14 @@ def train_on_batch(IDs, x, y, train_dataset, epoch, model, optimizer, loss, trai
         proba = tf.nn.softmax(logits)
         prediction = tf.argmax(proba, axis=1)
         train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)        
-    if save_indexes:
-        train_dataset.write_indexes(epoch, IDs)
+    if save_indexes and not TPU:
+        write_indexes(epoch, IDs)
+    elif save_indexes and TPU:
+        print("CANNOT SAVE INDEXES IN TPU MODE")
     train_loss_metric.update_state(loss_value)
 
 @tf.function
-def val_step(IDs, x, y, val_dataset, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian=False, n_val_example=10000, batch_size=2500, save_indexes=False, TPU = False):
+def val_step(IDs, x, y, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian=False, n_val_example=10000, batch_size=2500, save_indexes=False, TPU = False):
     val_logits = model(x, training=False)
     if bayesian:
        val_kl = tf.reduce_sum(model.losses)/ tf.cast(n_val_example, tf.float32)
@@ -148,10 +167,10 @@ def my_train(model, optimizer, loss,
         
         for IDs, x_batch_train, y_batch_train in train_dataset.dataset:
             with strategy.scope():
-                strategy.run(train_on_batch, args=(IDs, x_batch_train, y_batch_train, train_dataset, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, train_dataset.batch_size), kwargs={'TPU': True})
+                strategy.run(train_on_batch, args=(IDs, x_batch_train, y_batch_train, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, train_dataset.batch_size), kwargs={'TPU': True})
         for IDs, x_batch_val, y_batch_val in val_dataset.dataset:
             with strategy.scope():
-                strategy.run(val_step, args=(IDs, x_batch_val, y_batch_val, val_dataset, epoch, model, loss, val_acc_metric, val_loss_metric, bayesian, n_val_example, val_dataset.batch_size),  kwargs={'TPU': True})
+                strategy.run(val_step, args=(IDs, x_batch_val, y_batch_val, epoch, model, loss, val_acc_metric, val_loss_metric, bayesian, n_val_example, val_dataset.batch_size),  kwargs={'TPU': True})
         with strategy.scope():
             train_acc_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_acc_metric.result(), axis=None)
             train_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_loss_metric.result(), axis=None)

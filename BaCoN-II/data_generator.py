@@ -597,7 +597,7 @@ class DataSet():
             if not os.path.exists(self.name_spectra_folder):
                 tf.print('Creating directory %s' %  self.name_spectra_folder)
                 os.makedirs(self.name_spectra_folder)
-        elif self.TPU:
+        elif self.save_processed_spectra and self.TPU:
             tf.print("WARNING: Cannot save processed spectra in TPU mode.")
 
         #Process spectrum files
@@ -627,21 +627,7 @@ class DataSet():
 
         
         return dataset
-    
-    def write_indexes(self, batch_ID, indices):
-        batch_ID = batch_ID.numpy()
-        indices = indices.numpy()
-        idx_files_dir = os.path.join(self.models_dir, 'idx_files')
-        if not os.path.exists(idx_files_dir):
-            tf.print('Creating directory %s' % idx_files_dir)
-            os.makedirs(idx_files_dir)
-        idx_file = self.models_dir+'/idx_files/idx_file_batch'+ str(batch_ID)+'.txt'                  
-        tf.print('Saving indexes in  %s' %idx_file)
-        idx_list = indices
-        with open(idx_file, 'w+') as file:
-            tf.print('Opened %s' %idx_file)
-            for idx in idx_list: #i in range(len(idx_list)):
-                file.write(idx+'\n')
+
     
 
 
