@@ -169,7 +169,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
         self.all_ks = tf.convert_to_tensor(np.loadtxt(self.norm_data_path)[:, 0], tf.float32)
         self.original_k_len = tf.cast(tf.size(self.all_ks).numpy(), tf.int32)
         if self.sample_pace !=1:
-                self.all_ks = np.loadtxt(self.norm_data_path, dtype=tf.float32)[::self.sample_pace, 0]
+                self.all_ks = np.loadtxt(self.norm_data_path)[::self.sample_pace, 0]
                 self.all_ks = tf.convert_to_tensor(self.all_ks, tf.float32)
     
 
