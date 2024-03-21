@@ -488,7 +488,11 @@ def main():
         training_generator, validation_generator = create_generators(FLAGS, strategy=strategy)
     else:
         training_generator, validation_generator = create_generators(FLAGS)
-      
+
+    cache_dir = '/cache'
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir)
+    
     training_generator.dataset = training_generator.dataset.cache('/cache/train_cache.tf-data')
     validation_generator.dataset = validation_generator.dataset.cache('/cache/val_cache.tf-data')
 
