@@ -13,7 +13,7 @@ import tensorflow.compat.v2 as tf
 import tensorflow_probability as tfp
 tf.enable_v2_behavior()
 tfd = tfp.distributions
-from data_generator import create_generators
+from data_generator import create_datasets
 from models import *
 from utils import DummyHist, plot_hist, str2bool, Logger, get_flags
 import sys
@@ -21,7 +21,7 @@ import time
 import shutil
 
 @tf.function
-def train_on_batch(IDs, x, y, train_generator, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian=False, n_train_example=60000, batch_size=2500, save_indexes=False, TPU = False):
+def train_on_batch(IDs, x, y, train_dataset, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian=False, n_train_example=60000, batch_size=2500, save_indexes=False, TPU = False):
     with tf.GradientTape() as tape:
         tape.watch(model.trainable_variables)
         for layer in model.layers:  # Supports frozen weights
@@ -43,11 +43,11 @@ def train_on_batch(IDs, x, y, train_generator, epoch, model, optimizer, loss, tr
         prediction = tf.argmax(proba, axis=1)
         train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)        
     if save_indexes:
-        train_generator.write_indexes(epoch, IDs)
+        train_dataset.write_indexes(epoch, IDs)
     train_loss_metric.update_state(loss_value)
 
 @tf.function
-def val_step(IDs, x, y, val_generator, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian=False, n_val_example=10000, batch_size=2500, save_indexes=False, TPU = False):
+def val_step(IDs, x, y, val_dataset, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian=False, n_val_example=10000, batch_size=2500, save_indexes=False, TPU = False):
     val_logits = model(x, training=False)
     if bayesian:
        val_kl = tf.reduce_sum(model.losses)/ tf.cast(n_val_example, tf.float32)
@@ -59,7 +59,7 @@ def val_step(IDs, x, y, val_generator, epoch, model, loss, val_loss_metric, val_
     val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
     val_loss_metric.update_state(val_loss_value)
     if save_indexes:
-        val_generator.write_indexes(epoch, IDs)
+        val_dataset.write_indexes(epoch, IDs)
     return val_loss_value
 
 
@@ -88,8 +88,8 @@ def ELBO(y, logits, kl, TPU=False, batch_size=None):
 
 def my_train(model, optimizer, loss,
              epochs, 
-             train_generator, 
-             val_generator, manager, ckpt, train_loss_metric,            
+             train_dataset, 
+             val_dataset, manager, ckpt, train_loss_metric,            
              train_acc_metric, val_loss_metric, val_acc_metric, TPU=False, strategy=None,
              restore=False, patience=100,
              bayesian=False, save_ckpt=False, decayed_lr_value=None, save_indexes = False
@@ -102,14 +102,6 @@ def my_train(model, optimizer, loss,
       best_loss=np.infty
       print("Initializing checkpoint from scratch.")
   else:
-      # this is to fix bug in restoring optimizer. See https://github.com/tensorflow/tensorflow/issues/33150
-      #print('Training on one batch to properly restore model....') 
-      #x, y = train_generator[0]
-      #_ = train_on_batch(x, y, model, optimizer, loss, train_acc_metric, 
-      #                  bayesian=bayesian, n_train_example=train_generator.batch_size*train_generator.n_batches)
-      #train_acc_metric.reset_states()
-      
-      #optimizer.iterations # this is to fix bug in restoring optimizer. See https://gist.github.com/yoshihikoueno/4ff0694339f88d579bb3d9b07e609122
       print('Restoring ckpt...')
       ckpt.restore(manager.latest_checkpoint)
       print('ckpt step: %s' %ckpt.step)
@@ -133,22 +125,16 @@ def my_train(model, optimizer, loss,
           print("Checkpoint not found. Initializing checkpoint from scratch.")
       
       print('Last learning rate was %s' %ckpt.optimizer.learning_rate)
-      #if decayed_lr_value is not None:
-        #lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_generator), FLAGS.decay)
-      #  ckpt.optimizer.learning_rate = decayed_lr_value(hist_start) #FLAGS.lr
-      #  print('Learning rate set to %s' %ckpt.optimizer.learning_rate)
-      #else:
-      #    print('Re-starting from this value for the learing rate')
   
-  n_val_example=val_generator.batch_size*val_generator.n_batches
-  n_train_example=train_generator.batch_size*train_generator.n_batches
+  n_val_example=val_dataset.batch_size*val_dataset.n_batches
+  n_train_example=train_dataset.batch_size*train_dataset.n_batches
   count = 0
   if not TPU:
-      train_generator.dataset = train_generator.dataset.cache('cache/train_cache.tf-data')
-      val_generator.dataset = val_generator.dataset.cache('cache/val_cache.tf-data')
-  for _ in train_generator.dataset:
+      train_dataset.dataset = train_dataset.dataset.cache('cache/train_cache.tf-data')
+      val_dataset.dataset = val_dataset.dataset.cache('cache/val_cache.tf-data')
+  for _ in train_dataset.dataset:
         pass
-  for _ in val_generator.dataset:
+  for _ in val_dataset.dataset:
         pass
   for epoch in range(epochs):
     print("Epoch %d" % (epoch,))
@@ -160,22 +146,22 @@ def my_train(model, optimizer, loss,
     epoch = tf.constant(epoch, dtype=tf.int32)
     if TPU:
         
-        for IDs, x_batch_train, y_batch_train in train_generator.dataset:
+        for IDs, x_batch_train, y_batch_train in train_dataset.dataset:
             with strategy.scope():
-                strategy.run(train_on_batch, args=(IDs, x_batch_train, y_batch_train, train_generator, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, train_generator.batch_size), kwargs={'TPU': True})
-        for IDs, x_batch_val, y_batch_val in val_generator.dataset:
+                strategy.run(train_on_batch, args=(IDs, x_batch_train, y_batch_train, train_dataset, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, train_dataset.batch_size), kwargs={'TPU': True})
+        for IDs, x_batch_val, y_batch_val in val_dataset.dataset:
             with strategy.scope():
-                strategy.run(val_step, args=(IDs, x_batch_val, y_batch_val, val_generator, epoch, model, loss, val_acc_metric, val_loss_metric, bayesian, n_val_example, val_generator.batch_size),  kwargs={'TPU': True})
+                strategy.run(val_step, args=(IDs, x_batch_val, y_batch_val, val_dataset, epoch, model, loss, val_acc_metric, val_loss_metric, bayesian, n_val_example, val_dataset.batch_size),  kwargs={'TPU': True})
         with strategy.scope():
             train_acc_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_acc_metric.result(), axis=None)
             train_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_loss_metric.result(), axis=None)
             val_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_loss_metric.result(), axis=None)
             val_acc_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_acc_metric.result(), axis=None)
     else:
-        for IDs, x_batch_train, y_batch_train in train_generator.dataset:
-            train_on_batch(IDs, x_batch_train, y_batch_train, train_generator, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, val_generator.batch_size, TPU=False)
-        for IDs, x_batch_val, y_batch_val in val_generator.dataset:
-            val_step(IDs, x_batch_train, y_batch_train, train_generator, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian, n_val_example, val_generator.batch_size, TPU=False)
+        for IDs, x_batch_train, y_batch_train in train_dataset.dataset:
+            train_on_batch(IDs, x_batch_train, y_batch_train, train_dataset, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, val_dataset.batch_size, TPU=False)
+        for IDs, x_batch_val, y_batch_val in val_dataset.dataset:
+            val_step(IDs, x_batch_train, y_batch_train, train_dataset, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian, n_val_example, val_dataset.batch_size, TPU=False)
         train_acc_value = train_acc_metric.result()
         train_loss_value = train_loss_metric.result()
         val_loss_value = val_loss_metric.result()
@@ -230,10 +216,10 @@ def my_train(model, optimizer, loss,
             print('Re-wrote histories until epoch %s' %str(len(history['val_accuracy'][:-1])) )
                     
         with open(fname_idxs_train, 'a') as fit:
-            for ID in train_generator.list_IDs:
+            for ID in train_dataset.list_IDs:
                 fit.write(str(ID) +'\n')
         with open(fname_idxs_val, 'a') as fiv:
-            for ID in val_generator.list_IDs:   
+            for ID in val_dataset.list_IDs:   
                 fiv.write( str(ID) +'\n' )
     
     for key in history.keys():
@@ -252,14 +238,14 @@ def my_train(model, optimizer, loss,
   return model, history
 
 
-def compute_loss(generator, model, bayesian=False, TPU=False, strategy=None):
-    x_batch_train, y_batch_train = generator[0]
+def compute_loss(dataset, model, bayesian=False, TPU=False, strategy=None):
+    x_batch_train, y_batch_train = dataset[0]
     logits = model(x_batch_train, training=False)
     if bayesian:
-            kl = sum(model.losses)/generator.batch_size/generator.n_batches
-            loss_0 = ELBO(y_batch_train, logits, kl, TPU=TPU, batch_size=generator.batch_size)
+            kl = sum(model.losses)/dataset.batch_size/dataset.n_batches
+            loss_0 = ELBO(y_batch_train, logits, kl, TPU=TPU, batch_size=dataset.batch_size)
     else:
-            loss_0 = my_loss(y_batch_train, logits, TPU=TPU, batch_size=generator.batch_size)
+            loss_0 = my_loss(y_batch_train, logits, TPU=TPU, batch_size=dataset.batch_size)
     return loss_0
 
 
@@ -498,27 +484,27 @@ def main():
         #    fpar.write(' : '.join([str(key), str(value)])+'\n')
     
     
-    print('\n------------ CREATING DATA GENERATORS ------------')
+    print('\n------------ CREATING DATASETS ------------')
     if FLAGS.TPU:
-        training_generator, validation_generator = create_generators(FLAGS, strategy=strategy)
+        training_dataset, validation_dataset = create_datasets(FLAGS, strategy=strategy)
     else:
-        training_generator, validation_generator = create_generators(FLAGS)
+        training_dataset, validation_dataset = create_datasets(FLAGS)
 
     cache_dir = 'cache'
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     
     if FLAGS.fine_tune:
-        print('\n------------ CREATING ORIGINAL DATA GENERATORS FOR CHECK------------')
+        print('\n------------ CREATING ORIGINAL DATASETS FOR CHECK------------')
         if FLAGS.TPU:
-            or_training_generator, or_validation_generator = create_generators(FLAGS_ORIGINAL, strategy=strategy)
+            or_training_dataset, or_validation_dataset = create_datasets(FLAGS_ORIGINAL, strategy=strategy)
         else:
-            or_training_generator, or_validation_generator = create_generators(FLAGS_ORIGINAL)
-        n_classes = or_training_generator.n_classes_out # in order to build correctly original model
+            or_training_dataset, or_validation_dataset = create_datasets(FLAGS_ORIGINAL)
+        n_classes = or_training_dataset.n_classes_out # in order to build correctly original model
         model_name = FLAGS_ORIGINAL.model_name
         bayesian=FLAGS_ORIGINAL.bayesian
     else:
-        n_classes = training_generator.n_classes_out
+        n_classes = training_dataset.n_classes_out
         model_name = FLAGS.model_name
         bayesian = FLAGS.bayesian
     
@@ -528,12 +514,12 @@ def main():
     
     print('------------ BUILDING MODEL ------------')
     if FLAGS.swap_axes:
-        input_shape = ( int(training_generator.dim[0]), 
-                   int(training_generator.n_channels))
+        input_shape = ( int(training_dataset.dim[0]), 
+                   int(training_dataset.n_channels))
     else:
-        input_shape = ( int(training_generator.dim[0]), 
-                   int(training_generator.dim[1]), 
-                   int(training_generator.n_channels))
+        input_shape = ( int(training_dataset.dim[0]), 
+                   int(training_dataset.dim[1]), 
+                   int(training_dataset.n_channels))
     print('Input shape %s' %str(input_shape))
     
     if FLAGS.test_mode:
@@ -598,18 +584,18 @@ def main():
     if FLAGS.fine_tune:
         if FLAGS.TPU:
             with strategy.scope():
-                loss_0 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
+                loss_0 = compute_loss(or_training_dataset, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
         else:
-            loss_0 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
+            loss_0 = compute_loss(or_training_dataset, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
         print('Loss before loading weights/ %s\n' %loss_0.numpy())
     
     if FLAGS.decay is not None:
         if FLAGS.TPU:
             with strategy.scope():
-                lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_generator), FLAGS.decay)
+                lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_dataset), FLAGS.decay)
                 optimizer = tf.keras.optimizers.Adam(lr_fn)
         else:
-            lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_generator), FLAGS.decay)
+            lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_dataset), FLAGS.decay)
             optimizer = tf.keras.optimizers.Adam(lr_fn)
     else:
         if FLAGS.TPU:
@@ -619,7 +605,7 @@ def main():
             optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
     
     if FLAGS.restore and FLAGS.decay is not None:
-        decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / len(training_generator))
+        decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / len(training_dataset))
         
     #optimizer.iterations  # this access will invoke optimizer._iterations method and create optimizer.iter attribute
     #if FLAGS.decay is not None:
@@ -651,9 +637,9 @@ def main():
         
         if FLAGS.TPU:
             with strategy.scope():
-                loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
+                loss_1 = compute_loss(or_training_dataset, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
         else:
-            loss_1 = compute_loss(or_training_generator, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
+            loss_1 = compute_loss(or_training_dataset, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
 
         print('Loss after loading weights/ %s\n' %loss_1.numpy())
         if FLAGS.add_FT_dense:
@@ -668,13 +654,13 @@ def main():
             if FLAGS.TPU:
                 with strategy.scope():
                     model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
-                                       n_out_labels=training_generator.n_classes_out,
+                                       n_out_labels=training_dataset.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        trainable=FLAGS.trainable, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
             else:
                 model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
-                                       n_out_labels=training_generator.n_classes_out,
+                                       n_out_labels=training_dataset.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        trainable=FLAGS.trainable, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
@@ -682,12 +668,12 @@ def main():
             if FLAGS.TPU:
                 with strategy.scope():
                     model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
-                                       n_out_labels=training_generator.n_classes_out,
+                                       n_out_labels=training_dataset.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm)
             else: 
                 model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
-                                       n_out_labels=training_generator.n_classes_out,
+                                       n_out_labels=training_dataset.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm)
         model.build(input_shape=input_shape)
@@ -736,13 +722,13 @@ def main():
     
     
     #print('Model n_classes : %s ' %n_classes)
-    print('Features shape:', training_generator.xshape)
-    print('Labels shape:', training_generator.yshape)
+    print('Features shape:', training_dataset.xshape)
+    print('Labels shape:', training_dataset.yshape)
    
     model, history = my_train(model, optimizer, loss,
                 FLAGS.n_epochs, 
-                training_generator, 
-                validation_generator, manager, ckpt, train_loss_metric,
+                training_dataset, 
+                validation_dataset, manager, ckpt, train_loss_metric,
                 train_acc_metric, val_loss_metric, val_acc_metric, TPU=FLAGS.TPU,
                 strategy=strategy, patience=FLAGS.patience, restore=FLAGS.restore, 
                 bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None, save_indexes = FLAGS.save_indexes #not(FLAGS.test_mode)
