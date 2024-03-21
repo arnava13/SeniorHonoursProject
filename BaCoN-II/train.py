@@ -18,6 +18,7 @@ from models import *
 from utils import DummyHist, plot_hist, str2bool, Logger, get_flags
 import sys
 import time
+import shutil
 
 @tf.function
 def train_on_batch(IDs, x, y, train_generator, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian=False, n_train_example=60000, batch_size=2500, save_indexes=False, TPU = False):
@@ -744,7 +745,7 @@ def main():
     
     #Delete cached datasets
     try:
-        os.remove('cache')
+        shutil.rmtree('cache')
         print(f"Cache folder deleted.")
     except FileNotFoundError:
         print(f"Cache folder does not exist.")
