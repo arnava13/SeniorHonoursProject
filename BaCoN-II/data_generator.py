@@ -694,169 +694,169 @@ def read_partition(FLAGS):
     
 
 def create_generators(FLAGS, strategy = None):
-    
-    if FLAGS.my_path is not None:
-        os.chdir(FLAGS.my_path)
-       
-    
-    # --------------------  CREATE DATA GENERATORS   --------------------
-    
-    all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS)
-    tf.print('create_generators n_labels: %s' %n_labels) 
-    if (FLAGS.fine_tune or FLAGS.one_vs_all) and FLAGS.dataset_balanced:
-        # balanced dataset , 1/2 lcdm , 1/2 rest in FT or one vs all mode
-        case=1
-        n_labels_eff = n_labels*len(FLAGS.c_1)
-        len_c1=len(FLAGS.c_1)
-    elif not (FLAGS.fine_tune or FLAGS.one_vs_all):
-        # regular case
-        case=2
-        n_labels_eff=n_labels
-        len_c1=1
-    elif (FLAGS.fine_tune or FLAGS.one_vs_all) and not FLAGS.dataset_balanced:
-        #  Unbalanced dataset , 1/5 lcdm , 1/5 rest in FT or one vs all mode
-        case=3
-        n_labels_eff = len(all_labels)
-        if FLAGS.one_vs_all and len(FLAGS.c_1)<len(all_labels)-1:
-            n_labels_eff = len(FLAGS.c_1)+len(FLAGS.c_0)
-        len_c1=1
-    tf.print('create_generators n_labels_eff: %s' %n_labels_eff)  
-    tf.print('create_generators len_c1: %s' %len_c1)
+    with tf.device('/cpu:0'):
+        if FLAGS.my_path is not None:
+            os.chdir(FLAGS.my_path)
         
         
-
-    
-    # SPLIT TRAIN/VALIDATION /(TEST)
-    val_index = np.random.choice(all_index, size=int(np.floor(val_size*n_samples)), replace=False)
-    train_index_temp =  np.setdiff1d(all_index, val_index) #np.delete(all_index, val_index-1)
-    test_size_eff = FLAGS.test_size/(train_index_temp.shape[0]/n_samples)
-    test_index = np.random.choice(train_index_temp, size=int(np.floor(test_size_eff*train_index_temp.shape[0])), replace=False)
-    train_index =  np.setdiff1d(train_index_temp, test_index)
-
-    tf.print('Check for no duplicates in test: (0=ok):')
-    tf.print(np.array([np.isin(el, train_index) for el in test_index]).sum())
-    tf.print('Check for no duplicates in val: (0=ok):')
-    tf.print(np.array([np.isin(el, train_index) for el in val_index]).sum())
-
-    tf.print('N of files in training set: %s' %train_index.shape[0])
-    tf.print('N of files in validation set: %s' %val_index.shape[0])
-    tf.print('N of files in test set: %s' %test_index.shape[0])
-
-    tf.print('Check - total: %s' %(val_index.shape[0]+test_index.shape[0]+train_index.shape[0]))
-    
-    if FLAGS.add_noise:
-        n_noisy_samples = FLAGS.n_noisy_samples
-    else:
-        n_noisy_samples = 1
-    tf.print('--create_generators, train indexes')
-    if FLAGS.test_mode:
-        if case==3:
-            batch_size=train_index.shape[0]*n_labels_eff*n_noisy_samples
-        elif case==2:
-            batch_size=train_index.shape[0]*n_labels*n_noisy_samples
-        elif case==1:
-            batch_size=n_labels_eff*n_noisy_samples
-    else:
-        batch_size=FLAGS.batch_size
-    tf.print('batch_size: %s' %batch_size)
-
-    if not FLAGS.test_mode:
-        train_index_1  = cut_sample(train_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=False, len_c1=len_c1)
-        tf.print('Train index length: %s' %train_index_1.shape[0])
-    else:
-        train_index_1 = train_index
-        tf.print('Train index: %s' %train_index_1)
-    tf.print('--create_generators, validation indexes')
-    if not FLAGS.test_mode:
-        val_index_1  = cut_sample(val_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=False,len_c1=len_c1)
-        tf.print('Val index length: %s'  %val_index_1.shape[0])
-    else:
-        val_index_1 = val_index
-        tf.print('Validation index: %s' %val_index_1)
-    
-    tf.print('len(train_index_1), batch_size, n_labels_eff, n_noisy_samples = %s, %s, %s, %s' %(train_index_1.shape[0], batch_size, n_labels_eff,n_noisy_samples ))
-    assert train_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
-    assert val_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
-    
-    partition={'train': train_index_1, 'validation': val_index_1}
-    
-    
-    if FLAGS.restore:
-        partition = read_partition(FLAGS)
-        batch_size=FLAGS.batch_size
-         
-    ###################
-    # USE THE BLOCH BELOW TO BE COMPATIBLE WITH OLDER VERSIONS OF DARTA GENERATORS. EVENTUALLY REMOVE
-    ###################
-    try:
-        sigma_sys=FLAGS.sigma_sys
-    except AttributeError:
-        tf.print(' ####  FLAGS.sigma_sys not found! #### \n Probably loading an older model. Using sigma_sys=0')
-        sigma_sys=0.
+        # --------------------  CREATE DATA GENERATORS   --------------------
         
-    try:
-        z_bins=FLAGS.z_bins
-    except AttributeError:
-        tf.print(' ####  FLAGS.z_bins not found! #### \n Probably loading an older model. Using 4 z bins')
-        z_bins=[0, 1, 2, 3]
-    try:
-        swap_axes=FLAGS.swap_axes
-    except AttributeError:
-        if FLAGS.im_channels>1:
-            swap_axes=True
+        all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS)
+        tf.print('create_generators n_labels: %s' %n_labels) 
+        if (FLAGS.fine_tune or FLAGS.one_vs_all) and FLAGS.dataset_balanced:
+            # balanced dataset , 1/2 lcdm , 1/2 rest in FT or one vs all mode
+            case=1
+            n_labels_eff = n_labels*len(FLAGS.c_1)
+            len_c1=len(FLAGS.c_1)
+        elif not (FLAGS.fine_tune or FLAGS.one_vs_all):
+            # regular case
+            case=2
+            n_labels_eff=n_labels
+            len_c1=1
+        elif (FLAGS.fine_tune or FLAGS.one_vs_all) and not FLAGS.dataset_balanced:
+            #  Unbalanced dataset , 1/5 lcdm , 1/5 rest in FT or one vs all mode
+            case=3
+            n_labels_eff = len(all_labels)
+            if FLAGS.one_vs_all and len(FLAGS.c_1)<len(all_labels)-1:
+                n_labels_eff = len(FLAGS.c_1)+len(FLAGS.c_0)
+            len_c1=1
+        tf.print('create_generators n_labels_eff: %s' %n_labels_eff)  
+        tf.print('create_generators len_c1: %s' %len_c1)
+            
+            
+
+        
+        # SPLIT TRAIN/VALIDATION /(TEST)
+        val_index = np.random.choice(all_index, size=int(np.floor(val_size*n_samples)), replace=False)
+        train_index_temp =  np.setdiff1d(all_index, val_index) #np.delete(all_index, val_index-1)
+        test_size_eff = FLAGS.test_size/(train_index_temp.shape[0]/n_samples)
+        test_index = np.random.choice(train_index_temp, size=int(np.floor(test_size_eff*train_index_temp.shape[0])), replace=False)
+        train_index =  np.setdiff1d(train_index_temp, test_index)
+
+        tf.print('Check for no duplicates in test: (0=ok):')
+        tf.print(np.array([np.isin(el, train_index) for el in test_index]).sum())
+        tf.print('Check for no duplicates in val: (0=ok):')
+        tf.print(np.array([np.isin(el, train_index) for el in val_index]).sum())
+
+        tf.print('N of files in training set: %s' %train_index.shape[0])
+        tf.print('N of files in validation set: %s' %val_index.shape[0])
+        tf.print('N of files in test set: %s' %test_index.shape[0])
+
+        tf.print('Check - total: %s' %(val_index.shape[0]+test_index.shape[0]+train_index.shape[0]))
+        
+        if FLAGS.add_noise:
+            n_noisy_samples = FLAGS.n_noisy_samples
         else:
-            swap_axes=False
-        tf.print(' ####  FLAGS.swap_axes not found! #### \n Probably loading an older model. Set swap_axes=%s' %str(swap_axes))
-    ###################
+            n_noisy_samples = 1
+        tf.print('--create_generators, train indexes')
+        if FLAGS.test_mode:
+            if case==3:
+                batch_size=train_index.shape[0]*n_labels_eff*n_noisy_samples
+            elif case==2:
+                batch_size=train_index.shape[0]*n_labels*n_noisy_samples
+            elif case==1:
+                batch_size=n_labels_eff*n_noisy_samples
+        else:
+            batch_size=FLAGS.batch_size
+        tf.print('batch_size: %s' %batch_size)
+
+        if not FLAGS.test_mode:
+            train_index_1  = cut_sample(train_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=False, len_c1=len_c1)
+            tf.print('Train index length: %s' %train_index_1.shape[0])
+        else:
+            train_index_1 = train_index
+            tf.print('Train index: %s' %train_index_1)
+        tf.print('--create_generators, validation indexes')
+        if not FLAGS.test_mode:
+            val_index_1  = cut_sample(val_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=False,len_c1=len_c1)
+            tf.print('Val index length: %s'  %val_index_1.shape[0])
+        else:
+            val_index_1 = val_index
+            tf.print('Validation index: %s' %val_index_1)
         
-    ##Generate a random seed for a tensorflow random number generator used in the class to prevent issues in parallel processing when in TPU mode
-    seed = np.random.randint(0, 2**32 - 1)
-    
-    
-    params = {'dim': (FLAGS.im_depth, FLAGS.im_width),
-          'batch_size':batch_size, # should satisfy  m x Batch size /( n_labels x n_noisy_samples) =  n_indexes  with m a positive integer
-          'n_channels': FLAGS.im_channels,
-          'shuffle': True,
-          'normalization': FLAGS.normalization,
-          'sample_pace': FLAGS.sample_pace,
-          'add_noise':FLAGS.add_noise,
-          'n_noisy_samples':n_noisy_samples,
-          'fine_tune':FLAGS.fine_tune,
-          'add_shot':FLAGS.add_shot, 'add_sys':FLAGS.add_sys,'add_cosvar':FLAGS.add_cosvar,
-          'k_max':FLAGS.k_max, 'i_max':FLAGS.i_max, 'k_min':FLAGS.k_min, 'i_min':FLAGS.i_min, 'sigma_sys':sigma_sys,
-          'swap_axes':swap_axes,
-          'z_bins':z_bins,
-          'test_mode':FLAGS.test_mode,
-          'normalization':FLAGS.normalization,
-          'models_dir':FLAGS.models_dir,
-          'norm_data_name':FLAGS.norm_data_name,
-          'fine_tune':FLAGS.fine_tune ,
-          'fname':FLAGS.fname,
-          #'c_0':FLAGS.c_0 ,
-          #'c_1':FLAGS.c_1 ,    
-          'curves_folder':FLAGS.curves_folder,  
-          'sigma_curves':FLAGS.sigma_curves,
-          'sigma_curves_default':FLAGS.sigma_curves_default,
-          'save_processed_spectra':FLAGS.save_processed_spectra,
-          'rescale_curves':FLAGS.rescale_curves,
-          'TPU':FLAGS.TPU
-          }
-    
-    if FLAGS.fine_tune  or FLAGS.one_vs_all:
-        params['c_0'] = FLAGS.c_0
-        params['c_1'] = FLAGS.c_1
-        params['group_lab_dict'] = FLAGS.group_lab_dict
-        params['dataset_balanced']=FLAGS.dataset_balanced
-        params['one_vs_all']=FLAGS.one_vs_all
+        tf.print('len(train_index_1), batch_size, n_labels_eff, n_noisy_samples = %s, %s, %s, %s' %(train_index_1.shape[0], batch_size, n_labels_eff,n_noisy_samples ))
+        assert train_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
+        assert val_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
         
-    
-    if not params['add_noise']:
-        params['n_noisy_samples']=1
-    
-    tf.print('\n--DataGenerator Train')
-    training_generator = DataGenerator(partition['train'], labels, labels_dict, data_root = FLAGS.DIR, save_indexes=False, seed = seed, strategy=strategy, **params)
-    tf.print('\n--DataGenerator Validation')
-    validation_generator = DataGenerator(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False, seed = seed, strategy = strategy, **params)
+        partition={'train': train_index_1, 'validation': val_index_1}
+        
+        
+        if FLAGS.restore:
+            partition = read_partition(FLAGS)
+            batch_size=FLAGS.batch_size
+            
+        ###################
+        # USE THE BLOCH BELOW TO BE COMPATIBLE WITH OLDER VERSIONS OF DARTA GENERATORS. EVENTUALLY REMOVE
+        ###################
+        try:
+            sigma_sys=FLAGS.sigma_sys
+        except AttributeError:
+            tf.print(' ####  FLAGS.sigma_sys not found! #### \n Probably loading an older model. Using sigma_sys=0')
+            sigma_sys=0.
+            
+        try:
+            z_bins=FLAGS.z_bins
+        except AttributeError:
+            tf.print(' ####  FLAGS.z_bins not found! #### \n Probably loading an older model. Using 4 z bins')
+            z_bins=[0, 1, 2, 3]
+        try:
+            swap_axes=FLAGS.swap_axes
+        except AttributeError:
+            if FLAGS.im_channels>1:
+                swap_axes=True
+            else:
+                swap_axes=False
+            tf.print(' ####  FLAGS.swap_axes not found! #### \n Probably loading an older model. Set swap_axes=%s' %str(swap_axes))
+        ###################
+            
+        ##Generate a random seed for a tensorflow random number generator used in the class to prevent issues in parallel processing when in TPU mode
+        seed = np.random.randint(0, 2**32 - 1)
+        
+        
+        params = {'dim': (FLAGS.im_depth, FLAGS.im_width),
+            'batch_size':batch_size, # should satisfy  m x Batch size /( n_labels x n_noisy_samples) =  n_indexes  with m a positive integer
+            'n_channels': FLAGS.im_channels,
+            'shuffle': True,
+            'normalization': FLAGS.normalization,
+            'sample_pace': FLAGS.sample_pace,
+            'add_noise':FLAGS.add_noise,
+            'n_noisy_samples':n_noisy_samples,
+            'fine_tune':FLAGS.fine_tune,
+            'add_shot':FLAGS.add_shot, 'add_sys':FLAGS.add_sys,'add_cosvar':FLAGS.add_cosvar,
+            'k_max':FLAGS.k_max, 'i_max':FLAGS.i_max, 'k_min':FLAGS.k_min, 'i_min':FLAGS.i_min, 'sigma_sys':sigma_sys,
+            'swap_axes':swap_axes,
+            'z_bins':z_bins,
+            'test_mode':FLAGS.test_mode,
+            'normalization':FLAGS.normalization,
+            'models_dir':FLAGS.models_dir,
+            'norm_data_name':FLAGS.norm_data_name,
+            'fine_tune':FLAGS.fine_tune ,
+            'fname':FLAGS.fname,
+            #'c_0':FLAGS.c_0 ,
+            #'c_1':FLAGS.c_1 ,    
+            'curves_folder':FLAGS.curves_folder,  
+            'sigma_curves':FLAGS.sigma_curves,
+            'sigma_curves_default':FLAGS.sigma_curves_default,
+            'save_processed_spectra':FLAGS.save_processed_spectra,
+            'rescale_curves':FLAGS.rescale_curves,
+            'TPU':FLAGS.TPU
+            }
+        
+        if FLAGS.fine_tune  or FLAGS.one_vs_all:
+            params['c_0'] = FLAGS.c_0
+            params['c_1'] = FLAGS.c_1
+            params['group_lab_dict'] = FLAGS.group_lab_dict
+            params['dataset_balanced']=FLAGS.dataset_balanced
+            params['one_vs_all']=FLAGS.one_vs_all
+            
+        
+        if not params['add_noise']:
+            params['n_noisy_samples']=1
+        
+        tf.print('\n--DataGenerator Train')
+        training_generator = DataGenerator(partition['train'], labels, labels_dict, data_root = FLAGS.DIR, save_indexes=False, seed = seed, strategy=strategy, **params)
+        tf.print('\n--DataGenerator Validation')
+        validation_generator = DataGenerator(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False, seed = seed, strategy = strategy, **params)
 
     
     return training_generator, validation_generator #, params
