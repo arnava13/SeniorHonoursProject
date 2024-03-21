@@ -429,7 +429,8 @@ class DataSet(): # need to add new variable to 'params' further down
                 expanded = tf.transpose(expanded, perm=[0, 2, 1])
                 if self.Verbose:
                     print('New dimension of data: %s' %str(expanded.shape))
-                expanded = expanded[:,:,self.z_bins]
+                zbins = tf.convert_to_tensor(self.z_bins, dtype=tf.int32)
+                expanded = tf.gather(expanded, zbins, axis=2)
                 if self.Verbose:
                     print('Final dimension of data: %s' %str(expanded.shape))
                     print('expanded first 10:') 
