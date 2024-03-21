@@ -373,7 +373,7 @@ class DataSet(): # need to add new variable to 'params' further down
                     P_noisy = P_noisy + noise_cosvar
 
                 if self.add_sys:
-                    curve_random_nr = self.rng.uniform(shape=[], minval=0, maxval=1000, dtype=tf.int32)
+                    curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
                     curve_random_nr = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
                     curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
                     curves_loaded = np.loadtxt(curve_file)
