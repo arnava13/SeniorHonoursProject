@@ -382,17 +382,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 tf.print('Noise realization %s' %i_noise)
             # add noise if selected
             if self.add_cosvar:
-                if self.TPU:
-                    with self.strategy.scope():
-                        noise_scale = generate_noise(k, P_noise, self.pi, sys_scaled=self.sys_scaled,
-                                                sys_factor=self.sys_factor,sys_max=self.sys_max,
-                                                add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
-                        noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
-                        P_noisy = P_noisy + noise_cosVar
-                else:
                     noise_scale = generate_noise(k, P_noise, self.pi, sys_scaled=self.sys_scaled,
-                                                    sys_factor=self.sys_factor,sys_max=self.sys_max,
-                                                    add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
+                                            sys_factor=self.sys_factor,sys_max=self.sys_max,
+                                            add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
                     noise_cosVar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
                     P_noisy = P_noisy + noise_cosVar
             if self.add_sys:
@@ -408,37 +400,21 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 # rescale noise_sys curves according to error (10% default from production curves), 
                 # rescale by Gaussian with sigma = 1
                 # multiply with normalisation spectrum
-                if self.TPU:
-                    with self.strategy.scope():
-                        noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * P_noise
-                        noise_sys = tf.cast(noise_sys, dtype=tf.float32)
-                        if self.rescale_curves == 'uniform':
-                            noise_sys = noise_sys * self.rng.uniform(shape=noise_sys.shape, minval=0, maxval=1, dtype=tf.float32)
-                        if self.rescale_curves == 'gaussian':
-                            noise_sys = noise_sys * self.rng.normal(shape=noise_sys.shape, mean=0, stddev=1, dtype=tf.float32)
-                        P_noisy = tf.cast(P_noisy, dtype=tf.float32)
-                        P_noisy = P_noisy + noise_sys
-                else:
-                    noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * P_noise
-                    noise_sys = tf.cast(noise_sys, dtype=tf.float32)
 
-                    if self.rescale_curves == 'uniform':
-                        noise_sys = noise_sys * self.rng.uniform(shape=noise_sys.shape, minval=0, maxval=1, dtype=tf.float32)
-                    if self.rescale_curves == 'gaussian':
-                        noise_sys = noise_sys * self.rng.normal(shape=noise_sys.shape, mean=0, stddev=1, dtype=tf.float32)
+                noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * P_noise
+                noise_sys = tf.cast(noise_sys, dtype=tf.float32)
 
-                    P_noisy = tf.cast(P_noisy, dtype=tf.float32)
-                    P_noisy = P_noisy + noise_sys
+                if self.rescale_curves == 'uniform':
+                    noise_sys = noise_sys * self.rng.uniform(shape=noise_sys.shape, minval=0, maxval=1, dtype=tf.float32)
+                if self.rescale_curves == 'gaussian':
+                    noise_sys = noise_sys * self.rng.normal(shape=noise_sys.shape, mean=0, stddev=1, dtype=tf.float32)
+
+                P_noisy = tf.cast(P_noisy, dtype=tf.float32)
+                P_noisy = P_noisy + noise_sys
             if self.add_shot:
-                if self.TPU:
-                    with self.strategy.scope():
-                        noise_scale = generate_noise(k, P_noise, self.pi, sys_scaled=self.sys_scaled, sys_factor=self.sys_factor, sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True, sigma_sys=self.sigma_sys)
-                        noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
-                        P_noisy = P_noisy + noise_shot
-                else:
-                    noise_scale = generate_noise(k,P_noise,self.pi,sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
-                    noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
-                    P_noisy = P_noisy + noise_shot
+                noise_scale = generate_noise(k,P_noise,self.pi,sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
+                noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
+                P_noisy = P_noisy + noise_shot
 
             expanded = tf.expand_dims(P_noisy, axis=2)
         else:
@@ -530,13 +506,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             X = (X - mu_batch) / std_batch
         elif self.normalization == 'stdcosmo':
             if self.swap_axes:
-                if self.TPU:
-                    with self.strategy.scope():
-                        divisor = tf.gather(self.norm_data, self.z_bins, axis=1)
-                        X = X / divisor - 1
-                else:
-                    divisor = tf.expand_dims(tf.expand_dims(self.norm_data, axis=0), axis=-1)
-                    X = X / divisor - 1
+                divisor = tf.expand_dims(tf.expand_dims(self.norm_data, axis=0), axis=-1)
+                X = X / divisor - 1
                 if self.Verbose:
                     tf.print('axes swapped')
                     tf.print('NORM first 10:', divisor[:10])
@@ -633,28 +604,19 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         #Process spectrum files
         dataset = tf.data.Dataset.from_tensor_slices((ID_list, fname_list)) 
+        dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        if self.shuffle:
+            dataset = dataset.shuffle(buffer_size=len(list_IDs))
         if self.TPU:
-            with tf.device('/cpu:0'):
-                dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-            with self.strategy.scope():
-                dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-                if self.shuffle:
-                    dataset = dataset.shuffle(buffer_size=len(list_IDs))
-                global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
-                global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
-                dataset = dataset.batch(global_batchsize)
-                dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-                dataset = self.strategy.experimental_distribute_dataset(dataset)
-
+            global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
         else:
-            dataset = dataset.map(self.process_file, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-            dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)  
-            if self.shuffle:
-                dataset = dataset.shuffle(buffer_size=len(list_IDs))  
-            global_batchsize = self.batch_size   
-            global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
-            dataset = dataset.batch(global_batchsize)
-            dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+            global_batchsize = self.batch_size
+        global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
+        dataset = dataset.batch(global_batchsize)
+        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+        if self.TPU:
+            dataset = self.strategy.experimental_distribute_dataset(dataset)
 
         self.xshape = ((self.batch_size * self.n_batches).numpy(),) + tuple(self.xshape_file)
         self.yshape = ((self.batch_size * self.n_batches).numpy(),) + tuple(self.yshape_file)
