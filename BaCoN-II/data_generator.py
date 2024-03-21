@@ -525,7 +525,7 @@ class DataSet(): # need to add new variable to 'params' further down
             for l in self.labels:
                 for ID in list_IDs_dict[l]:
                     t_st =  self.data_root + '/'+l+ '/'+ str(ID) + '.txt' 
-                    fname_list.append(t_st)
+                    fname_list.append(str(t_st))
                     ID_list.append(ID)  
         else:
              fname_list = get_fname_list(self.c_0, self.c_1, list_IDs, self.data_root,  list_IDs_dict, dataset_balanced=self.dataset_balanced,)
@@ -545,7 +545,7 @@ class DataSet(): # need to add new variable to 'params' further down
 
         def data_generator(ID_list, fname_list):
             for ID, fname in zip(ID_list, fname_list):
-                ID, X, y = self.process_file(ID, str(fname))
+                ID, X, y = self.process_file(ID, fname.decode('utf-8'))
                 yield ID, X, y
 
         
