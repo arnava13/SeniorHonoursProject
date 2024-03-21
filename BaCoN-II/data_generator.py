@@ -756,6 +756,30 @@ def create_datasets(FLAGS, strategy = None):
     if FLAGS.restore:
         partition = read_partition(FLAGS)
         batch_size=FLAGS.batch_size
+
+    ###################
+    # USE THE BLOCH BELOW TO BE COMPATIBLE WITH OLDER VERSIONS OF DARTA GENERATORS. EVENTUALLY REMOVE
+    ###################
+    try:
+        sigma_sys=FLAGS.sigma_sys
+    except AttributeError:
+        tf.print(' ####  FLAGS.sigma_sys not found! #### \n Probably loading an older model. Using sigma_sys=0')
+        sigma_sys=0.
+        
+    try:
+        z_bins=FLAGS.z_bins
+    except AttributeError:
+        tf.print(' ####  FLAGS.z_bins not found! #### \n Probably loading an older model. Using 4 z bins')
+        z_bins=[0, 1, 2, 3]
+    try:
+        swap_axes=FLAGS.swap_axes
+    except AttributeError:
+        if FLAGS.im_channels>1:
+            swap_axes=True
+        else:
+            swap_axes=False
+        tf.print(' ####  FLAGS.swap_axes not found! #### \n Probably loading an older model. Set swap_axes=%s' %str(swap_axes))
+    ###################
         
     ##Generate a random seed for a tensorflow random number generator used in the class to prevent issues in parallel processing when in TPU mode
     seed = np.random.randint(0, 2**32 - 1)
