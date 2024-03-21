@@ -524,7 +524,9 @@ class DataSet():
                 def body(i, X, X_save):
                     z = z_bins[i]
                     X_slice = X[:, :, 0, z]
-                    X_save_updated = tf.tensor_scatter_nd_update(X_save, tf.range(1, tf.shape(X_slice)[1] + 1)[:, tf.newaxis], X_slice)
+                    indices = tf.range(1, tf.shape(X_slice)[1] + 1)[:, tf.newaxis]
+                    indices = tf.transpose(indices)
+                    X_save_updated = tf.tensor_scatter_nd_update(X_save, indices, X_slice)
                     spectra_file = tf.strings.join([self.name_spectra_folder, f'processed_spectra_zbin{i}.txt'], separator='/')
                     tf.print(f'Saving processed (noisy and normalised) spectra in {spectra_file}')
                     X_save_string = tf.strings.reduce_join(tf.strings.as_string(X_save_updated), separator=' ', axis=-1)
