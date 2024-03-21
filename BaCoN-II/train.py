@@ -60,6 +60,7 @@ def train_on_batch(IDs, x, y, epoch, model, optimizer, loss, train_acc_metric, t
             proba = tf.nn.softmax(logits)
             prediction = tf.argmax(proba, axis=1)
             train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
+            train_loss_metric.update_state(loss_value)
 
     if TPU:
         strategy.run(step_fn, args=(x, y))
@@ -69,7 +70,6 @@ def train_on_batch(IDs, x, y, epoch, model, optimizer, loss, train_acc_metric, t
         write_indexes(epoch, IDs)
     elif save_indexes and TPU:
         print("CANNOT SAVE INDEXES IN TPU MODE")
-    train_loss_metric.update_state(loss_value)
 
 @tf.function
 def val_step(IDs, x, y, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian=False, n_val_example=10000, batch_size=2500, save_indexes=False, TPU = False, strategy = None):
@@ -84,13 +84,14 @@ def val_step(IDs, x, y, epoch, model, loss, val_loss_metric, val_acc_metric, bay
         val_prediction = tf.argmax(val_proba, axis=1)
         val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
         val_loss_metric.update_state(val_loss_value)
-        if save_indexes:
-            write_indexes(epoch, IDs)
-        return val_loss_value
     if TPU:
-        val_loss_value = strategy.run(val_step_fn, args=(x, y))
+        strategy.run(val_step_fn, args=(x, y))
     else:
-        val_loss_value = val_step_fn(x, y)
+        val_step_fn(x, y)
+    if save_indexes and not TPU:
+        write_indexes(epoch, IDs)
+    elif save_indexes and TPU:
+        print("CANNOT SAVE INDEXES IN TPU MODE")
 
 
 @tf.function
