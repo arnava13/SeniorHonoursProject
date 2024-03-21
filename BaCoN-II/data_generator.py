@@ -107,8 +107,7 @@ class DataSet():
                 seed=1234, TPU=False, strategy = None
                 ):
       
-        tf.print('Data Generator Initialization')
-        tf.print('CWD: ', os.getcwd())
+        tf.print('DataSet Initialization')
         self.one_vs_all=one_vs_all
         self.dataset_balanced=dataset_balanced
         self.sigma_sys=sigma_sys
@@ -667,15 +666,15 @@ def read_partition(FLAGS):
     
     
 
-def create_generators(FLAGS, strategy = None):
+def create_datasets(FLAGS, strategy = None):
     if FLAGS.my_path is not None:
         os.chdir(FLAGS.my_path)
     
     
-    # --------------------  CREATE DATA GENERATORS   --------------------
+    # --------------------  CREATE DATASETS   --------------------
     
     all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS)
-    tf.print('create_generators n_labels: %s' %n_labels) 
+    tf.print('create_datasets n_labels: %s' %n_labels) 
     if (FLAGS.fine_tune or FLAGS.one_vs_all) and FLAGS.dataset_balanced:
         # balanced dataset , 1/2 lcdm , 1/2 rest in FT or one vs all mode
         case=1
@@ -693,8 +692,8 @@ def create_generators(FLAGS, strategy = None):
         if FLAGS.one_vs_all and len(FLAGS.c_1)<len(all_labels)-1:
             n_labels_eff = len(FLAGS.c_1)+len(FLAGS.c_0)
         len_c1=1
-    tf.print('create_generators n_labels_eff: %s' %n_labels_eff)  
-    tf.print('create_generators len_c1: %s' %len_c1)
+    tf.print('create_datasets n_labels_eff: %s' %n_labels_eff)  
+    tf.print('create_datasets len_c1: %s' %len_c1)
         
         
 
@@ -721,7 +720,7 @@ def create_generators(FLAGS, strategy = None):
         n_noisy_samples = FLAGS.n_noisy_samples
     else:
         n_noisy_samples = 1
-    tf.print('--create_generators, train indexes')
+    tf.print('--create_datasets, train indexes')
     if FLAGS.test_mode:
         if case==3:
             batch_size=train_index.shape[0]*n_labels_eff*n_noisy_samples
@@ -739,7 +738,7 @@ def create_generators(FLAGS, strategy = None):
     else:
         train_index_1 = train_index
         tf.print('Train index: %s' %train_index_1)
-    tf.print('--create_generators, validation indexes')
+    tf.print('--create_datasets, validation indexes')
     if not FLAGS.test_mode:
         val_index_1  = cut_sample(val_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=False,len_c1=len_c1)
         tf.print('Val index length: %s'  %val_index_1.shape[0])
@@ -757,30 +756,6 @@ def create_generators(FLAGS, strategy = None):
     if FLAGS.restore:
         partition = read_partition(FLAGS)
         batch_size=FLAGS.batch_size
-        
-    ###################
-    # USE THE BLOCH BELOW TO BE COMPATIBLE WITH OLDER VERSIONS OF DARTA GENERATORS. EVENTUALLY REMOVE
-    ###################
-    try:
-        sigma_sys=FLAGS.sigma_sys
-    except AttributeError:
-        tf.print(' ####  FLAGS.sigma_sys not found! #### \n Probably loading an older model. Using sigma_sys=0')
-        sigma_sys=0.
-        
-    try:
-        z_bins=FLAGS.z_bins
-    except AttributeError:
-        tf.print(' ####  FLAGS.z_bins not found! #### \n Probably loading an older model. Using 4 z bins')
-        z_bins=[0, 1, 2, 3]
-    try:
-        swap_axes=FLAGS.swap_axes
-    except AttributeError:
-        if FLAGS.im_channels>1:
-            swap_axes=True
-        else:
-            swap_axes=False
-        tf.print(' ####  FLAGS.swap_axes not found! #### \n Probably loading an older model. Set swap_axes=%s' %str(swap_axes))
-    ###################
         
     ##Generate a random seed for a tensorflow random number generator used in the class to prevent issues in parallel processing when in TPU mode
     seed = np.random.randint(0, 2**32 - 1)
@@ -827,17 +802,17 @@ def create_generators(FLAGS, strategy = None):
         params['n_noisy_samples']=1
     
     tf.print('\n--DataSet Train')
-    training_generator = DataSet(partition['train'], labels, labels_dict, data_root = FLAGS.DIR, save_indexes=False, seed = seed, strategy=strategy, **params)
+    training_dataset = DataSet(partition['train'], labels, labels_dict, data_root = FLAGS.DIR, save_indexes=False, seed = seed, strategy=strategy, **params)
     tf.print('\n--DataSet Validation')
-    validation_generator = DataSet(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False, seed = seed, strategy = strategy, **params)
+    validation_dataset = DataSet(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False, seed = seed, strategy = strategy, **params)
 
     
-    return training_generator, validation_generator #, params
+    return training_dataset, validation_dataset #, params
 
 
 
 
-def create_test_generator(FLAGS):
+def create_test_dataset(FLAGS):
     
     if FLAGS.my_path is not None:
         tf.print('Changing directory to %s' %FLAGS.my_path)
@@ -861,8 +836,8 @@ def create_test_generator(FLAGS):
         case=3
         n_labels_eff = len(all_labels)
         len_c1=1
-    tf.print('create_generators n_labels_eff: %s' %n_labels_eff)  
-    tf.print('create_generators len_c1: %s' %len_c1)
+    tf.print('create_datasets n_labels_eff: %s' %n_labels_eff)  
+    tf.print('create_datasets len_c1: %s' %len_c1)
 
     #if FLAGS.fine_tune:
     #    n_labels_eff = n_labels*len(FLAGS.c_1)
@@ -946,7 +921,7 @@ def create_test_generator(FLAGS):
     
     seed = np.random.randint(0, 2**32 - 1) 
     
-    test_generator = DataSet(partition_test['test'], 
+    test_dataset = DataSet(partition_test['test'], 
                                    labels, labels_dict, 
                                    data_root=FLAGS.TEST_DIR , 
                                save_indexes = FLAGS.save_indexes,
@@ -956,5 +931,5 @@ def create_test_generator(FLAGS):
 
 
     
-    return test_generator
+    return test_dataset
 
