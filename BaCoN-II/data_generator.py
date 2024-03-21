@@ -125,7 +125,6 @@ class DataSet(): # need to add new variable to 'params' further down
             if self.z_bins.shape[0]!=self.n_channels:
                 raise ValueError('Number of z bins does not match n_channels.')
         
-        self.z_bins = tf.convert_to_tensor(self.z_bins, dtype=tf.int32)
         
         self.data_root=data_root
         self.norm_data_path = self.data_root+norm_data_name
@@ -506,7 +505,8 @@ class DataSet(): # need to add new variable to 'params' further down
                     return [tf.add(i, 1), X, X_save]
                 i = tf.constant(0, dtype=tf.int32)
                 tf.while_loop(condition, body, [i, X, X_save])
-            write_spectra(self.z_bins, X, X_save)
+            zbins = tf.convert_to_tensor(self.z_bins, dtype=tf.int32)
+            write_spectra(zbins, X, X_save)
         if self.swap_axes:
             X = X[:,:,0,:]
             X = X[0,:,:]
