@@ -544,7 +544,7 @@ class DataSet(): # need to add new variable to 'params' further down
 
         def data_generator(ID_list, fname_list):
             for ID, fname in zip(ID_list, fname_list):
-                ID, X, y = self.process_file(ID, fname)
+                ID, X, y = self.process_file(ID, str(fname))
                 yield ID, X, y
 
         
