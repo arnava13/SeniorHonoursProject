@@ -592,7 +592,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 curve_nr_string = curve_nr_string + '.txt'
                 curve_file = os.path.join(self.curves_folder, curve_nr_string)
                 self.curves_loaded[i] = np.loadtxt(curve_file)
-        tf.convert_to_tensor(self.curves_loaded, dtype=tf.float32)
+        self.curves_loaded = tf.convert_to_tensor(self.curves_loaded, dtype=tf.float32)
         
         if self.save_processed_spectra and not self.TPU:
             if not os.path.exists(self.name_spectra_folder):
