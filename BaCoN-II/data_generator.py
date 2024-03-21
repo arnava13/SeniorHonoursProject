@@ -189,7 +189,7 @@ class DataSet(): # need to add new variable to 'params' further down
         print('New data dim: %s' %str(self.dim) )
         print('Final i_max used is %s' %self.i_max)
         print('Final i_min used is %s' %self.i_min)
-        self.all_ks = tf.convert_to_tensor(self.all_ks)
+
             
         
             
