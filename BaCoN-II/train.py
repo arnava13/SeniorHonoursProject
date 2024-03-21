@@ -38,48 +38,36 @@ def write_indexes(self, batch_ID, indices):
             file.write(tf.strings.as_string(idx) + '\n')
 
 @tf.function
-def train_on_batch(IDs, x, y, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian=False, n_train_example=60000, batch_size=2500, save_indexes=False, TPU = False, strategy = None):
+def train_on_batch(IDs, x, y, epoch, model, train_acc_metric, train_loss_metric, save_indexes=False, TPU = False, strategy = None):
     def step_fn(x, y):
-        with tf.GradientTape() as tape:
-            tape.watch(model.trainable_variables)
-            for layer in model.layers:  # Supports frozen weights
-                x = layer(x, training=layer.trainable)
-            logits = x
-            if bayesian:
-                # Assuming model.losses are appropriately scaled
-                kl = tf.reduce_sum(model.losses) / tf.cast(n_train_example, tf.float32)
-                loss_value = loss(y, logits, kl, batch_size=batch_size, TPU=TPU)
-            else:
-                loss_value = loss(y, logits, batch_size=batch_size, TPU=TPU)
-            train_acc_metric.update_state(y, logits)
+        # Compute loss and update metrics
+        loss_value = model.train_on_batch(x, y)
+        logits = model.predict_on_batch(x)
 
-            grads = tape.gradient(loss_value, model.trainable_weights)
-            optimizer.apply_gradients(zip(grads, model.trainable_weights))
-
-            # Compute accuracy
-            proba = tf.nn.softmax(logits)
-            prediction = tf.argmax(proba, axis=1)
-            train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
-            train_loss_metric.update_state(loss_value)
+        # Compute accuracy
+        proba = tf.nn.softmax(logits)
+        prediction = tf.argmax(proba, axis=1)
+        train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
+        train_loss_metric.update_state(loss_value)
 
     if TPU:
         strategy.run(step_fn, args=(x, y))
     else:
         step_fn(x, y)
+
     if save_indexes and not TPU:
         write_indexes(epoch, IDs)
     elif save_indexes and TPU:
         print("CANNOT SAVE INDEXES IN TPU MODE")
 
 @tf.function
-def val_step(IDs, x, y, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian=False, n_val_example=10000, batch_size=2500, save_indexes=False, TPU = False, strategy = None):
+def val_step(IDs, x, y, epoch, model, val_loss_metric, val_acc_metric, save_indexes=False, TPU = False, strategy = None):
     def val_step_fn(x, y):
-        val_logits = model(x, training=False)
-        if bayesian:
-            val_kl = tf.reduce_sum(model.losses) / tf.cast(n_val_example, tf.float32)
-            val_loss_value = loss(y, val_logits, val_kl, TPU=TPU)
-        else:
-            val_loss_value = loss(y, val_logits, TPU=TPU)
+        # Compute loss and update metrics
+        val_loss_value = model.test_on_batch(x, y)
+        val_logits = model.predict_on_batch(x)
+
+        # Compute accuracy
         val_proba = tf.nn.softmax(val_logits)
         val_prediction = tf.argmax(val_proba, axis=1)
         val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
@@ -89,6 +77,7 @@ def val_step(IDs, x, y, epoch, model, loss, val_loss_metric, val_acc_metric, bay
         strategy.run(val_step_fn, args=(x, y))
     else:
         val_step_fn(x, y)
+
     if save_indexes and not TPU:
         write_indexes(epoch, IDs)
     elif save_indexes and TPU:
@@ -118,13 +107,13 @@ def ELBO(y, logits, kl, TPU=False, batch_size=None):
     elbo_loss = neg_log_likelihood + kl
     return elbo_loss
 
-def my_train(model, optimizer, loss,
+def my_train(model,
              epochs, 
              train_dataset, 
              val_dataset, manager, ckpt, train_loss_metric,            
              train_acc_metric, val_loss_metric, val_acc_metric, TPU=False, strategy=None,
              restore=False, patience=100,
-             bayesian=False, save_ckpt=False, decayed_lr_value=None, save_indexes = False
+             save_ckpt=False, save_indexes = False
               ):
   fname_hist = manager.directory+'/hist'
   fname_idxs_train = manager.directory+'/idxs_train.txt'
@@ -179,20 +168,19 @@ def my_train(model, optimizer, loss,
     if TPU:
         for IDs, x_batch_train, y_batch_train in train_dataset.dataset:
             with strategy.scope():
-                train_on_batch(IDs, x_batch_train, y_batch_train, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, n_train_example = n_train_example, batch_size = train_dataset.batch_size, TPU = True, strategy=strategy, save_indexes=save_indexes, bayesian=bayesian)
+                train_on_batch(IDs, x_batch_train, y_batch_train, epoch, model, train_acc_metric, train_loss_metric, TPU = True, strategy=strategy, save_indexes=save_indexes)
         for IDs, x_batch_val, y_batch_val in val_dataset.dataset:
             with strategy.scope():
-                val_step(IDs, x_batch_val, y_batch_val, epoch, model, loss, val_loss_metric, val_acc_metric, n_val_example=n_val_example, batch_size=val_dataset.batch_size, TPU = True, strategy=strategy, save_indexes=save_indexes, bayesian=bayesian)
-        with strategy.scope():
+                val_step(IDs, x_batch_val, y_batch_val, epoch, model, val_loss_metric, val_acc_metric, TPU = True, strategy=strategy, save_indexes=save_indexes)
             train_acc_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_acc_metric.result(), axis=None)
             train_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_loss_metric.result(), axis=None)
             val_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_loss_metric.result(), axis=None)
             val_acc_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_acc_metric.result(), axis=None)
     else:
         for IDs, x_batch_train, y_batch_train in train_dataset.dataset:
-            train_on_batch(IDs, x_batch_train, y_batch_train, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian=bayesian, n_train_example = n_train_example, batch_size= val_dataset.batch_size, TPU=False, save_indexes=save_indexes)
+            train_on_batch(IDs, x_batch_train, y_batch_train, epoch, model, train_acc_metric, train_loss_metric,TPU=False, save_indexes=save_indexes)
         for IDs, x_batch_val, y_batch_val in val_dataset.dataset:
-            val_step(IDs, x_batch_train, y_batch_train, epoch, model, loss, val_loss_metric, val_acc_metric, n_val_example=n_val_example, batch_size=val_dataset.batch_size, TPU=False, save_indexes=save_indexes, bayesian = bayesian)
+            val_step(IDs, x_batch_train, y_batch_train, epoch, model, val_loss_metric, val_acc_metric, TPU=False, save_indexes=save_indexes)
         train_acc_value = train_acc_metric.result()
         train_loss_value = train_loss_metric.result()
         val_loss_value = val_loss_metric.result()
@@ -215,12 +203,7 @@ def my_train(model, optimizer, loss,
         if count==patience:
             print('Max patience reached. ')
             break
-    
-    if epoch == 2:
-        if not os.path.exists('cache/train_cache.tf-data'):
-            print('Train cache not created')
-        if not os.path.exists('cache/val_cache.tf-data'):
-            print('Val cache not created')
+
     
     
     
@@ -553,6 +536,38 @@ def main():
                    int(training_dataset.n_channels))
     print('Input shape %s' %str(input_shape))
     
+    if FLAGS.TPU:
+        with strategy.scope():
+            train_acc_metric = tf.keras.metrics.Accuracy()
+            val_acc_metric = tf.keras.metrics.Accuracy()
+            train_loss_metric = tf.keras.metrics.Mean()
+            val_loss_metric = tf.keras.metrics.Mean()
+    else:
+        train_acc_metric = tf.keras.metrics.Accuracy()
+        val_acc_metric = tf.keras.metrics.Accuracy()
+        train_loss_metric = tf.keras.metrics.Mean()
+        val_loss_metric = tf.keras.metrics.Mean()
+
+    if FLAGS.decay is not None:
+        if FLAGS.TPU:
+            with strategy.scope():
+                lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_dataset), FLAGS.decay)
+                optimizer = tf.keras.optimizers.Adam(lr_fn)
+        else:
+            lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_dataset), FLAGS.decay)
+            optimizer = tf.keras.optimizers.Adam(lr_fn)
+    else:
+        if FLAGS.TPU:
+            with strategy.scope():
+                optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
+        else:
+            optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
+    
+    if FLAGS.bayesian:
+        loss=ELBO
+    else:
+        loss=my_loss
+
     if FLAGS.test_mode:
         drop=0
     else:
@@ -592,7 +607,7 @@ def main():
                         n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
                             )
 
-            model.build(input_shape=input_shape)
+            model.compile(optimizer=optimizer, loss=loss, metrics=[train_acc_metric, train_loss_metric, val_acc_metric, val_loss_metric])
     else:
         model=make_model(     model_name=model_name,
                          drop=drop, 
@@ -608,7 +623,7 @@ def main():
                           bayesian=bayesian, 
                           n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
                              )
-        model.build(input_shape=input_shape)
+        model.compile(optimizer=optimizer, loss=loss, metrics=[train_acc_metric, train_loss_metric, val_acc_metric, val_loss_metric], jit_compile=True)
 
     print(model.summary())
     
@@ -619,21 +634,7 @@ def main():
         else:
             loss_0 = compute_loss(or_training_dataset, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
         print('Loss before loading weights/ %s\n' %loss_0.numpy())
-    
-    if FLAGS.decay is not None:
-        if FLAGS.TPU:
-            with strategy.scope():
-                lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_dataset), FLAGS.decay)
-                optimizer = tf.keras.optimizers.Adam(lr_fn)
-        else:
-            lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_dataset), FLAGS.decay)
-            optimizer = tf.keras.optimizers.Adam(lr_fn)
-    else:
-        if FLAGS.TPU:
-            with strategy.scope():
-                optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
-        else:
-            optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
+
     
     if FLAGS.restore and FLAGS.decay is not None:
         decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / len(training_dataset))
@@ -689,12 +690,14 @@ def main():
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        trainable=FLAGS.trainable, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
+                    model.compile(optimizer=optimizer, loss=loss, metrics=[train_acc_metric, train_loss_metric, val_acc_metric, val_loss_metric])
             else:
                 model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
                                        n_out_labels=training_dataset.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        trainable=FLAGS.trainable, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
+                model.compile(optimizer=optimizer, loss=loss, metrics=[train_acc_metric, train_loss_metric, val_acc_metric, val_loss_metric], jit_compile=True)
         else:
             if FLAGS.TPU:
                 with strategy.scope():
@@ -702,12 +705,13 @@ def main():
                                        n_out_labels=training_dataset.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm)
+                    model.compile(optimizer=optimizer, loss=loss, metrics=[train_acc_metric, train_loss_metric, val_acc_metric, val_loss_metric])
             else: 
                 model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
                                        n_out_labels=training_dataset.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm)
-        model.build(input_shape=input_shape)
+                model.compile(optimizer=optimizer, loss=loss, metrics=[train_acc_metric, train_loss_metric, val_acc_metric, val_loss_metric], jit_compile=True)
         print(model.summary())
 
         ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
@@ -722,20 +726,7 @@ def main():
         
     manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
                                         max_to_keep=2, 
-                                        checkpoint_name=ckpt_name)
-
-    if FLAGS.TPU:
-        with strategy.scope():
-            train_acc_metric = tf.keras.metrics.Accuracy()
-            val_acc_metric = tf.keras.metrics.Accuracy()
-            train_loss_metric = tf.keras.metrics.Mean()
-            val_loss_metric = tf.keras.metrics.Mean()
-    else:
-        train_acc_metric = tf.keras.metrics.Accuracy()
-        val_acc_metric = tf.keras.metrics.Accuracy()
-        train_loss_metric = tf.keras.metrics.Mean()
-        val_loss_metric = tf.keras.metrics.Mean()
-    
+                                        checkpoint_name=ckpt_name)    
     
     if FLAGS.GPU:
         device_name = tf.test.gpu_device_name()
@@ -746,23 +737,18 @@ def main():
     
     
     print('------------ TRAINING ------------\n')
-    if FLAGS.bayesian:
-        loss=ELBO
-    else:
-        loss=my_loss
-    
-    
+
     #print('Model n_classes : %s ' %n_classes)
     print('Features shape:', training_dataset.xshape)
     print('Labels shape:', training_dataset.yshape)
    
-    model, history = my_train(model, optimizer, loss,
+    model, history = my_train(model,
                 FLAGS.n_epochs, 
                 training_dataset, 
                 validation_dataset, manager, ckpt, train_loss_metric,
                 train_acc_metric, val_loss_metric, val_acc_metric, TPU=FLAGS.TPU,
                 strategy=strategy, patience=FLAGS.patience, restore=FLAGS.restore, 
-                bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None, save_indexes = FLAGS.save_indexes #not(FLAGS.test_mode)
+                save_ckpt=FLAGS.save_ckpt, save_indexes = FLAGS.save_indexes #not(FLAGS.test_mode)
             )
     
     #Delete cached datasets
