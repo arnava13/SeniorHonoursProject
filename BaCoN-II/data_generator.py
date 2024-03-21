@@ -366,6 +366,8 @@ class DataSet(): # need to add new variable to 'params' further down
                 if self.Verbose:
                     print('Noise realization %s' %i_noise)
                 # add noise if selected
+                if type(self.norm_data) is not np.ndarray:
+                    self.norm_data = self.norm_data.numpy()
                 if self.add_cosvar:
                     noise_scale = generate_noise(k, self.norm_data[:, self.z_bins], sys_scaled=self.sys_scaled,
                                                     sys_factor=self.sys_factor,sys_max=self.sys_max,
