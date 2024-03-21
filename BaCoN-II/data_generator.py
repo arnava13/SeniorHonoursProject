@@ -619,7 +619,8 @@ class DataSet():
             dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
             if self.shuffle:
                 dataset = dataset.shuffle(buffer_size=len(list_IDs))
-            dataset = dataset.batch(self.batch_size)
+            global_batchsize = tf.cast(self.batch_size, dtype=tf.int64)
+            dataset = dataset.batch(global_batchsize)
             dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
        
         self.xshape = ((self.batch_size * self.n_batches).numpy(),) + tuple(self.xshape_file)
