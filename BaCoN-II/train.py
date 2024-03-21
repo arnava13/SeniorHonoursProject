@@ -38,27 +38,33 @@ def write_indexes(self, batch_ID, indices):
             file.write(tf.strings.as_string(idx) + '\n')
 
 @tf.function
-def train_on_batch(IDs, x, y, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian=False, n_train_example=60000, batch_size=2500, save_indexes=False, TPU = False):
-    with tf.GradientTape() as tape:
-        tape.watch(model.trainable_variables)
-        for layer in model.layers:  # Supports frozen weights
-            x = layer(x, training=layer.trainable)
-        logits = x
-        if bayesian:
-            # Assuming model.losses are appropriately scaled
-            kl = tf.reduce_sum(model.losses) / tf.cast(n_train_example, tf.float32)
-            loss_value = loss(y, logits, kl, batch_size=batch_size, TPU=TPU)
-        else:
-            loss_value = loss(y, logits, batch_size=batch_size, TPU=TPU)
-        train_acc_metric.update_state(y, logits)
+def train_on_batch(IDs, x, y, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian=False, n_train_example=60000, batch_size=2500, save_indexes=False, TPU = False, strategy = None):
+    def step_fn(x, y):
+        with tf.GradientTape() as tape:
+            tape.watch(model.trainable_variables)
+            for layer in model.layers:  # Supports frozen weights
+                x = layer(x, training=layer.trainable)
+            logits = x
+            if bayesian:
+                # Assuming model.losses are appropriately scaled
+                kl = tf.reduce_sum(model.losses) / tf.cast(n_train_example, tf.float32)
+                loss_value = loss(y, logits, kl, batch_size=batch_size, TPU=TPU)
+            else:
+                loss_value = loss(y, logits, batch_size=batch_size, TPU=TPU)
+            train_acc_metric.update_state(y, logits)
 
-        grads = tape.gradient(loss_value, model.trainable_weights)
-        optimizer.apply_gradients(zip(grads, model.trainable_weights))
+            grads = tape.gradient(loss_value, model.trainable_weights)
+            optimizer.apply_gradients(zip(grads, model.trainable_weights))
 
-        # Compute accuracy
-        proba = tf.nn.softmax(logits)
-        prediction = tf.argmax(proba, axis=1)
-        train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)        
+            # Compute accuracy
+            proba = tf.nn.softmax(logits)
+            prediction = tf.argmax(proba, axis=1)
+            train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
+
+    if TPU:
+        strategy.run(step_fn, args=(x, y))
+    else:
+        step_fn(x, y)
     if save_indexes and not TPU:
         write_indexes(epoch, IDs)
     elif save_indexes and TPU:
@@ -66,20 +72,25 @@ def train_on_batch(IDs, x, y, epoch, model, optimizer, loss, train_acc_metric, t
     train_loss_metric.update_state(loss_value)
 
 @tf.function
-def val_step(IDs, x, y, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian=False, n_val_example=10000, batch_size=2500, save_indexes=False, TPU = False):
-    val_logits = model(x, training=False)
-    if bayesian:
-       val_kl = tf.reduce_sum(model.losses)/ tf.cast(n_val_example, tf.float32)
-       val_loss_value = loss(y, val_logits, val_kl, TPU = TPU)
+def val_step(IDs, x, y, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian=False, n_val_example=10000, batch_size=2500, save_indexes=False, TPU = False, strategy = None):
+    def val_step_fn(x, y):
+        val_logits = model(x, training=False)
+        if bayesian:
+            val_kl = tf.reduce_sum(model.losses) / tf.cast(n_val_example, tf.float32)
+            val_loss_value = loss(y, val_logits, val_kl, TPU=TPU)
+        else:
+            val_loss_value = loss(y, val_logits, TPU=TPU)
+        val_proba = tf.nn.softmax(val_logits)
+        val_prediction = tf.argmax(val_proba, axis=1)
+        val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
+        val_loss_metric.update_state(val_loss_value)
+        if save_indexes:
+            write_indexes(epoch, IDs)
+        return val_loss_value
+    if TPU:
+        val_loss_value = strategy.run(val_step_fn, args=(x, y))
     else:
-         val_loss_value = loss(y, val_logits, TPU = TPU)
-    val_proba = tf.nn.softmax(val_logits)
-    val_prediction = tf.argmax(val_proba, axis=1)
-    val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
-    val_loss_metric.update_state(val_loss_value)
-    if save_indexes:
-        val_dataset.write_indexes(epoch, IDs)
-    return val_loss_value
+        val_loss_value = val_step_fn(x, y)
 
 
 @tf.function
@@ -167,10 +178,10 @@ def my_train(model, optimizer, loss,
         
         for IDs, x_batch_train, y_batch_train in train_dataset.dataset:
             with strategy.scope():
-                strategy.run(train_on_batch, args=(IDs, x_batch_train, y_batch_train, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, train_dataset.batch_size), kwargs={'TPU': True})
+                train_on_batch(IDs, x_batch_train, y_batch_train, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, train_dataset.batch_size, TPU = True, strategy=strategy, save_indexes=save_indexes)
         for IDs, x_batch_val, y_batch_val in val_dataset.dataset:
             with strategy.scope():
-                strategy.run(val_step, args=(IDs, x_batch_val, y_batch_val, epoch, model, loss, val_acc_metric, val_loss_metric, bayesian, n_val_example, val_dataset.batch_size),  kwargs={'TPU': True})
+                val_step(IDs, x_batch_val, y_batch_val, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian, n_val_example, val_dataset.batch_size, TPU = True, strategy=strategy, save_indexes=save_indexes)
         with strategy.scope():
             train_acc_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_acc_metric.result(), axis=None)
             train_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_loss_metric.result(), axis=None)
@@ -178,9 +189,9 @@ def my_train(model, optimizer, loss,
             val_acc_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_acc_metric.result(), axis=None)
     else:
         for IDs, x_batch_train, y_batch_train in train_dataset.dataset:
-            train_on_batch(IDs, x_batch_train, y_batch_train, train_dataset, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, val_dataset.batch_size, TPU=False)
+            train_on_batch(IDs, x_batch_train, y_batch_train, train_dataset, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, val_dataset.batch_size, TPU=False, save_indexes=save_indexes)
         for IDs, x_batch_val, y_batch_val in val_dataset.dataset:
-            val_step(IDs, x_batch_train, y_batch_train, train_dataset, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian, n_val_example, val_dataset.batch_size, TPU=False)
+            val_step(IDs, x_batch_train, y_batch_train, train_dataset, epoch, model, loss, val_loss_metric, val_acc_metric, bayesian, n_val_example, val_dataset.batch_size, TPU=False, save_indexes=save_indexes)
         train_acc_value = train_acc_metric.result()
         train_loss_value = train_loss_metric.result()
         val_loss_value = val_loss_metric.result()
