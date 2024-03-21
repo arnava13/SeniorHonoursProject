@@ -16,7 +16,7 @@ from utils import cut_sample, get_all_indexes, get_fname_list, find_nearest
 
 
 
-def generate_noise(k, P, pi
+def generate_noise(k, P, pi,
                    add_shot=True,
                    add_sys=True,
                    add_cosvar=True,
