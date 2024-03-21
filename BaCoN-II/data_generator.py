@@ -541,9 +541,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             X = X[0,:,:]
         y = tf.one_hot(y, depth=self.n_classes_out)
 
-        if ID == 1:
-            self.xshape_file = X.shape
-            self.yshape_file = y.shape
+        self.xshape_file = X.shape
+        self.yshape_file = y.shape
+        
         if self.Verbose:
             tf.print('Dimension of data after normalising: %s' %str(X.shape))
             tf.print('Dimension of labels after one-hot encoding: %s' %str(y.shape))
