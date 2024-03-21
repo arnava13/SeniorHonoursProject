@@ -545,8 +545,6 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 if self.Verbose:
                     tf.print('axes not swapped')
                     tf.print('Dimension of NORM data:', tf.shape(divisor))
-        self.xshape = X.shape
-        self.yshape = y.shape
         if self.save_processed_spectra and not self.TPU:
             X_save_init = tf.zeros((self.batch_size * self.n_batches + 1, len(self.all_ks) + 1), dtype=tf.float32)
             y_expanded = tf.expand_dims(tf.concat([[0], y], axis=0), axis=-1)
@@ -575,6 +573,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             X = X[:,:,0,:]
             X = X[0,:,:]
         y = tf.one_hot(y, depth=self.n_classes_out)
+
+        self.xshape = X.shape
+        self.yshape = y.shape
 
         return ID, X, y
     
