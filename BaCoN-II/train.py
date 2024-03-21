@@ -150,9 +150,6 @@ def my_train(model,
   n_val_example=val_dataset.batch_size*val_dataset.n_batches
   n_train_example=train_dataset.batch_size*train_dataset.n_batches
   count = 0
-  if not TPU:
-      train_dataset.dataset = train_dataset.dataset.cache('cache/train_cache.tf-data')
-      val_dataset.dataset = val_dataset.dataset.cache('cache/val_cache.tf-data')
   for _ in train_dataset.dataset:
         pass
   for _ in val_dataset.dataset:
