@@ -574,8 +574,8 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             X = X[0,:,:]
         y = tf.one_hot(y, depth=self.n_classes_out)
 
-        self.xshape = X.shape
-        self.yshape = y.shape
+        self.xshape_file = X.shape.numpy()
+        self.yshape_file = y.shape.numpy()
 
         return ID, X, y
     
@@ -651,7 +651,11 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
             dataset = dataset.batch(global_batchsize)
             dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-    
+
+        self.xshape = ((self.batch_size * self.n_batches).numpy(),) + tuple(self.x_shape_file)
+        self.yshape = ((self.batch_size * self.n_batches).numpy(),) + tuple(self.y_shape_file)
+
+        
         return dataset
     
     def write_indexes(self, batch_ID, indices):
