@@ -547,12 +547,15 @@ class DataSet(): # need to add new variable to 'params' further down
                 ID, X, y = self.process_file(ID, fname)
                 yield ID, X, y
 
+        
+
+        n_ks = tf.constant(len(self.all_ks), dtype=tf.int32)
+
         if self.swap_axes:
             x_shape = (1, n_ks, 1, self.n_channels)
         else:
             x_shape = (1, n_ks, self.n_channels, 1)
-
-        n_ks = tf.constant(len(self.all_ks), dtype=tf.int32)
+            
         dataset = tf.data.Dataset.from_generator(data_generator,
         output_signature=(
                 tf.TensorSpec(shape=(), dtype=tf.int32),
