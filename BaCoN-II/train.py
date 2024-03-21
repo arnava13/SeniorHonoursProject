@@ -488,6 +488,9 @@ def main():
         training_generator, validation_generator = create_generators(FLAGS, strategy=strategy)
     else:
         training_generator, validation_generator = create_generators(FLAGS)
+      
+    training_generator.dataset = training_generator.dataset.cache('/tmp/train_cache.tf-data')
+    validation_generator.dataset = validation_generator.dataset.cache('/tmp/val_cache.tf-data')
     
     if FLAGS.fine_tune:
         print('\n------------ CREATING ORIGINAL DATA GENERATORS FOR CHECK------------')
@@ -730,17 +733,21 @@ def main():
             )
     
     #Delete cached datasets
-    if os.path.exists('/tmp/train_cache.tf-data'):
+    try:
         os.remove('/tmp/train_cache.tf-data')
-        print(f"Training cache file deleted.")
-    else:
-        print(f"Training cache file does not exist.")
+        print(f"Train cache file deleted.")
+    except FileNotFoundError:
+        print(f"Train cache file does not exist.")
+    except Exception as e:
+        print(f"Error deleting train cache file.")
     
-    if os.path.exists('/tmp/val_cache.tf-data'):
+    try:
         os.remove('/tmp/val_cache.tf-data')
-        print(f"Validation cache file deleted.")
-    else:
-        print(f"Validation cache file does not exist.")
+        print(f"Val cache file deleted.")
+    except FileNotFoundError:
+        print(f"Val cache file does not exist.")
+    except Exception as e:
+        print(f"Error deleting val cache file.")
 
 
     hist_path =  out_path+'/hist.png'
