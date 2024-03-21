@@ -515,8 +515,8 @@ class DataSet():
             X_save = tf.zeros((self.batch_size + 1, tf.size(self.all_ks) + 1), dtype=tf.float32)
             indices_y = tf.stack([tf.range(1, self.batch_size + 1), tf.zeros(self.batch_size, dtype=tf.int32)], axis=1)
             indices_ks = tf.stack([tf.zeros(tf.size(self.all_ks), dtype=tf.int32), tf.range(1, tf.size(self.all_ks) + 1)], axis=1)
-            X_save = tf.tensor_scatter_nd_update(X_save, indices_y, updates=y)
-            X_save = tf.tensor_scatter_nd_update(X_save, indices_ks, updates=self.all_ks)
+            X_save = tf.tensor_scatter_nd_update(X_save, indices_y, updates=tf.cast(y, tf.float32))
+            X_save = tf.tensor_scatter_nd_update(X_save, indices_ks, updates=tf.cast(self.all_ks, tf.float32))
             def write_spectra(z_bins, X, X_save):
                 loop_len = tf.size(z_bins)
                 def condition(i, X, X_save):
