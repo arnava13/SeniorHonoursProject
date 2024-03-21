@@ -512,11 +512,14 @@ class DataSet():
                     tf.print('axes not swapped')
                     tf.print('Dimension of NORM data:', tf.shape(divisor))
         if self.save_processed_spectra and not self.TPU:
-            X_save_init = tf.zeros((self.batch_size * self.n_batches + 1, len(self.all_ks) + 1), dtype=tf.float32)
-            y_expanded = tf.expand_dims(tf.concat([[0], y], axis=0), axis=-1)
-            all_ks_expanded = tf.expand_dims(tf.concat([[0], self.all_ks], axis=0), axis=0)
-            X_save = tf.tensor_scatter_nd_update(X_save_init, tf.range(tf.shape(y_expanded)[0])[:, tf.newaxis], y_expanded)
-            X_save = tf.tensor_scatter_nd_update(X_save, tf.range(tf.shape(all_ks_expanded)[0])[tf.newaxis, :], all_ks_expanded)
+            X_save = tf.zeros((self.batch_size + 1, tf.size(self.all_ks) + 1), dtype=tf.float32)
+
+            X_save = tf.tensor_scatter_nd_update(X_save, 
+                                                indices=[[i, 0] for i in range(1, self.batch_size + 1)], 
+                                                updates=y)
+            X_save = tf.tensor_scatter_nd_update(X_save, 
+                                                indices=[[0, i] for i in range(1, tf.size(self.all_ks) + 1)], 
+                                                updates=self.all_ks)
             def write_spectra(z_bins, X, X_save):
                 loop_len = tf.size(z_bins)
                 def condition(i, X, X_save):
