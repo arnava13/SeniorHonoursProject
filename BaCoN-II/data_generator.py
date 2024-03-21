@@ -144,7 +144,7 @@ class DataSet(): # need to add new variable to 'params' further down
             print('Closest k to k_max is %s' %k_max_res)
 
         elif self.i_max is not None:
-            self.k_max = tf.gather(self.all_ks, self.i_max)
+            self.k_max = self.all_ks[i_max]
             print('Specified i_max is %s' %self.i_max)
             print('Corresponding k_max is %s' %self.k_max)
             
@@ -157,7 +157,7 @@ class DataSet(): # need to add new variable to 'params' further down
 
         else:
             self.i_max = -1
-            print('No max in k. Using all ks . k_max=%s' %tf.gather(self.all_ks, self.i_max))
+            print('No max in k. Using all ks . k_max=%s' %self.all_ks[i_max])
 
         # Select points from k_min or i_min
 
@@ -168,7 +168,7 @@ class DataSet(): # need to add new variable to 'params' further down
             print('Closest k to k_min is %s' %k_min_res)
 
         elif self.i_min is not None:
-            self.k_min = tf.gather(self.all_ks, self.i_min)
+            self.k_min = self.all_ks[i_min]
             print('Specified i_min is %s' %self.i_min)
             print('Corresponding k_min is %s' %self.k_min)
             
@@ -181,7 +181,7 @@ class DataSet(): # need to add new variable to 'params' further down
 
         else:
             self.i_min = 0
-            print('No min in k. Using all ks . k_min=%s' %tf.gather(self.all_ks, self.i_min))
+            print('No min in k. Using all ks . k_min=%s' %self.all_ks[i_min])
 
         self.all_ks = self.all_ks[self.i_min:self.i_max]
         self.dim = (self.all_ks.shape[0], self.dim[1])
@@ -453,6 +453,7 @@ class DataSet(): # need to add new variable to 'params' further down
                 print('Encoding: %s' % encoding)
             
             y = encoding
+        ID = tf.convert_to_tensor(ID, dtype=tf.int32)
         X = tf.convert_to_tensor(X, dtype=tf.float32)
         y = tf.convert_to_tensor(y, dtype=tf.int32)    
 
@@ -527,7 +528,7 @@ class DataSet(): # need to add new variable to 'params' further down
                     ID_list.append(ID)  
         else:
              fname_list = get_fname_list(self.c_0, self.c_1, list_IDs, self.data_root,  list_IDs_dict, dataset_balanced=self.dataset_balanced,)
-             ID_list = [int(fname.split('.')[0].split('/')[-2]+'/'+fname.split('.')[0].split('/')[-1]) for fname in fname_list]
+             ID_list = [int(fname.split('/')[-1].split('.')[0]) for fname in fname_list]
         if self.fine_tune and self.Verbose :
             print(fname_list)
             
@@ -541,13 +542,20 @@ class DataSet(): # need to add new variable to 'params' further down
             print("list_IDs_dict")
             print(list_IDs_dict)
 
-        data_list = []
+        def data_generator(ID_list, fname_list):
+            for ID, fname in zip(ID_list, fname_list):
+                ID, X, y = self.process_file(ID, fname)
+                yield ID, X, y
 
-        for ID, fname in zip(ID_list, fname_list):
-            ID, X, y = self.process_file(ID, fname)
-            data_list.append((ID, X, y))
-
-        dataset = tf.data.Dataset.from_tensor_slices(data_list)
+        n_ks = tf.constant(len(self.all_ks), dtype=tf.int32)
+        dataset = tf.data.Dataset.from_generator(data_generator,
+        output_signature=(
+                tf.TensorSpec(shape=(), dtype=tf.int32),
+                tf.TensorSpec(shape=(n_ks, self.n_channels), dtype=tf.float32),
+                tf.TensorSpec(shape=(), dtype=tf.int32)
+            ),
+            args=(ID_list, fname_list)
+        )
 
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
         
