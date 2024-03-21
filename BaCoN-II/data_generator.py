@@ -52,7 +52,7 @@ def generate_noise(k, P, pi,
     return tf.cast(sigma_noise, dtype=tf.float32)
 
 class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
-    #@tf.function
+    @tf.function
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
         with tf.device('/cpu:0'):
             file_content = tf.io.read_file(file_path)
