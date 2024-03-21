@@ -104,6 +104,7 @@ class DataSet(): # need to add new variable to 'params' further down
         self.seed = seed
         self.rng = tf.random.Generator.from_seed(self.seed)
         self.swap_axes = swap_axes 
+        self.TPU = TPU
         
         self.k_max=k_max
         self.k_min=k_min
