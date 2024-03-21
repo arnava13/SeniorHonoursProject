@@ -51,7 +51,7 @@ def generate_noise(k, P, pi,
      
     return tf.cast(sigma_noise, dtype=tf.float32)
 
-class DataGenerator(tf.compat.v2.keras.utils.Sequence): 
+class DataSet(): 
     """
     @tf.function
     def read_file(self, file_path, *, column_indices=None, dtype=tf.float32):
@@ -826,10 +826,10 @@ def create_generators(FLAGS, strategy = None):
     if not params['add_noise']:
         params['n_noisy_samples']=1
     
-    tf.print('\n--DataGenerator Train')
-    training_generator = DataGenerator(partition['train'], labels, labels_dict, data_root = FLAGS.DIR, save_indexes=False, seed = seed, strategy=strategy, **params)
-    tf.print('\n--DataGenerator Validation')
-    validation_generator = DataGenerator(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False, seed = seed, strategy = strategy, **params)
+    tf.print('\n--DataSet Train')
+    training_generator = DataSet(partition['train'], labels, labels_dict, data_root = FLAGS.DIR, save_indexes=False, seed = seed, strategy=strategy, **params)
+    tf.print('\n--DataSet Validation')
+    validation_generator = DataSet(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False, seed = seed, strategy = strategy, **params)
 
     
     return training_generator, validation_generator #, params
@@ -946,7 +946,7 @@ def create_test_generator(FLAGS):
     
     seed = np.random.randint(0, 2**32 - 1) 
     
-    test_generator = DataGenerator(partition_test['test'], 
+    test_generator = DataSet(partition_test['test'], 
                                    labels, labels_dict, 
                                    data_root=FLAGS.TEST_DIR , 
                                save_indexes = FLAGS.save_indexes,
