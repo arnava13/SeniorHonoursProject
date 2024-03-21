@@ -613,6 +613,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
                 global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
                 dataset = dataset.batch(global_batchsize)
                 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+                dataset.cache()
                 dataset = self.strategy.experimental_distribute_dataset(dataset)
         else:
             dataset = dataset.map(self.process_spectra, num_parallel_calls=tf.data.experimental.AUTOTUNE)

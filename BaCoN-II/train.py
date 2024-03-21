@@ -143,12 +143,12 @@ def my_train(model, optimizer, loss,
   n_val_example=val_generator.batch_size*val_generator.n_batches
   n_train_example=train_generator.batch_size*train_generator.n_batches
   count = 0
-  if TPU:
-    train_generator.dataset = train_generator.dataset.cache()
-    val_generator.dataset = val_generator.dataset.cache()
-    for _ in train_generator.dataset:
+  if not TPU:
+      train_generator.dataset = train_generator.dataset.cache('cache/train_cache.tf-data')
+      val_generator.dataset = val_generator.dataset.cache('cache/val_cache.tf-data')
+  for _ in train_generator.dataset:
         pass
-    for _ in val_generator.dataset:
+  for _ in val_generator.dataset:
         pass
   for epoch in range(epochs):
     print("Epoch %d" % (epoch,))
@@ -749,18 +749,15 @@ def main():
             )
     
     #Delete cached datasets
-    """
-    try:
-        shutil.rmtree('cache')
-        print(f"Cache folder deleted.")
-    except FileNotFoundError:
-        print(f"Cache folder does not exist.")
-    except Exception as e:
-        print(f"Error deleting cache folder.")
-    """
+    if not FLAGS.TPU:
+        try:
+            shutil.rmtree('cache')
+            print(f"Cache folder deleted.")
+        except FileNotFoundError:
+            print(f"Cache folder does not exist.")
+        except Exception as e:
+            print(f"Error deleting cache folder.")
     
-
-
     hist_path =  out_path+'/hist.png'
     if FLAGS.fine_tune:
         if FLAGS.test_mode:
