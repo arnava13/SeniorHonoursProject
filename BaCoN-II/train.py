@@ -500,8 +500,8 @@ def main():
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     
-    training_generator.dataset = training_generator.dataset.cache('cache/train_cache.tf-data')
-    validation_generator.dataset = validation_generator.dataset.cache('cache/val_cache.tf-data')
+    training_generator.dataset = training_generator.dataset.cache()
+    validation_generator.dataset = validation_generator.dataset.cache()
     
     if FLAGS.fine_tune:
         print('\n------------ CREATING ORIGINAL DATA GENERATORS FOR CHECK------------')
@@ -744,6 +744,7 @@ def main():
             )
     
     #Delete cached datasets
+    """
     try:
         shutil.rmtree('cache')
         print(f"Cache folder deleted.")
@@ -751,6 +752,7 @@ def main():
         print(f"Cache folder does not exist.")
     except Exception as e:
         print(f"Error deleting cache folder.")
+    """
     
 
 
