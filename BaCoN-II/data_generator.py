@@ -578,6 +578,15 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         return ID, X, y
     
+    @tf.function
+    def load_sys(self, i):
+        curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
+        curve_nr_string = tf.strings.as_string(curve_random_nr)
+        curve_nr_string = tf.strings.join([curve_nr_string, '.txt'])
+        curve_file = tf.strings.join([self.curves_folder, curve_nr_string], separator='/')
+        curve_dat = self.read_file(curve_file, dtype=tf.float32)
+        return curve_dat
+
     def __data_generation(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
         if not self.fine_tune and not self.one_vs_all:
@@ -609,15 +618,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         # Load n_noisy_samples random sys noise curves
         if self.add_noise and self.add_sys:
-            self.curves_loaded = np.zeros((self.n_noisy_samples_numpy, self.original_k_len, self.n_channels +1), dtype=np.float32)
-            for i in range(self.n_noisy_samples_numpy):
-                curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-                curve_nr_string = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
-                curve_nr_string = curve_nr_string + '.txt'
-                curve_file = os.path.join(self.curves_folder, curve_nr_string)
-                curve_dat = np.loadtxt(curve_file)
-                self.curves_loaded[i] = curve_dat
-            self.curves_loaded = tf.convert_to_tensor(self.curves_loaded, dtype=tf.float32)
+            self.curves_loaded = tf.map_fn(self.load_sys, tf.range(self.n_noisy_samples))
         
         if self.save_processed_spectra and not self.TPU:
             if not tf.io.gfile.exists(self.name_spectra_folder):
