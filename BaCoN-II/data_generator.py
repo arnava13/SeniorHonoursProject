@@ -373,38 +373,32 @@ class DataSet(): # need to add new variable to 'params' further down
                     P_noisy = P_noisy + noise_cosvar
 
                 if self.add_sys:
-                    curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-
-                curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
-                curves_loaded = np.loadtxt(curve_file)
-               
-                noise_sys = tf.convert_to_tensor(curves_loaded[:, 1:], dtype=tf.float32)
-                k_sys = tf.convert_to_tensor(curves_loaded[:, 0], dtype=tf.float32)
-
-                shape_match = tf.reduce_all(tf.equal(tf.shape(k), tf.shape(k_sys)))
-                match = tf.cond(shape_match, lambda: tf.reduce_all(tf.equal(k, k_sys)), lambda: tf.constant(False))
-            
-                if not match:
-                    print('ERROR: k-values in spectrum and theory-error curve file not identical')
-
-                if self.sample_pace!=1:
-                    noise_sys = noise_sys[0::self.sample_pace, :]
-                    k_sys = k_sys[0::self.sample_pace]
-                noise_sys, k_sys = noise_sys[self.i_min:self.i_max], k_sys[self.i_min:self.i_max]
-
-                # rescale noise_sys curves according to error (10% default from production curves), 
-                # rescale by Gaussian with sigma = 1
-                # multiply with normalisation spectrum
-                noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * self.norm_data[:,self.z_bins]
-
-                if self.rescale_curves == 'uniform':
-                    noise_sys = noise_sys * self.rng.uniform(shape=noise_sys.shape, minval=0, maxval=1, dtype=tf.float32)
-                if self.rescale_curves == 'gaussian':
-                    noise_sys = noise_sys * self.rng.normal(shape=noise_sys.shape, mean=0, stddev=1, dtype=tf.float32)
-
-                P_noisy = P_noisy + noise_sys
+                    curve_random_nr = self.rng.uniform(shape=[], minval=0, maxval=1000, dtype=tf.int32)
+                    curve_random_nr = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
+                    curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
+                    curves_loaded = np.loadtxt(curve_file)
+                    noise_sys, k_sys = curves_loaded[:, 1:], curves_loaded[:, 0]
 
 
+                    if self.sample_pace!=1:
+                        noise_sys = noise_sys[0::self.sample_pace, :]
+                        k_sys = k_sys[0::self.sample_pace]
+                    noise_sys, k_sys = noise_sys[self.i_min:self.i_max], k_sys[self.i_min:self.i_max]
+                    if (k.all() != k_sys.all()):
+                        print('ERROR: k-values in spectrum and theory-error curve file not identical')
+
+                    # rescale noise_sys curves according to error (10% default from production curves), 
+                    # rescale by Gaussian with sigma = 1
+                    # multiply with normalisation spectrum
+                    noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * self.norm_data[:,self.z_bins]
+
+                    if self.rescale_curves == 'uniform':
+                        noise_sys = noise_sys * np.random.uniform(0,1)
+                    if self.rescale_curves == 'gaussian':
+                        noise_sys = noise_sys * np.random.normal(loc=0, scale = 1)
+
+                    P_noisy = P_noisy + noise_sys
+                    
                 if self.add_shot:
                     noise_scale = generate_noise(k,self.norm_data[: , self.z_bins], self.pi, sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
                     noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
