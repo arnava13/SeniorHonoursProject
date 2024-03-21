@@ -191,7 +191,7 @@ def my_train(model, optimizer, loss,
             print('Max patience reached. ')
             break
     
-    if epoch == 0:
+    if epoch == 2:
         if not os.path.exists('cache/train_cache.tf-data'):
             print('Train cache not created')
         if not os.path.exists('cache/val_cache.tf-data'):
