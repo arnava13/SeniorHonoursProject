@@ -489,16 +489,16 @@ def main():
     else:
         training_generator, validation_generator = create_generators(FLAGS)
 
-    cache_dir = '/cache'
+    cache_dir = 'cache'
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     
-    training_generator.dataset = training_generator.dataset.cache('/cache/train_cache.tf-data')
-    validation_generator.dataset = validation_generator.dataset.cache('/cache/val_cache.tf-data')
+    training_generator.dataset = training_generator.dataset.cache('cache/train_cache.tf-data')
+    validation_generator.dataset = validation_generator.dataset.cache('cache/val_cache.tf-data')
 
-    if not os.path.exists('/cache/train_cache.tf-data'):
+    if not os.path.exists('cache/train_cache.tf-data'):
         print('Train cache not created')
-    if not os.path.exists('/cache/val_cache.tf-data'):
+    if not os.path.exists('cache/val_cache.tf-data'):
         print('Val cache not created')
     
     if FLAGS.fine_tune:
@@ -743,7 +743,7 @@ def main():
     
     #Delete cached datasets
     try:
-        os.remove('/cache/train_cache.tf-data')
+        os.remove('cache/train_cache.tf-data')
         print(f"Train cache file deleted.")
     except FileNotFoundError:
         print(f"Train cache file does not exist.")
@@ -751,7 +751,7 @@ def main():
         print(f"Error deleting train cache file.")
     
     try:
-        os.remove('/cache/val_cache.tf-data')
+        os.remove('cache/val_cache.tf-data')
         print(f"Val cache file deleted.")
     except FileNotFoundError:
         print(f"Val cache file does not exist.")
