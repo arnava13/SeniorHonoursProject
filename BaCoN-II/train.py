@@ -151,11 +151,13 @@ def my_train(model, optimizer, loss,
     val_acc_metric.reset_states()
     epoch = tf.constant(epoch, dtype=tf.int32)
     if TPU:
-        with strategy.scope():
-            for IDs, x_batch_train, y_batch_train in train_generator.dataset:
+        for IDs, x_batch_train, y_batch_train in train_generator.dataset:
+            with strategy.scope():
                 strategy.run(train_on_batch, args=(IDs, x_batch_train, y_batch_train, train_generator, epoch, model, optimizer, loss, train_acc_metric, train_loss_metric, bayesian, n_train_example, train_generator.batch_size), kwargs={'TPU': True})
-            for IDs, x_batch_val, y_batch_val in val_generator.dataset:
+        for IDs, x_batch_val, y_batch_val in val_generator.dataset:
+            with strategy.scope():
                 strategy.run(val_step, args=(IDs, x_batch_val, y_batch_val, val_generator, epoch, model, loss, val_acc_metric, val_loss_metric, bayesian, n_val_example, val_generator.batch_size),  kwargs={'TPU': True})
+        with strategy.scope():
             train_acc_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_acc_metric.result(), axis=None)
             train_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, train_loss_metric.result(), axis=None)
             val_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_loss_metric.result(), axis=None)
