@@ -535,8 +535,9 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
             X = X[0,:,:]
         y = tf.one_hot(y, depth=self.n_classes_out)
 
-        self.xshape_file = X.shape
-        self.yshape_file = y.shape
+        if ID == 1:
+            self.xshape_file = X.shape
+            self.yshape_file = y.shape
         if self.Verbose:
             tf.print('Dimension of data after normalising: %s' %str(X.shape))
             tf.print('Dimension of labels after one-hot encoding: %s' %str(y.shape))
@@ -596,20 +597,25 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence):
 
         #Process spectrum files
         dataset = tf.data.Dataset.from_tensor_slices((ID_list, all_spectra)) 
-        dataset = dataset.map(self.process_spectra, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        if self.shuffle:
-            dataset = dataset.shuffle(buffer_size=len(list_IDs))
         if self.TPU:
-            global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
+            with self.strategy.scope():
+                dataset = dataset.map(self.process_spectra, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                if self.shuffle:
+                    dataset = dataset.shuffle(buffer_size=len(list_IDs))
+                global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
+                global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
+                dataset = dataset.batch(global_batchsize)
+                dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+                dataset = self.strategy.experimental_distribute_dataset(dataset)
         else:
-            global_batchsize = self.batch_size
-        global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
-        dataset = dataset.batch(global_batchsize)
-        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-        if self.TPU:
-            dataset = self.strategy.experimental_distribute_dataset(dataset)
-
+            dataset = dataset.map(self.process_spectra, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            if self.shuffle:
+                dataset = dataset.shuffle(buffer_size=len(list_IDs))
+            dataset = dataset.batch(self.batch_size)
+            dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+       
         self.xshape = ((self.batch_size * self.n_batches).numpy(),) + tuple(self.xshape_file)
         self.yshape = ((self.batch_size * self.n_batches).numpy(),) + tuple(self.yshape_file)
 
