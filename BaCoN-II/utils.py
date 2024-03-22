@@ -411,13 +411,13 @@ def get_all_indexes(FLAGS, Test=False):
             dir_name=data_dir+'/'+l
         else:
             dir_name=data_dir+'/'+l #+'_test'
-        n_samples = len([name for name in os.listdir(dir_name) if ( os.path.isfile(os.path.join(dir_name, name)) and 'DS_Store' not in name)]) 
-        print('%s - %s training examples' %(l,n_samples))
-        n_s.append(n_samples)
+        n_samples_class = len([name for name in os.listdir(dir_name) if ( os.path.isfile(os.path.join(dir_name, name)) and 'DS_Store' not in name)]) 
+        print('%s - %s training examples' %(l,n_samples_class))
+        n_s.append(n_samples_class)
         indices = [int(str.split(name, sep='.')[0]) for name in os.listdir(dir_name) if os.path.isfile(os.path.join(dir_name, name)) and 'DS_Store' not in name]
         all_index.extend(indices)
 
-    n_samples = sum(n_samples)
+    n_samples = sum(n_s)
     all_index = np.array(all_index)
 
     for i in range(len(all_labels)-1):
