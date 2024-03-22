@@ -20,30 +20,30 @@ import sys
 import time
 import shutil
 
-@tf.function
-def my_loss(y, logits, TPU=False, batch_size=None):
-    if TPU:
-        loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
-    else:
-        loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
-    loss_per_example = loss_f(y, logits)
-    
-    if TPU:
-        # Use the strategy to reduce the loss across replicas
-        loss = tf.nn.compute_average_loss(loss_per_example, global_batch_size=batch_size)
-    else:
-        loss = loss_per_example
+class BayesianLoss(tf.keras.losses.Loss):
+    def __init__(self, n_train_examples, n_val_examples):
+        super().__init__()
+        self.n_examples = n_train_examples  # Default to training examples
+        self.n_train_examples = n_train_examples
+        self.n_val_examples = n_val_examples
+        self.base_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
 
-    return loss
+    def call(self, y_true, y_pred):
+        kl_loss = sum(self.model.losses) / self.n_examples
+        neg_log_likelihood = self.base_loss(y_true, y_pred)
+        return neg_log_likelihood + kl_loss
 
-@tf.function
-def ELBO(y, logits, kl, TPU=False, batch_size=None):
-    neg_log_likelihood = my_loss(y, logits, TPU=TPU, batch_size=batch_size)
-    elbo_loss = neg_log_likelihood + kl
-    return elbo_loss
+    def set_mode_training(self):
+        self.n_examples = self.n_train_examples
+
+    def set_mode_validation(self):
+        self.n_examples = self.n_val_examples
+
+    def set_model(self, model):
+        self.model = model
 
 class TrainingCallback(tf.keras.callbacks.Callback):
-    def __init__(self, ckpt, checkpoint_manager, fname_hist, patience=10, verbose=1, restore=False, history=None):
+    def __init__(self, loss, ckpt, checkpoint_manager, fname_hist, patience=10, verbose=1, restore=False, history=None):
         self.ckpt = ckpt
         self.checkpoint_manager = checkpoint_manager
         self.fname_hist = fname_hist
@@ -53,9 +53,19 @@ class TrainingCallback(tf.keras.callbacks.Callback):
         self.verbose = verbose
         self.restore = restore
         self.history = history or {}
+        self.loss_function = loss
         # Ensure the checkpoint directory exists
         tf.io.gfile.makedirs(checkpoint_manager.directory)
         self.start_time = time.time()  # Overall training start time
+    
+    def on_train_batch_begin(self, batch, logs=None):
+        self.loss_function.set_mode_training()
+    
+    def on_test_batch_begin(self, batch, logs=None):
+        self.loss_function.set_mode_validation()
+    
+    def set_model(self, model):
+        self.model = model
 
     def on_epoch_begin(self, epoch, logs=None):
         self.epoch_start_time = time.time()
@@ -105,7 +115,7 @@ class TrainingCallback(tf.keras.callbacks.Callback):
         total_time = time.time() - self.start_time
         print(f"Time:  {total_time:.2fs}, ---- Loss: {logs.get('loss', 0):.4f}, Acc.: {logs.get('accuracy', 0):.4f}, Val. Loss: {logs.get('val_loss', 0):.4f}, Val. Acc.: {logs.get('val_accuracy', 0):.4f}\n")
 
-def my_train(model, epochs, 
+def my_train(model, loss, epochs, 
              train_dataset, 
              val_dataset, ckpt_path, ckpt, ckpt_manager, TPU=False, strategy=None,
              restore=False, patience=100,
@@ -147,7 +157,7 @@ def my_train(model, epochs,
         history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy':[] }
         best_loss = np.infty
     
-    callback = TrainingCallback(ckpt, ckpt_manager, fname_hist=fname_hist, patience=10, verbose=1)
+    callback = TrainingCallback(loss, ckpt, ckpt_manager, fname_hist=fname_hist, patience=10, verbose=1)
 
     for _ in train_dataset.dataset:
             pass
@@ -171,13 +181,11 @@ def compute_loss(dataset, model, bayesian=False, TPU=False, strategy=None):
     logits = model(x_batch_train, training=False)
     if bayesian:
             kl = sum(model.losses)/dataset.batch_size/dataset.n_batches
-            loss_0 = ELBO(y_batch_train, logits, kl, TPU=TPU, batch_size=dataset.batch_size)
+            base_loss = tf.keras.losses.CategoricalCrossentropy(y_batch_train, logits, from_logits=True)
+            loss_0 = base_loss + kl
     else:
-            loss_0 = my_loss(y_batch_train, logits, TPU=TPU, batch_size=dataset.batch_size)
+            loss_0 = tf.keras.losses.categorical_crossentropy(y_batch_train, logits, from_logits=True)
     return loss_0
-
-
-
 
 def main():
     
@@ -477,10 +485,10 @@ def main():
             optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
     
     if FLAGS.bayesian:
-        loss=ELBO
+        loss=BayesianLoss(n_train_examples=training_dataset.n_examples, n_val_examples=validation_dataset.n_examples)
+        loss.set_model(model)
     else:
-        loss=my_loss
-
+        loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
     if FLAGS.test_mode:
         drop=0
     else:
@@ -653,7 +661,7 @@ def main():
     print('Features shape:', training_dataset.xshape)
     print('Labels shape:', training_dataset.yshape)
    
-    model, history = my_train(model,
+    model, history = my_train(model, loss,
                 FLAGS.n_epochs, 
                 training_dataset, 
                 validation_dataset, ckpts_path, ckpt, manager, TPU=FLAGS.TPU,
