@@ -507,7 +507,7 @@ class DataSet(): # need to add new variable to 'params' further down
         if self.swap_axes:
             X = X[:,:,0,:]
             X = X[0,:,:]
-        y = tf.convert_to_tensor(y, dtype=tf.int32)
+        y = tf.cast(y, dtype=tf.int32)
         y = tf.one_hot(y, depth=self.n_classes_out)
 
         self.xshape_file = X.shape
