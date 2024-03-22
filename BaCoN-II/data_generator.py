@@ -549,7 +549,7 @@ class DataSet(): # need to add new variable to 'params' further down
 
         def data_generator(fname_list):
             for fname in fname_list:
-                X, y = self.process_file(ID, fname.decode('utf-8'))
+                X, y = self.process_file(fname.decode('utf-8'))
                 yield X, y
 
         dataset = tf.data.Dataset.from_generator(data_generator,
