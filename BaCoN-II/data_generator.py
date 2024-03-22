@@ -280,11 +280,11 @@ class DataSet(): # need to add new variable to 'params' further down
                 raise ValueError('Batch size must be multiple of (number of classes) x (n_noisy_samples) ')
             self.n_indexes = self.batch_size//(self.n_classes*self.n_noisy_samples) # now many index files to read per each batch
         
-        self.n_batches = len(list_IDs)//(self.batch_size)
+        self.n_batches = len(list_IDs)//(self.n_indexes)
         print('list_IDs length: %s' %len(list_IDs))
         print('n_indexes (n of file IDs read for each batch): %s' %self.n_indexes)
         print('batch size: %s' %self.batch_size)
-        print('n_batches : %s' %self.n_batches)
+        print('n_batches : %s' %self.n_batches*len(self.labels))
         if self.n_batches==0:
             raise ValueError('Not enough examples to support this batch size ')
    
@@ -305,7 +305,7 @@ class DataSet(): # need to add new variable to 'params' further down
         
         print('In total, for each batch we have %s training examples' %(n_ex))
         print('Input batch size: %s' %self.batch_size)
-        print('N of batches to cover all file IDs: %s' %self.n_batches)
+        print('N of batches to cover all file IDs: %s' %self.n_batches*len(self.n_labels))
         if n_ex!=self.batch_size:
             raise ValueError('Effective batch size does not match input batch size')
         
@@ -317,14 +317,14 @@ class DataSet(): # need to add new variable to 'params' further down
         
         
         if self.n_indexes!=len(list_IDs)/self.n_batches: 
-          print('length of IDs = %s' %str(len(list_IDs)))
-          print('n_batches = %s' %self.n_batches)
+          print('length of IDs = %s' %str(len(list_IDs)*len(self.labels)))
+          print('n_batches = %s' %self.n_batches*len(self.n_labels))
           print('n_indexes = %s' %self.n_indexes)
           print('len(list_IDs)/self.n_batches = %s' %(len(list_IDs)/self.n_batches))
           raise ValueError('n_batches does not match length of IDs')
         self.Verbose=Verbose
         self.Verbose_2=Verbose_2
-
+        self.n_batches = self.n_batches * len(self.labels)
         self.dataset=self.__data_generation(self.list_IDs, self.list_IDs_dict)
          
 
@@ -608,6 +608,9 @@ def create_datasets(FLAGS):
     if FLAGS.my_path is not None:
         os.chdir(FLAGS.my_path)
        
+    
+    # --------------------  CREATE DATA GENERATORS   --------------------
+    
     all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS)
     print('create_generators n_labels: %s' %n_labels) 
     if (FLAGS.fine_tune or FLAGS.one_vs_all) and FLAGS.dataset_balanced:
@@ -658,11 +661,11 @@ def create_datasets(FLAGS):
     print('--create_generators, train indexes')
     if FLAGS.test_mode:
         if case==3:
-            batch_size=train_index.shape[0]*n_noisy_samples
+            batch_size=train_index.shape[0]*n_labels_eff*n_noisy_samples
         elif case==2:
-            batch_size=train_index.shape[0]*n_noisy_samples
+            batch_size=train_index.shape[0]*n_labels*n_noisy_samples
         elif case==1:
-            batch_size=n_noisy_samples
+            batch_size=n_labels_eff*n_noisy_samples
     else:
         batch_size=FLAGS.batch_size
     print('batch_size: %s' %batch_size)
@@ -682,12 +685,11 @@ def create_datasets(FLAGS):
         print('Validation index: %s' %val_index_1)
     
     print('len(train_index_1), batch_size, n_labels_eff, n_noisy_samples = %s, %s, %s, %s' %(train_index_1.shape[0], batch_size, n_labels_eff,n_noisy_samples ))
-    assert train_index_1.shape[0]%(batch_size*(1-val_size))==0
-    assert val_index_1.shape[0]%(batch_size*val_size)==0
+    assert train_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
+    assert val_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
     
     partition={'train': train_index_1, 'validation': val_index_1}
-    
-    
+        
     if FLAGS.restore:
         partition = read_partition(FLAGS)
         batch_size=FLAGS.batch_size
@@ -772,6 +774,7 @@ def create_datasets(FLAGS):
 
 def create_test_dataset(FLAGS):
     
+     
     if FLAGS.my_path is not None:
         print('Changing directory to %s' %FLAGS.my_path)
         os.chdir(FLAGS.my_path)
@@ -820,9 +823,9 @@ def create_test_dataset(FLAGS):
     print('--Train')
     if FLAGS.test_mode:
         if not FLAGS.fine_tune:
-            batch_size=all_index.shape[0]*n_noisy_samples
+            batch_size=all_index.shape[0]*n_labels_eff*n_noisy_samples
         else:
-            batch_size=n_noisy_samples
+            batch_size=n_labels_eff*n_noisy_samples
     else:
         batch_size=FLAGS.batch_size
     print('batch_size: %s' %batch_size)
@@ -830,7 +833,7 @@ def create_test_dataset(FLAGS):
     test_index_1  = cut_sample(all_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=True, len_c1=len_c1)
     n_test = test_index_1.shape[0]
 
-    assert test_index_1.shape[0]%(batch_size//n_noisy_samples)==0
+    assert test_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
 
     print('N. of test files used: %s' %n_test)
 
