@@ -160,7 +160,7 @@ def my_train(model, loss, epochs,
     if TPU:
         with strategy.scope():
             val_steps_per_epoch = len(val_dataset.list_IDs) // val_dataset.batch_size
-            train_steps_per_epoch = len(train_dataset.list_IDs) // val_dataset.batch_size
+            train_steps_per_epoch = len(train_dataset.list_IDs) // train_dataset.batch_size
             train_dataset.dataset = strategy.experimental_distribute_dataset(train_dataset.dataset)
             val_dataset.dataset = strategy.experimental_distribute_dataset(val_dataset.dataset)
             history = model.fit(train_dataset.dataset, epochs=epochs,
