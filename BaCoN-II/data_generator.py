@@ -458,8 +458,8 @@ class DataSet():
         self.xshape_file = X.shape
         self.yshape_file = y.shape
     
-        print('Dimension of data after normalising: %s' %str(X.shape)))
-        print('Dimension of labels after one-hot encoding: %s' %str(y.shape)))
+        print('Dimension of data after normalising: %s' %str(X.shape))
+        print('Dimension of labels after one-hot encoding: %s' %str(y.shape))
         return X, y
 
     def create_dataset(self, list_IDs, list_IDs_dict):
