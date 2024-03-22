@@ -76,7 +76,7 @@ class DataSet(): # need to add new variable to 'params' further down
                 c_0=None, c_1=None, group_lab_dict=None,
                 z_bins=[0, 1, 2, 3], swap_axes=False,
                 dataset_balanced=False, test_mode=False, one_vs_all=False,
-                seed=1234, TPU=False
+                seed=1234, TPU=False, strategy = None
                 ):
       
         print('DataSet Initialization')
@@ -610,7 +610,7 @@ def read_partition(FLAGS):
     
     
 
-def create_datasets(FLAGS):
+def create_datasets(FLAGS, strategy=None):
     
     if FLAGS.my_path is not None:
         os.chdir(FLAGS.my_path)
@@ -769,9 +769,9 @@ def create_datasets(FLAGS):
         params['n_noisy_samples']=1
     
     print('\n--DataSet Train')
-    training_dataset = DataSet(partition['train'], labels, labels_dict, data_root = FLAGS.DIR, save_indexes=False, seed = seed, **params)
+    training_dataset = DataSet(partition['train'], labels, labels_dict, data_root = FLAGS.DIR, save_indexes=False, seed = seed, strategy=strategy, **params)
     print('\n--DataSet Validation')
-    validation_dataset = DataSet(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False, seed = seed, **params)
+    validation_dataset = DataSet(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False,strategy=strategy, seed = seed, **params)
 
     
     return training_dataset, validation_dataset #, params
