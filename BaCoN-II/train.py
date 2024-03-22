@@ -174,11 +174,11 @@ def my_train(model, loss, epochs,
         with strategy.scope():
             history = model.fit(train_dataset.dataset, epochs=epochs,
                                 validation_data=val_dataset.dataset,
-                                callbacks=[callback], steps_per_epoch=train_dataset.n_batches, validation_steps=val_dataset.n_batches)
+                                callbacks=[callback])
     else:
         history = model.fit(train_dataset.dataset, epochs=epochs,
                             validation_data=val_dataset.dataset,
-                            callbacks=[callback], steps_per_epoch=train_dataset.n_batches, validation_steps=val_dataset.n_batches)
+                            callbacks=[callback])
 
     return model, history
 

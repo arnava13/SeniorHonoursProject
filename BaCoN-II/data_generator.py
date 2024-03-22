@@ -324,7 +324,6 @@ class DataSet(): # need to add new variable to 'params' further down
           raise ValueError('n_batches does not match length of IDs')
         self.Verbose=Verbose
         self.Verbose_2=Verbose_2
-        self.n_batches = self.n_batches * len(self.labels)
         self.dataset=self.__data_generation(self.list_IDs, self.list_IDs_dict)
          
 
