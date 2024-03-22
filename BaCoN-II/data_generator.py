@@ -510,9 +510,6 @@ class DataSet():
 
                 for i_noise in range(self.n_noisy_samples):
                     X, y = self.noise_realisations(fname, P_original, k, i_noise)
-                    if i == 1:
-                        print('X shape: %s' %str(X.shape))
-                        print('y shape: %s' %str(y.shape))
                     yield X, y
 
         dataset = tf.data.Dataset.from_generator(data_generator,
