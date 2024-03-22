@@ -405,29 +405,26 @@ def get_all_indexes(FLAGS, Test=False):
     n_labels=len(np.unique([val for val in labels_dict.values()]))
     print('n_labels : %s' %n_labels)
     n_s=[]
-    all_index=[]
     for l in all_labels:
         if not Test:
             dir_name=data_dir+'/'+l
         else:
             dir_name=data_dir+'/'+l #+'_test'
         n_samples = len([name for name in os.listdir(dir_name) if ( os.path.isfile(os.path.join(dir_name, name)) and 'DS_Store' not in name)]) 
-        indices = [int(str.split(name, sep='.')[0]) for name in os.listdir(dir_name) if os.path.isfile(os.path.join(dir_name, name)) and 'DS_Store' not in name]
-        all_index.extend(indices)
         print('%s - %s training examples' %(l,n_samples))
         n_s.append(n_samples)
-    all_index = np.array(all_index)
 
     for i in range(len(all_labels)-1):
         assert n_s[i] == n_s[i+1]
     
-    n_samples = sum(n_s)
+    n_samples = n_s[0]
     
     l = all_labels[0]#'lcdm'
     if not Test:
         dir_name=data_dir+'/'+l
     else:
         dir_name=data_dir+'/'+l #+'_test'
+    all_index = np.array([int(str.split(name, sep='.')[0]) for name in os.listdir(dir_name) if (os.path.isfile(os.path.join(dir_name, name)) and 'DS_Store' not in name)])
     assert all_index.shape[0]==n_samples
     print('\nN. of data files: %s' %all_index.shape)
     if FLAGS.test_mode: #and not Test:

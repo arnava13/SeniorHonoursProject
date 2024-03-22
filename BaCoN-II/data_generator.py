@@ -608,11 +608,8 @@ def create_datasets(FLAGS):
     if FLAGS.my_path is not None:
         os.chdir(FLAGS.my_path)
        
-    
-    # --------------------  CREATE DATASETS   --------------------
-    
     all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS)
-    print('create_datasets n_labels: %s' %n_labels) 
+    print('create_generators n_labels: %s' %n_labels) 
     if (FLAGS.fine_tune or FLAGS.one_vs_all) and FLAGS.dataset_balanced:
         # balanced dataset , 1/2 lcdm , 1/2 rest in FT or one vs all mode
         case=1
@@ -630,8 +627,8 @@ def create_datasets(FLAGS):
         if FLAGS.one_vs_all and len(FLAGS.c_1)<len(all_labels)-1:
             n_labels_eff = len(FLAGS.c_1)+len(FLAGS.c_0)
         len_c1=1
-    print('create_datasets n_labels_eff: %s' %n_labels_eff)  
-    print('create_datasets len_c1: %s' %len_c1)
+    print('create_generators n_labels_eff: %s' %n_labels_eff)  
+    print('create_generators len_c1: %s' %len_c1)
         
         
 
@@ -658,7 +655,7 @@ def create_datasets(FLAGS):
         n_noisy_samples = FLAGS.n_noisy_samples
     else:
         n_noisy_samples = 1
-    print('--create_datasets, train indexes')
+    print('--create_generators, train indexes')
     if FLAGS.test_mode:
         if case==3:
             batch_size=train_index.shape[0]*n_labels_eff*n_noisy_samples
@@ -676,7 +673,7 @@ def create_datasets(FLAGS):
     else:
         train_index_1 = train_index
         print('Train index: %s' %train_index_1)
-    print('--create_datasets, validation indexes')
+    print('--create_generators, validation indexes')
     if not FLAGS.test_mode:
         val_index_1  = cut_sample(val_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=False,len_c1=len_c1)
         print('Val index length: %s'  %val_index_1.shape[0])
@@ -694,7 +691,6 @@ def create_datasets(FLAGS):
     if FLAGS.restore:
         partition = read_partition(FLAGS)
         batch_size=FLAGS.batch_size
-         
     ###################
     # USE THE BLOCH BELOW TO BE COMPATIBLE WITH OLDER VERSIONS OF DARTA GENERATORS. EVENTUALLY REMOVE
     ###################
@@ -798,8 +794,8 @@ def create_test_dataset(FLAGS):
         case=3
         n_labels_eff = len(all_labels)
         len_c1=1
-    print('create_datasets n_labels_eff: %s' %n_labels_eff)  
-    print('create_datasets len_c1: %s' %len_c1)
+    print('create_generators n_labels_eff: %s' %n_labels_eff)  
+    print('create_generators len_c1: %s' %len_c1)
 
     #if FLAGS.fine_tune:
     #    n_labels_eff = n_labels*len(FLAGS.c_1)
