@@ -423,6 +423,9 @@ class DataSet():
         
         y = encoding
 
+        X = tf.convert_to_tensor(X, dtype=tf.float32)
+        y = tf.convert_to_tensor(y, dtype=tf.int32)
+
         
         return X, y
 
