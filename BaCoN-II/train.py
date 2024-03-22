@@ -155,19 +155,6 @@ def my_train(model, loss, epochs,
         print("Initializing checkpoint from scratch.")
         history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy':[] }
         best_loss = np.infty
-
-    if not TPU:
-            if shuffle:
-                train_dataset.dataset = train_dataset.dataset.shuffle(buffer_size=len(train_dataset.list_IDs))
-                val_dataset.dataset = val_dataset.dataset.shuffle(buffer_size=len(val_dataset.list_IDs))
-            train_dataset.dataset = train_dataset.dataset.cache('cache/train_cache.tf-data')
-            val_dataset.dataset = val_dataset.dataset.cache('cache/val_cache.tf-data')
-            train_batchsize = tf.cast(train_dataset.batch_size, dtype=tf.int64)
-            val_batchsize = tf.cast(val_dataset.batch_size, dtype=tf.int64)
-            train_dataset.dataset = train_dataset.dataset.batch(train_batchsize)
-            val_dataset.dataset = val_dataset.dataset.batch(val_batchsize)
-            train_dataset.dataset = train_dataset.dataset.prefetch(tf.data.experimental.AUTOTUNE)
-            val_dataset.dataset = val_dataset.dataset.prefetch(tf.data.experimental.AUTOTUNE)
     
     callback = TrainingCallback(loss, ckpt, ckpt_manager, fname_hist=fname_hist, patience=10, save_ckpt=save_ckpt)
     if TPU:

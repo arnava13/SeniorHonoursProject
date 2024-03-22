@@ -574,6 +574,14 @@ class DataSet(): # need to add new variable to 'params' further down
                 dataset = self.strategy.experimental_distribute_dataset(dataset)
         else:
             dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            if self.shuffle:
+                dataset = dataset.shuffle(buffer_size=len(list_IDs))
+            dataset.cache()
+            global_batchsize = self.batch_sizenc
+            global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
+            dataset = dataset.batch(global_batchsize)
+            dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
        
         self.xshape = ((self.batch_size * self.n_batches),) + tuple(self.xshape_file)
         self.yshape = ((self.batch_size * self.n_batches),) + tuple(self.yshape_file)
