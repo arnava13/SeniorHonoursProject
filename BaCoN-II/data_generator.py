@@ -573,7 +573,6 @@ class DataSet(): # need to add new variable to 'params' further down
                 global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
                 dataset = dataset.batch(global_batchsize)
                 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-                dataset = self.strategy.experimental_distribute_dataset(dataset)
         else:
             dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
             if self.shuffle:
