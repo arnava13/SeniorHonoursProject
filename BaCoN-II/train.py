@@ -43,14 +43,14 @@ class BayesianLoss(tf.keras.losses.Loss):
         self.model = model
 
 class TrainingCallback(tf.keras.callbacks.Callback):
-    def __init__(self, loss, ckpt, checkpoint_manager, fname_hist, patience=10, verbose=1, restore=False, history=None):
+    def __init__(self, loss, ckpt, checkpoint_manager, fname_hist, patience=10, restore=False, history=None, save_ckpt=False):
         self.ckpt = ckpt
         self.checkpoint_manager = checkpoint_manager
         self.fname_hist = fname_hist
         self.patience = patience
         self.best_loss = float('inf')
         self.count = 0
-        self.verbose = verbose
+        self.save_ckpt = save_ckpt
         self.restore = restore
         self.history = history or {}
         self.loss_function = loss
@@ -88,17 +88,15 @@ class TrainingCallback(tf.keras.callbacks.Callback):
             save_path = self.checkpoint_manager.save()
             improvement_flag = True
             self.count = 0  # Reset counter after improvement
-            if self.verbose:
+            if self.save_ckpt:
                 print(f"\nEpoch {epoch+1}: Validation loss decreased to {current_val_loss:.4f}. Checkpoint saved: {save_path}")
         else:
             self.count += 1
-            if self.verbose:
-                print(f'\nEpoch {epoch+1}: Loss did not decrease. Count = {self.count}')
+            print(f'\nEpoch {epoch+1}: Loss did not decrease. Count = {self.count}')
 
         # Early stopping check
         if self.count >= self.patience:
-            if self.verbose:
-                print('Max patience reached. Stopping training.')
+            print('Max patience reached. Stopping training.')
             self.model.stop_training = True
 
         # Increment the checkpoint step
@@ -115,11 +113,10 @@ class TrainingCallback(tf.keras.callbacks.Callback):
         total_time = time.time() - self.start_time
         print(f"Time:  {total_time:.2f}, ---- Loss: {logs.get('loss', 0):.4f}, Acc.: {logs.get('accuracy', 0):.4f}, Val. Loss: {logs.get('val_loss', 0):.4f}, Val. Acc.: {logs.get('val_accuracy', 0):.4f}\n")
 
-def my_train(model, loss, epochs, 
+def my_train(model, loss, epochs,
              train_dataset, 
              val_dataset, ckpt_path, ckpt, ckpt_manager, TPU=False, strategy=None,
-             restore=False, patience=100,
-             save_ckpt=False):
+             restore=False, patience=100, shuffle=True, save_ckpt=False):
     fname_hist = os.path.join(ckpt_path, 'hist')
     if not os.path.exists(fname_hist):
         os.makedirs(fname_hist)
@@ -158,8 +155,21 @@ def my_train(model, loss, epochs,
         print("Initializing checkpoint from scratch.")
         history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy':[] }
         best_loss = np.infty
+
+    if not TPU:
+            if shuffle:
+                train_dataset.dataset = train_dataset.dataset.shuffle(buffer_size=len(train_dataset.list_IDs))
+                val_dataset.dataset = val_dataset.dataset.shuffle(buffer_size=len(val_dataset.list_IDs))
+            train_dataset.dataset = train_dataset.dataset.cache('cache/train_cache.tf-data')
+            val_dataset.dataset = val_dataset.dataset.cache('cache/val_cache.tf-data')
+            train_batchsize = tf.cast(train_dataset.batch_size, dtype=tf.int64)
+            val_batchsize = tf.cast(val_dataset.batch_size, dtype=tf.int64)
+            train_dataset.dataset = train_dataset.dataset.batch(train_batchsize)
+            val_dataset.dataset = val_dataset.dataset.batch(val_batchsize)
+            train_dataset.dataset = train_dataset.dataset.prefetch(tf.data.experimental.AUTOTUNE)
+            val_dataset.dataset = val_dataset.dataset.prefetch(tf.data.experimental.AUTOTUNE)
     
-    callback = TrainingCallback(loss, ckpt, ckpt_manager, fname_hist=fname_hist, patience=10, verbose=1)
+    callback = TrainingCallback(loss, ckpt, ckpt_manager, fname_hist=fname_hist, patience=10, save_ckpt=save_ckpt)
     if TPU:
         with strategy.scope():
             history = model.fit(train_dataset.dataset, epochs=epochs,
@@ -284,6 +294,7 @@ def main():
     parser.add_argument("--decay", default=0.95, type=float, required=False)
     parser.add_argument("--BatchNorm", default=True, type=str2bool, required=False)
     parser.add_argument("--padding", default='valid', type=str, required=False)
+    parser.add_argument("--shuffle", default='False', type=str2bool, required=False)
 
     FLAGS = parser.parse_args()
     
@@ -687,7 +698,7 @@ def main():
                 FLAGS.n_epochs, 
                 training_dataset, 
                 validation_dataset, ckpts_path, ckpt, manager, TPU=FLAGS.TPU,
-                strategy=strategy, patience=FLAGS.patience, restore=FLAGS.restore, 
+                strategy=strategy, patience=FLAGS.patience, restore=FLAGS.restore, shuffle=FLAGS.shuffle, 
                 save_ckpt=FLAGS.save_ckpt #not(FLAGS.test_mode)
             )
     

@@ -280,7 +280,7 @@ class DataSet(): # need to add new variable to 'params' further down
                 raise ValueError('Batch size must be multiple of (number of classes) x (n_noisy_samples) ')
             self.n_indexes = self.batch_size//(self.n_classes*self.n_noisy_samples) # now many index files to read per each batch
         
-        self.n_batches = len(list_IDs)//(self.n_indexes)
+        self.n_batches = len(list_IDs)//(self.batch_size)
         print('list_IDs length: %s' %len(list_IDs))
         print('n_indexes (n of file IDs read for each batch): %s' %self.n_indexes)
         print('batch size: %s' %self.batch_size)
@@ -567,23 +567,14 @@ class DataSet(): # need to add new variable to 'params' further down
                 dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
                 if self.shuffle:
                     dataset = dataset.shuffle(buffer_size=len(list_IDs))
+                dataset.cache()
                 global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
                 global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
-                dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-                dataset.cache()
                 dataset = dataset.batch(global_batchsize)
+                dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
                 dataset = self.strategy.experimental_distribute_dataset(dataset)
         else:
             dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-            if self.shuffle:
-                dataset = dataset.shuffle(buffer_size=len(list_IDs))
-            global_batchsize = tf.cast(self.batch_size, dtype=tf.int64)
-            dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-            if os.path.exists('cache/train_cache.tf-data'):
-                dataset = dataset.cache('cache/val_cache.tf-data')
-            else:
-                dataset = dataset.cache('cache/train_cache.tf-data')
-            dataset = dataset.batch(global_batchsize)
        
         self.xshape = ((self.batch_size * self.n_batches),) + tuple(self.xshape_file)
         self.yshape = ((self.batch_size * self.n_batches),) + tuple(self.yshape_file)
