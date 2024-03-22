@@ -46,12 +46,12 @@ class BayesianLoss(tf.keras.losses.Loss):
         self.model = model
 
 class TrainingCallback(tf.keras.callbacks.Callback):
-    def __init__(self, loss, ckpt, checkpoint_manager, fname_hist, patience=10, restore=False, history=None, save_ckpt=False):
+    def __init__(self, loss, ckpt, checkpoint_manager, fname_hist, patience=10, best_loss = np.infty, restore=False, history=None, save_ckpt=False):
         self.ckpt = ckpt
         self.checkpoint_manager = checkpoint_manager
         self.fname_hist = fname_hist
         self.patience = patience
-        self.best_loss = float('inf')
+        self.best_loss = best_loss
         self.count = 0
         self.save_ckpt = save_ckpt
         self.restore = restore
@@ -76,21 +76,18 @@ class TrainingCallback(tf.keras.callbacks.Callback):
             # Rewriting historical data if restoring
             for key in self.history.keys():
                 fname = os.path.join(self.fname_hist, f'{key}.txt')
-                with open(fname, 'a') as fh:
+                with open(fname, 'a+') as fh:
                     for el in self.history[key][:-1]:
                         fh.write(str(el) + '\n')
             print(f'Re-wrote histories until epoch {len(self.history["val_accuracy"][:-1])}')
 
     def on_epoch_end(self, epoch, logs=None):
-        epoch_duration = time.time() - self.epoch_start_time
         current_val_loss = logs.get('val_loss')
-        improvement_flag = False
 
         if current_val_loss < self.best_loss:
             self.best_loss = current_val_loss
             save_path = self.checkpoint_manager.save()
-            improvement_flag = True
-            self.count = 0  # Reset counter after improvement
+            self.count = 0
             if self.save_ckpt:
                 print(f"\nEpoch {epoch+1}: Validation loss decreased to {current_val_loss:.4f}. Checkpoint saved: {save_path}")
         else:
@@ -106,10 +103,10 @@ class TrainingCallback(tf.keras.callbacks.Callback):
         self.ckpt.step.assign_add(1)
 
         # Log metrics and epoch duration
-        for key in ['loss', 'val_loss', 'accuracy', 'val_accuracy']:  # Adjust according to your metrics
+        for key in ['loss', 'val_loss', 'accuracy', 'val_accuracy']: 
             if key in logs:
                 fname = os.path.join(self.fname_hist, f'{key}.txt')
-                with open(fname, 'a') as fh:
+                with open(fname, 'a+') as fh:
                     fh.write(f'{logs[key]}\n')
 
         # Print epoch summary
@@ -152,32 +149,34 @@ def my_train(model, loss, epochs,
 
             # Print last learning rate
             print('Last learning rate was %s' % ckpt.optimizer.learning_rate.numpy())
+            last_epoch = hist_start
         else:
             print("Checkpoint not found. Initializing checkpoint from scratch.")
+            history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy':[] }
+            best_loss = np.infty
+            last_epoch = 0
     else:
         print("Initializing checkpoint from scratch.")
         history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy':[] }
         best_loss = np.infty
+        last_epoch = 0
     
-    callback = TrainingCallback(loss, ckpt, ckpt_manager, fname_hist=fname_hist, patience=10, save_ckpt=save_ckpt)
+    callback = TrainingCallback(loss, ckpt, ckpt_manager, best_loss=best_loss, fname_hist=fname_hist, patience=10, save_ckpt=save_ckpt)
     if TPU:
-        print('val_dataset.n_examples: %s' %val_dataset.n_examples)
-        print('train_dataset.n_examples: %s' %train_dataset.n_examples)
-        print('val_dataset.batch_size: %s' %val_dataset.batch_size)
-        print('train_dataset.batch_size: %s' %train_dataset.batch_size)
-        print('num_replicas_in_sync: %s' %strategy.num_replicas_in_sync)
         with strategy.scope():
-            val_steps_per_epoch = val_dataset.n_examples // (val_dataset.batch_size * strategy.num_replicas_in_sync)
-            train_steps_per_epoch = train_dataset.n_examples // (train_dataset.batch_size * strategy.num_replicas_in_sync)
-            train_dataset.dataset = strategy.experimental_distribute_dataset(train_dataset.dataset)
-            val_dataset.dataset = strategy.experimental_distribute_dataset(val_dataset.dataset)
-            history = model.fit(train_dataset.dataset, epochs=epochs,
+            val_steps_per_epoch = val_dataset.n_batches // strategy.num_replicas_in_sync
+            train_steps_per_epoch = train_dataset.n_batches // strategy.num_replicas_in_sync
+            new_history = model.fit(train_dataset.dataset, epochs=epochs,
                                 validation_data=val_dataset.dataset,
-                                callbacks=[callback], steps_per_epoch=train_steps_per_epoch, validation_steps=val_steps_per_epoch)
+                                callbacks=[callback], steps_per_epoch=train_steps_per_epoch, validation_steps=val_steps_per_epoch, initial_epoch=last_epoch)
     else:
-        history = model.fit(train_dataset.dataset, epochs=epochs,
+        new_history = model.fit(train_dataset.dataset, epochs=epochs,
                             validation_data=val_dataset.dataset,
-                            callbacks=[callback])
+                            callbacks=[callback], initial_epoch=last_epoch)
+
+    # Append new history to existing history
+    for key in history.keys():
+        history[key].extend(new_history.history[key])
 
     return model, history
 
@@ -327,6 +326,7 @@ def main():
             tf.tpu.experimental.initialize_tpu_system(tpu_resolver)  # Initializes the TPU system
             strategy = tf.distribute.TPUStrategy(tpu_resolver)
             tpu_device = tpu_resolver.master()  # Retrieves the TPU device URI
+            print("Running on TPU:", tpu_device)
         except:
             raise Exception("TPU not found. Check if TPU is enabled in the notebook settings")
     else:
@@ -470,25 +470,14 @@ def main():
                    int(training_dataset.n_channels))
     print('Input shape %s' %str(input_shape))
     
-    if FLAGS.TPU:
-        with strategy.scope():
-            train_acc_metric = tf.keras.metrics.Accuracy()
-            val_acc_metric = tf.keras.metrics.Accuracy()
-            train_loss_metric = tf.keras.metrics.Mean()
-            val_loss_metric = tf.keras.metrics.Mean()
-    else:
-        train_acc_metric = tf.keras.metrics.Accuracy()
-        val_acc_metric = tf.keras.metrics.Accuracy()
-        train_loss_metric = tf.keras.metrics.Mean()
-        val_loss_metric = tf.keras.metrics.Mean()
-
     if FLAGS.decay is not None:
         if FLAGS.TPU:
             with strategy.scope():
-                lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_dataset), FLAGS.decay)
+                n_batches_eff = training_dataset.n_batches // strategy.num_replicas_in_sync
+                lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, n_batches_eff, FLAGS.decay)
                 optimizer = tf.keras.optimizers.Adam(lr_fn)
         else:
-            lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_dataset), FLAGS.decay)
+            lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, training_dataset.n_batches, FLAGS.decay)
             optimizer = tf.keras.optimizers.Adam(lr_fn)
     else:
         if FLAGS.TPU:
@@ -536,7 +525,7 @@ def main():
                         n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
                             )
             if FLAGS.bayesian:
-                loss=BayesianLoss(n_train_examples=training_dataset.n_examples, n_val_examples=validation_dataset.n_examples, TPU=FLAGS.TPU)
+                loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size, TPU=FLAGS.TPU)
                 loss.set_model(model)
             else:
                 if FLAGS.TPU:
@@ -561,7 +550,7 @@ def main():
                           n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
                              )
         if FLAGS.bayesian:
-            loss=BayesianLoss(n_train_examples=training_dataset.n_examples, n_val_examples=validation_dataset.n_examples)
+            loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
             loss.set_model(model)
         else:
             if FLAGS.TPU:
@@ -582,7 +571,7 @@ def main():
 
     
     if FLAGS.restore and FLAGS.decay is not None:
-        decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / len(training_dataset))
+        decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / training_dataset.n_batches)
         
     #optimizer.iterations  # this access will invoke optimizer._iterations method and create optimizer.iter attribute
     #if FLAGS.decay is not None:
@@ -635,7 +624,7 @@ def main():
                                        trainable=FLAGS.trainable, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
                     if FLAGS.bayesian:
-                        loss=BayesianLoss(n_train_examples=training_dataset.n_examples, n_val_examples=validation_dataset.n_examples)
+                        loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
                         loss.set_model(model)
                     else:
                         loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
@@ -647,7 +636,7 @@ def main():
                                        trainable=FLAGS.trainable, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
                 if FLAGS.bayesian:
-                    loss=BayesianLoss(n_train_examples=training_dataset.n_examples, n_val_examples=validation_dataset.n_examples)
+                    loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
                     loss.set_model(model)
                 else:
                     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
@@ -660,7 +649,7 @@ def main():
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm)
                     if FLAGS.bayesian:
-                        loss=BayesianLoss(n_train_examples=training_dataset.n_examples, n_val_examples=validation_dataset.n_examples)
+                        loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
                         loss.set_model(model)
                     else:
                         loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
@@ -671,7 +660,7 @@ def main():
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm)
                 if FLAGS.bayesian:
-                    loss=BayesianLoss(n_train_examples=training_dataset.n_examples, n_val_examples=validation_dataset.n_examples)
+                    loss=BayesianLoss(n_train_examples=training_dataset.batch_size*training_dataset.n_batches, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
                     loss.set_model(model)
                 else:
                     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)

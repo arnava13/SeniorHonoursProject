@@ -418,6 +418,8 @@ def get_all_indexes(FLAGS, Test=False):
         assert n_s[i] == n_s[i+1]
     
     n_samples = n_s[0]
+
+    n_examples = sum(n_s)
     
     l = all_labels[0]#'lcdm'
     if not Test:
@@ -443,12 +445,12 @@ def get_all_indexes(FLAGS, Test=False):
         val_size = FLAGS.val_size
     else:
         val_size=None
-    n_samples=all_index.shape[0]
+    n_samples=all_index.shape[0] #per class
     
 
         
     print('get_all_indexes labels dict: %s' %str(labels_dict)) 
-    return all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels
+    return all_index, n_samples, n_examples, val_size, n_labels, labels, labels_dict, all_labels
     
 
 def find_nearest(array, value):

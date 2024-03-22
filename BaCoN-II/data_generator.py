@@ -52,7 +52,7 @@ def generate_noise(k, P,
   return sigma_noise
 
 
-class DataSet(): # need to add new variable to 'params' further down
+class DataSet(): 
     def __init__(self, list_IDs, labels, labels_dict, n_examples, batch_size=32, 
                 data_root = 'data/', dim=(500, 4), n_channels=1,
                 shuffle=True, normalization='stdcosmo',
@@ -202,14 +202,13 @@ class DataSet(): # need to add new variable to 'params' further down
         self.labels_dict = labels_dict
         self.inv_labels_dict={value:key for key,value in zip(self.labels_dict.keys(), self.labels_dict.values())}
         #print(self.inv_labels_dict)
-
         self.list_IDs = list_IDs
         if len(self.list_IDs)==1:
             self.list_IDs_dict = {label:list_IDs+i for i,label in enumerate(labels)}
             print('Ids dict to use in data gen: %s' %str(self.list_IDs_dict))
         else:
             self.list_IDs_dict = {label:list_IDs for label in labels}
-    
+        
         
         self.base_case_dataset = not((self.fine_tune and self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and self.dataset_balanced))
         print('one_vs_all: %s' %str(self.one_vs_all))
@@ -235,6 +234,8 @@ class DataSet(): # need to add new variable to 'params' further down
         #print('Batch size: %s' %self.batch_size)
         #print('N. samples used for each different label: %s' %self.n_indexes)
         self.save_indexes = save_indexes
+        if self.save_indexes:
+            self.save_indexes_dict={}
         self.normalization=normalization
         
         if self.normalization=='stdcosmo':
@@ -242,7 +243,9 @@ class DataSet(): # need to add new variable to 'params' further down
           if self.sample_pace !=1:
             self.norm_data = self.norm_data[0::self.sample_pace, :]
           self.norm_data = self.norm_data[self.i_min:self.i_max]
+              
         
+        self.idx_file_name = idx_file_name
         self.models_dir = models_dir
         self.pad=pad
         self.add_noise=add_noise
@@ -257,41 +260,36 @@ class DataSet(): # need to add new variable to 'params' further down
         ######
         
         if not self.base_case_dataset:
-            """
-            if self.batch_size%(self.n_examples != 0):
-                print('batch_size, n_examples= %s, %s'%(self.batch_size, self.n_examples))
-                raise ValueError('batch size must be multiple of n_examples)')"""
+            if self.batch_size%(self.n_classes*self.n_noisy_samples):
+                print('batch_size,n_classes, len(c_1), n_noisy_samples= %s, %s, %s, %s '%(self.batch_size, self.n_classes, len(self.c_1), self.n_noisy_samples))
+                raise ValueError('batch size must be multiple of n_classes x len(c_1) x n_noisy_samples')
         elif not(self.fine_tune and self.dataset_balanced) or not(not self.fine_tune and self.one_vs_all and self.dataset_balanced):
-            """"
-            if self.batch_size%(self.n_examples) != 0:
-                raise ValueError('batch size must be multiple of n_examples')"""
-            pass
+            if self.batch_size%(self.n_classes*self.n_noisy_samples):
+                raise ValueError('batch size must be multiple of n_classes x n_noisy_samples')
         else:
             raise ValueError('check dataset_balanced and one_vs_all compatibility')
             
         if not self.base_case_dataset:
-            """"
-            if self.batch_size%(self.n_examples)!=0:
+            if self.batch_size%(self.n_classes*self.n_noisy_samples)!=0:
                 print('Batch size = %s' %self.batch_size)
                 #print('( n_labels x n_noisy_samples) = %s' %(self.n_classes*self.n_noisy_samples))
-                raise ValueError('Batch size must be multiple of n_examples')"""
-            self.n_indexes = len(self.c_1)*self.batch_size//(self.n_examples) #len(self.c_1)*
+                raise ValueError('Batch size must be multiple of n_classes x len(c_1)  x (n_noisy_samples) ')
+            self.n_indexes = len(self.c_1)*self.batch_size//(self.n_classes*self.n_noisy_samples) #len(self.c_1)*
             print('batch_size, n_classes, len(self.c_1), n_noisy_samples= %s, %s, %s, %s' %(self.batch_size, self.n_classes, len(self.c_1), self.n_noisy_samples))
             print('n_indexes=len(self.c_1)*batch_size//(n_classes*n_noisy_samples)=%s' %self.n_indexes)
              
         else:
-            """
-            if self.batch_size%(self.n_examples)!=0:
+            if self.batch_size%(self.n_classes*self.n_noisy_samples)!=0:
                 print('Batch size = %s' %self.batch_size)
-                print('( n_examples) = %s' %(self.n_examples))
-                raise ValueError('Batch size must be multiple of (total number of examples)')"""
+                print('( n_classes x n_noisy_samples) = %s' %(self.n_classes*self.n_noisy_samples))
+                raise ValueError('Batch size must be multiple of (number of classes) x (n_noisy_samples) ')
             self.n_indexes = self.batch_size//(self.n_classes*self.n_noisy_samples) # now many index files to read per each batch
         
         self.n_batches = len(list_IDs)//(self.n_indexes)
         print('list_IDs length: %s' %len(list_IDs))
         print('n_indexes (n of file IDs read for each batch): %s' %self.n_indexes)
         print('batch size: %s' %self.batch_size)
-        print('n_batches : %s' %self.n_batches*len(self.labels))
+        print('n_batches : %s' %self.n_batches)
         if self.n_batches==0:
             raise ValueError('Not enough examples to support this batch size ')
    
@@ -312,142 +310,102 @@ class DataSet(): # need to add new variable to 'params' further down
         
         print('In total, for each batch we have %s training examples' %(n_ex))
         print('Input batch size: %s' %self.batch_size)
-        print('N of batches to cover all file IDs: %s' %self.n_batches*len(self.labels))
-        """
+        print('N of batches to cover all file IDs: %s' %self.n_batches)
         if n_ex!=self.batch_size:
-            raise ValueError('Effective batch size does not match input batch size')"""
-        """
+            raise ValueError('Effective batch size does not match input batch size')
+        
         if self.n_indexes%(self.batch_size/(n_check))!=0:
           print('Batch size = %s' %self.batch_size)
           print('( n_labels x n_noisy_samples) = %s' %(n_check*self.n_noisy_samples))
           print('n_indexes = %s' %self.n_indexes)
           raise ValueError('Batch size should satisfy  m x Batch size /( n_labels x n_noisy_samples) =  n_indexes  with m a positive integer ')
-        """
-        """
+        
+        
         if self.n_indexes!=len(list_IDs)/self.n_batches: 
-          print('length of IDs = %s' %str(len(list_IDs)*len(self.labels)))
-          print('n_batches = %s' %self.n_batches*len(self.labels))
+          print('length of IDs = %s' %str(len(list_IDs)))
+          print('n_batches = %s' %self.n_batches)
           print('n_indexes = %s' %self.n_indexes)
           print('len(list_IDs)/self.n_batches = %s' %(len(list_IDs)/self.n_batches))
           raise ValueError('n_batches does not match length of IDs')
-        """
         self.Verbose=Verbose
         self.Verbose_2=Verbose_2
-        self.dataset=self.__data_generation(self.list_IDs, self.list_IDs_dict)
+        self.dataset=self.create_dataset(self.list_IDs, self.list_IDs_dict)
          
-
-    def __len__(self):
-        'Denotes the number of batches per epoch'
-        return self.n_batches#int(np.floor(len(self.list_IDs)*self.n_classes*self.n_noisy_samples / self.batch_size))
-    
-    def __shape__(self):
-        'I dont know what exactly I should put here - where is n_channels ??? '
-        return((len(self.list_IDs), self.dim[0]/self.sample_pace, self.dim[1] ))
-
-    def process_file(self, fname):
-        if self.Verbose:
-            print('Loading file %s' %fname)
-
-        loaded_all = np.loadtxt(fname)
-
-        P_original, k = loaded_all[:, 1:], loaded_all[:, 0]
-
-        if self.sample_pace != 1:
-            P_original = P_original[::self.sample_pace]
-            k = k[::self.sample_pace]
-            
-        P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
-        self.k_range = k
-
-        if self.Verbose:
-            print('Dimension of original data: %s' %str(P_original.shape))
-        
-        if self.Verbose:
-            print('dimension P_original: %s' %str(P_original.shape))    
-            print('P_original first 10:') 
-            print(P_original[10])
-
-        # Add noise
-        for i_noise in range(self.n_noisy_samples):
-            if self.add_noise:
-                P_noisy = P_original
-                if self.Verbose:
-                    print('Noise realization %s' %i_noise)
-                # add noise if selected
-                if type(self.norm_data) is not np.ndarray:
-                    self.norm_data = self.norm_data.numpy()
-                if self.add_cosvar:
-                    noise_scale = generate_noise(k, self.norm_data[:, self.z_bins], sys_scaled=self.sys_scaled,
-                                                    sys_factor=self.sys_factor,sys_max=self.sys_max,
-                                                    add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
-                    noise_cosvar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
-                    P_noisy = P_noisy + noise_cosvar
-
-                if self.add_sys:
-                    curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-                    curve_random_nr = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
-                    curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
-                    curves_loaded = np.loadtxt(curve_file)
-                    noise_sys, k_sys = curves_loaded[:, 1:], curves_loaded[:, 0]
-
-
-                    if self.sample_pace!=1:
-                        noise_sys = noise_sys[0::self.sample_pace, :]
-                        k_sys = k_sys[0::self.sample_pace]
-                    noise_sys, k_sys = noise_sys[self.i_min:self.i_max], k_sys[self.i_min:self.i_max]
-                    if (k.all() != k_sys.all()):
-                        print('ERROR: k-values in spectrum and theory-error curve file not identical')
-
-                    # rescale noise_sys curves according to error (10% default from production curves), 
-                    # rescale by Gaussian with sigma = 1
-                    # multiply with normalisation spectrum
-                    noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * self.norm_data[:,self.z_bins]
-
-                    if self.rescale_curves == 'uniform':
-                        noise_sys = noise_sys * np.random.uniform(0,1)
-                    if self.rescale_curves == 'gaussian':
-                        noise_sys = noise_sys * np.random.normal(loc=0, scale = 1)
-
-                    P_noisy = P_noisy + noise_sys
-
-                if self.add_shot:
-                    noise_scale = generate_noise(k,self.norm_data[: , self.z_bins], sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
-                    noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
-                    P_noisy = P_noisy + noise_shot
-
-
-                expanded = np.expand_dims(P_noisy, axis=2)
-
-
-            else:
-                if self.Verbose:
-                    print('No noise')
-                expanded = np.expand_dims(P_original, axis=2)
-
-            # Store sample
+    def noise_realisations(self, fname, P_original, k, i_noise, j):
+        if self.add_noise:
+            P_noisy = P_original
             if self.Verbose:
-                print('Dimension of data: %s' %str(expanded.shape))
-            # swap axis if using one dim array in multiple channels 
-            if self.swap_axes:
-                if self.Verbose:
-                    print('Reshaping')
-                expanded = np.swapaxes(expanded, 2, 1)
-                if self.Verbose:
-                    print('New dimension of data: %s' %str(expanded.shape))
-                expanded = expanded[:,:,self.z_bins]
-                if self.Verbose:
-                    print('Final dimension of data: %s' %str(expanded.shape))
-                    print('expanded first 10:') 
-                    print(expanded[10])
-                # now shape of expanded is (1, n_data_points, 1, n_channels=3)
-            X = expanded  
+                print('Noise realization %s' %i_noise)
+            # add noise if selected
+            if type(self.norm_data) is not np.ndarray:
+                self.norm_data = self.norm_data.numpy()
+            if self.add_cosvar:
+                noise_scale = generate_noise(k, self.norm_data[:, self.z_bins], sys_scaled=self.sys_scaled,
+                                                sys_factor=self.sys_factor,sys_max=self.sys_max,
+                                                add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
+                noise_cosvar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
+                P_noisy = P_noisy + noise_cosvar
 
+            if self.add_sys:
+                noise_sys, k_sys = self.all_curves[j,:, 1:], self.all_curves[j,:, 0]
+
+
+                if self.sample_pace!=1:
+                    noise_sys = noise_sys[0::self.sample_pace, :]
+                    k_sys = k_sys[0::self.sample_pace]
+                noise_sys, k_sys = noise_sys[self.i_min:self.i_max], k_sys[self.i_min:self.i_max]
+                if (k.all() != k_sys.all()):
+                    print('ERROR: k-values in spectrum and theory-error curve file not identical')
+
+                # rescale noise_sys curves according to error (10% default from production curves), 
+                # rescale by Gaussian with sigma = 1
+                # multiply with normalisation spectrum
+                noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * self.norm_data[:,self.z_bins]
+
+                if self.rescale_curves == 'uniform':
+                    noise_sys = noise_sys * np.random.uniform(0,1)
+                if self.rescale_curves == 'gaussian':
+                    noise_sys = noise_sys * np.random.normal(loc=0, scale = 1)
+
+                P_noisy = P_noisy + noise_sys
+
+            if self.add_shot:
+                noise_scale = generate_noise(k,self.norm_data[: , self.z_bins], sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
+                noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
+                P_noisy = P_noisy + noise_shot
+
+
+            expanded = np.expand_dims(P_noisy, axis=2)
+
+
+        else:
             if self.Verbose:
-                print('dimension of X: %s' %str(X.shape))
-                print('X first 10:') 
-                print(X[10])
-                            
-        # Store class   
+                print('No noise')
+            expanded = np.expand_dims(P_original, axis=2)
+
+        # Store sample
+        if self.Verbose:
+            print('Dimension of data: %s' %str(expanded.shape))
+        # swap axis if using one dim array in multiple channels 
+        if self.swap_axes:
+            if self.Verbose:
+                print('Reshaping')
+            expanded = np.swapaxes(expanded, 2, 1)
+            if self.Verbose:
+                print('New dimension of data: %s' %str(expanded.shape))
+            expanded = expanded[:,:,self.z_bins]
+            if self.Verbose:
+                print('Final dimension of data: %s' %str(expanded.shape))
+                print('expanded first 10:') 
+                print(expanded[10])
+            # now shape of expanded is (1, n_data_points, 1, n_channels=3)
+        X = expanded  
+
+        if self.Verbose:
+            print('dimension of X: %s' %str(X.shape))
+            print('X first 10:') 
+            print(X[10])
+
         label = fname.split('/')[-2]
             
         if not self.base_case_dataset:
@@ -464,10 +422,9 @@ class DataSet(): # need to add new variable to 'params' further down
             print('Encoding: %s' % encoding)
         
         y = encoding
-        X = tf.convert_to_tensor(X, dtype=tf.float32)
-        y = tf.convert_to_tensor(y, dtype=tf.int32)    
 
-        return X, y
+        
+        yield X, y
 
     @tf.function
     def normalize_and_onehot(self, X, y):
@@ -488,31 +445,6 @@ class DataSet(): # need to add new variable to 'params' further down
                 if self.Verbose:
                     tf.print('axes not swapped')
                     tf.print('Dimension of NORM data:', tf.shape(divisor))
-        if self.save_processed_spectra and not self.TPU: #NOT CURRENTLY WORKING
-            X_save = tf.zeros((self.batch_size + 1, tf.size(self.all_ks) + 1), dtype=tf.float32)
-            indices_y = tf.stack([tf.range(1, self.batch_size + 1), tf.zeros(self.batch_size, dtype=tf.int32)], axis=1)
-            indices_ks = tf.stack([tf.zeros(tf.size(self.all_ks), dtype=tf.int32), tf.range(1, tf.size(self.all_ks) + 1)], axis=1)
-            X_save = tf.tensor_scatter_nd_update(X_save, indices_y, updates=tf.cast(y, tf.float32))
-            X_save = tf.tensor_scatter_nd_update(X_save, indices_ks, updates=tf.cast(self.all_ks, tf.float32))
-            def write_spectra(z_bins, X, X_save):
-                loop_len = tf.size(z_bins)
-                def condition(i, X, X_save):
-                    return i < loop_len
-                def body(i, X, X_save):
-                    z = z_bins[i]
-                    X_slice = X[:, :, 0, z]
-                    indices = tf.range(1, tf.shape(X_slice)[1] + 1)[:, tf.newaxis]
-                    indices = tf.transpose(indices)
-                    X_save_updated = tf.tensor_scatter_nd_update(X_save, indices, X_slice)
-                    spectra_file = tf.strings.join([self.name_spectra_folder, f'processed_spectra_zbin{i}.txt'], separator='/')
-                    tf.print(f'Saving processed (noisy and normalised) spectra in {spectra_file}')
-                    X_save_string = tf.strings.reduce_join(tf.strings.as_string(X_save_updated), separator=' ', axis=-1)
-                    tf.io.write_file(spectra_file, X_save_string)
-                    return [tf.add(i, 1), X, X_save]
-                i = tf.constant(0, dtype=tf.int32)
-                tf.while_loop(condition, body, [i, X, X_save])
-            zbins = tf.convert_to_tensor(self.z_bins, dtype=tf.int32)
-            write_spectra(zbins, X, X_save)
         if self.swap_axes:
             X = X[:,:,0,:]
             X = X[0,:,:]
@@ -527,7 +459,7 @@ class DataSet(): # need to add new variable to 'params' further down
             tf.print('Dimension of labels after one-hot encoding: %s' %str(y.shape))
         return X, y
 
-    def __data_generation(self, list_IDs, list_IDs_dict):
+    def create_dataset(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
         if not self.fine_tune and not self.one_vs_all:
             fname_list=[]
@@ -540,8 +472,8 @@ class DataSet(): # need to add new variable to 'params' further down
         if self.fine_tune and self.Verbose :
             print(fname_list)
             
-        #print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size, self.n_noisy_samples))
-        #assert len(fname_list)==self.batch_size*self.n_batches // self.n_noisy_samples
+        print('len(fname_list), batch_size, n_noisy_samples, n_batches: %s, %s, %s, %s' %(len(fname_list), self.batch_size, self.n_noisy_samples, self.n_batches))
+        assert len(fname_list)==self.batch_size*self.n_batches // self.n_noisy_samples
 
         fname_list = np.array(fname_list, dtype=str)
 
@@ -555,18 +487,49 @@ class DataSet(): # need to add new variable to 'params' further down
             x_shape = (n_ks, 1, self.n_channels)
         else:
             x_shape = (n_ks, self.n_channels, 1)
+        
+        self.all_curves = []
+        if self.add_sys:
+            for _ in range(self.n_noisy_samples*len(fname_list)):
+                curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
+                curve_random_nr = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
+                curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
+                curve_loaded = np.loadtxt(curve_file)
+                self.all_curves.append(curve_loaded)
+            self.all_curves = tf.convert_to_tensor(self.all_curves, dtype=tf.float32)
 
         def data_generator(fname_list):
-            for fname in fname_list:
-                X, y = self.process_file(fname.decode('utf-8'))
-                yield X, y
+            for i, fname in enumerate(fname_list):
+                if self.Verbose:
+                    print('Loading file %s' %fname)
+                loaded = np.loadtxt(fname.decode('utf-8'))
+                P_original, k = loaded[:, 1:], loaded[:, 0]
+                if self.sample_pace != 1:
+                    P_original = P_original[::self.sample_pace]
+                    k = k[::self.sample_pace]
+                
+                P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
+                self.k_range = k
+
+                if self.Verbose:
+                    print('Dimension of original data: %s' %str(P_original.shape))
+                
+                if self.Verbose:
+                    print('dimension P_original: %s' %str(P_original.shape))    
+                    print('P_original first 10:') 
+                    print(P_original[10])
+                
+                for i_noise in range(self.n_noisy_samples):
+                    j = i*self.n_noisy_samples + i_noise
+                    X, y = self.noise_realisations(fname, P_original, k, i_noise, j)
+                    yield X, y
 
         dataset = tf.data.Dataset.from_generator(data_generator,
         output_signature=(
                 tf.TensorSpec(shape=x_shape, dtype=tf.float32),
                 tf.TensorSpec(shape=(), dtype=tf.int32)
             ),
-            args=(fname_list,)
+            args=(fname_list)
         )
 
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
@@ -581,6 +544,7 @@ class DataSet(): # need to add new variable to 'params' further down
                 global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
                 dataset = dataset.batch(global_batchsize)
                 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+                dataset = self.strategy.experimental_distribute_dataset(dataset)
         else:
             dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
             if self.shuffle:
@@ -590,6 +554,27 @@ class DataSet(): # need to add new variable to 'params' further down
             global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
             dataset = dataset.batch(global_batchsize)
             dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+
+        if self.save_processed_spectra:
+
+            for batch_idx, batch in enumerate(dataset):
+                X, y = batch
+                if batch_idx==0:
+                    name_spectra_folder = os.path.join(self.models_dir,self.fname,'processed_spectra') 
+                    if not os.path.exists(name_spectra_folder):
+                        print('Creating directory %s' %  name_spectra_folder)
+                        os.makedirs(name_spectra_folder)
+                # new matrix for spectra, first column is class_idx, first row is k-values
+                X_save = np.empty((self.batch_size+1, len(self.all_ks)+1))
+                X_save[1:,0] = y  
+                X_save[0,1:] = self.all_ks
+                for i_z in self.z_bins:
+                    X_save[1:,1:] = X[:,:,0,i_z]
+                    spectra_file = os.path.join(name_spectra_folder, 'processed_spectra_zbin{}.txt'.format(i_z))
+                    if not os.path.exists(spectra_file):
+                        print('Saving processed (noisy and normalised) spectra in %s' % spectra_file)
+                        with open(spectra_file, "a+") as myCurvefile:
+                            np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
        
         self.xshape = ((self.batch_size * self.n_batches),) + tuple(self.xshape_file)
         self.yshape = ((self.batch_size * self.n_batches),) + tuple(self.yshape_file)
@@ -626,7 +611,14 @@ def create_datasets(FLAGS, strategy=None):
     
     # --------------------  CREATE DATA GENERATORS   --------------------
     
-    all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS)
+        
+    if FLAGS.my_path is not None:
+        os.chdir(FLAGS.my_path)
+       
+    
+    # --------------------  CREATE DATA GENERATORS   --------------------
+    
+    all_index, n_samples, n_examples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS)
     print('create_generators n_labels: %s' %n_labels) 
     if (FLAGS.fine_tune or FLAGS.one_vs_all) and FLAGS.dataset_balanced:
         # balanced dataset , 1/2 lcdm , 1/2 rest in FT or one vs all mode
@@ -663,11 +655,11 @@ def create_datasets(FLAGS, strategy=None):
     print('Check for no duplicates in val: (0=ok):')
     print(np.array([np.isin(el, train_index) for el in val_index]).sum())
 
-    print('N of files in training set: %s' %train_index.shape[0])
-    print('N of files in validation set: %s' %val_index.shape[0])
-    print('N of files in test set: %s' %test_index.shape[0])
+    print('N of files in training set: %s' %n_labels_eff*train_index.shape[0])
+    print('N of files in validation set: %s' %n_labels_eff*val_index.shape[0])
+    print('N of files in test set: %s' %n_labels_eff*test_index.shape[0])
 
-    print('Check - total: %s' %(val_index.shape[0]+test_index.shape[0]+train_index.shape[0]))
+    print('Check - total per class: %s' %(val_index.shape[0]+test_index.shape[0]+train_index.shape[0]))
     
     if FLAGS.add_noise:
         n_noisy_samples = FLAGS.n_noisy_samples
@@ -700,14 +692,16 @@ def create_datasets(FLAGS, strategy=None):
         print('Validation index: %s' %val_index_1)
     
     print('len(train_index_1), batch_size, n_labels_eff, n_noisy_samples = %s, %s, %s, %s' %(train_index_1.shape[0], batch_size, n_labels_eff,n_noisy_samples ))
-    #assert train_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
-    #assert val_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
+    assert train_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
+    assert val_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
     
     partition={'train': train_index_1, 'validation': val_index_1}
-        
+    
+    
     if FLAGS.restore:
         partition = read_partition(FLAGS)
         batch_size=FLAGS.batch_size
+         
     ###################
     # USE THE BLOCH BELOW TO BE COMPATIBLE WITH OLDER VERSIONS OF DARTA GENERATORS. EVENTUALLY REMOVE
     ###################
@@ -734,8 +728,6 @@ def create_datasets(FLAGS, strategy=None):
         
     ##Generate a random seed now to prevent issues in parallel processing when in TPU mode
     seed = np.random.randint(0, 2**32 - 1)
-    
-    n_examples = n_labels_eff * len(val_index_1)/val_size
     
     params = {'dim': (FLAGS.im_depth, FLAGS.im_width),
           'batch_size':batch_size, # should satisfy  m x Batch size /n_noisy_samples =  n_indexes  with m a positive integer
@@ -795,7 +787,7 @@ def create_test_dataset(FLAGS):
         print('Changing directory to %s' %FLAGS.my_path)
         os.chdir(FLAGS.my_path)
     
-    all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS, Test=True)
+    all_index, n_samples, n_examples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS, Test=True)
     
 
     if (FLAGS.fine_tune or FLAGS.one_vs_all) and FLAGS.dataset_balanced:
@@ -899,7 +891,7 @@ def create_test_dataset(FLAGS):
     seed = np.random.randint(0, 2**32 - 1) 
     
     test_dataset = DataSet(partition_test['test'], 
-                                   labels, labels_dict, 
+                                   labels, labels_dict, n_examples, 
                                    data_root=FLAGS.TEST_DIR , 
                                save_indexes = FLAGS.save_indexes,
                                models_dir=FLAGS.models_dir+FLAGS.fname,
