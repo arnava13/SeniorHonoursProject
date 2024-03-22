@@ -331,7 +331,7 @@ class DataSet():
         self.Verbose_2=Verbose_2
         self.dataset=self.create_dataset(self.list_IDs, self.list_IDs_dict)
          
-    def noise_realisations(self, fname, P_original, k, i_noise, j):
+    def noise_realisations(self, fname, P_original, k, i_noise):
         if self.add_noise:
             P_noisy = P_original
             if self.Verbose:
@@ -347,7 +347,12 @@ class DataSet():
                 P_noisy = P_noisy + noise_cosvar
 
             if self.add_sys:
-                noise_sys, k_sys = self.all_curves[j,:, 1:], self.all_curves[j,:, 0]
+                if self.add_sys:
+                    curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
+                    curve_random_nr = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
+                    curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
+                    curve_loaded = np.loadtxt(curve_file)
+                    noise_sys, k_sys = curve_loaded[:, 1:], curve_loaded[:, 0]
 
 
                 if self.sample_pace!=1:
@@ -431,16 +436,13 @@ class DataSet():
 
     @tf.function
     def normalize_and_onehot(self, X, y):
-        print("X into normalize_and_onehot: %s" %str(X.shape))
-        print("y into normalize_and_onehot: %s" %str(y.shape))
         if self.normalization == 'batch':
             mu_batch = tf.reduce_mean(X, axis=0)
             std_batch = tf.math.reduce_std(X, axis=0)
             X = (X - mu_batch) / std_batch
         elif self.normalization == 'stdcosmo':
             if self.swap_axes:
-                divisor = tf.gather(tf.expand_dims(tf.expand_dims(self.norm_data, axis=0), axis=2), self.z_bins, axis = 3)
-                X = X / divisor - 1
+                X = X / self.norm_data - 1
                 if self.Verbose:
                     tf.print('axes swapped')
                     tf.print('NORM first 10:', divisor[:10])
@@ -451,15 +453,12 @@ class DataSet():
                     tf.print('axes not swapped')
                     tf.print('Dimension of NORM data:', tf.shape(divisor))
         if self.swap_axes:
-            X = X[:,0,:,0]
+            X = X[:,0,:,0,:]
         y = tf.cast(y, dtype=tf.int32)
         y = tf.one_hot(y, depth=self.n_classes_out)
 
         self.xshape_file = X.shape
         self.yshape_file = y.shape
-    
-        print('Dimension of data after normalising: %s' %str(X.shape))
-        print('Dimension of labels after one-hot encoding: %s' %str(y.shape))
         return X, y
 
     def create_dataset(self, list_IDs, list_IDs_dict):
@@ -491,15 +490,6 @@ class DataSet():
         else:
             x_shape = (1, 1, n_ks, self.n_channels)
         
-        self.all_curves = []
-        if self.add_sys:
-            for _ in range(self.n_noisy_samples*len(fname_list)):
-                curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-                curve_random_nr = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
-                curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
-                curve_loaded = np.loadtxt(curve_file)
-                self.all_curves.append(curve_loaded)
-            self.all_curves = tf.convert_to_tensor(self.all_curves, dtype=tf.float32)
 
         def data_generator(fname_list):
             for i, fname in enumerate(fname_list):
@@ -521,8 +511,7 @@ class DataSet():
 
 
                 for i_noise in range(self.n_noisy_samples):
-                    j = i*self.n_noisy_samples + i_noise
-                    X, y = self.noise_realisations(fname, P_original, k, i_noise, j)
+                    X, y = self.noise_realisations(fname, P_original, k, i_noise)
                     if i == 1:
                         print('X shape: %s' %str(X.shape))
                         print('y shape: %s' %str(y.shape))

@@ -391,7 +391,7 @@ class DataGenerator(tf.compat.v2.keras.utils.Sequence): # need to add new variab
         if not self.fine_tune and not self.one_vs_all:
             fname_list=[]
             for l in self.labels:
-                for ID in list_IDs_temp_dict[l]:
+                for ID in list_IDs_dict[l]:
                     t_st =  self.data_root + '/'+l+ '/'+ str(ID) + '.txt' 
                     fname_list.append(t_st)
             fname_list = np.array(fname_list)

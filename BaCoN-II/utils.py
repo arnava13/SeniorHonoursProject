@@ -418,8 +418,6 @@ def get_all_indexes(FLAGS, Test=False):
         assert n_s[i] == n_s[i+1]
     
     n_samples = n_s[0]
-
-    n_examples = sum(n_s)
     
     l = all_labels[0]#'lcdm'
     if not Test:
@@ -428,7 +426,7 @@ def get_all_indexes(FLAGS, Test=False):
         dir_name=data_dir+'/'+l #+'_test'
     all_index = np.array([int(str.split(name, sep='.')[0]) for name in os.listdir(dir_name) if (os.path.isfile(os.path.join(dir_name, name)) and 'DS_Store' not in name)])
     assert all_index.shape[0]==n_samples
-    print('\nN. of data files in each class: %s' %all_index.shape)
+    print('\nN. of data files: %s' %all_index.shape)
     if FLAGS.test_mode: #and not Test:
         print('Choice with seed %s ' %FLAGS.seed)
         np.random.seed(FLAGS.seed)
@@ -445,12 +443,12 @@ def get_all_indexes(FLAGS, Test=False):
         val_size = FLAGS.val_size
     else:
         val_size=None
-    n_samples=all_index.shape[0] #per class
+    n_samples=all_index.shape[0]
     
 
         
     print('get_all_indexes labels dict: %s' %str(labels_dict)) 
-    return all_index, n_samples, n_examples, val_size, n_labels, labels, labels_dict, all_labels
+    return all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels
     
 
 def find_nearest(array, value):
