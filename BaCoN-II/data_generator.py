@@ -410,7 +410,7 @@ class DataSet():
             print('X first 10:') 
             print(X[10])
 
-        label = fname.split('/')[-2]
+        label = fname.decode('utf-8').split('/')[-2]
             
         if not self.base_case_dataset:
             label = self.group_lab_dict[label]
