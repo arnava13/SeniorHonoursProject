@@ -108,6 +108,8 @@ class TrainingCallback(tf.keras.callbacks.Callback):
         for key in ['loss', 'val_loss', 'accuracy', 'val_accuracy']:  # Adjust according to your metrics
             if key in logs:
                 fname = os.path.join(self.fname_hist, f'{key}.txt')
+                if not os.path.exists(fname):
+                    open(fname, 'w').close()  # Create the file
                 with open(fname, 'a') as fh:
                     fh.write(f'{logs[key]}\n')
 
@@ -121,6 +123,8 @@ def my_train(model, loss, epochs,
              restore=False, patience=100,
              save_ckpt=False):
     fname_hist = os.path.join(ckpt_path, 'hist')
+    if not os.path.exists(fname_hist):
+        os.makedirs(fname_hist)
     if restore:
         print('Restoring ckpt...')
         if ckpt_manager.latest_checkpoint:
@@ -158,11 +162,6 @@ def my_train(model, loss, epochs,
         best_loss = np.infty
     
     callback = TrainingCallback(loss, ckpt, ckpt_manager, fname_hist=fname_hist, patience=10, verbose=1)
-
-    for _ in train_dataset.dataset:
-            pass
-    for _ in val_dataset.dataset:
-            pass
     if TPU:
         with strategy.scope():
             history = model.fit(train_dataset.dataset, epochs=epochs,
@@ -177,7 +176,7 @@ def my_train(model, loss, epochs,
 
 
 def compute_loss(dataset, model, bayesian=False, TPU=False, strategy=None):
-    x_batch_train, y_batch_train = dataset[0]
+    x_batch_train, y_batch_train = dataset.take(0)
     logits = model(x_batch_train, training=False)
     if bayesian:
             kl = sum(model.losses)/dataset.batch_size/dataset.n_batches
@@ -298,6 +297,14 @@ def main():
     FLAGS.strides_pooling = [int(z) for z in FLAGS.strides_pooling]
     FLAGS.c_1.sort()
     FLAGS.c_0.sort()
+
+    try:
+        shutil.rmtree('cache')
+        print(f"Cache folder deleted.")
+    except FileNotFoundError:
+        print(f"Cache folder does not exist.")
+    except Exception as e:
+        print(f"Error deleting cache folder.")
 
     if FLAGS.TPU and FLAGS.GPU:
         print('Cannot use both TPU and GPU. Using GPU only ')
