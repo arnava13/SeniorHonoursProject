@@ -305,7 +305,7 @@ class DataSet(): # need to add new variable to 'params' further down
         
         print('In total, for each batch we have %s training examples' %(n_ex))
         print('Input batch size: %s' %self.batch_size)
-        print('N of batches to cover all file IDs: %s' %self.n_batches*len(self.n_labels))
+        print('N of batches to cover all file IDs: %s' %self.n_batches*len(self.labels))
         if n_ex!=self.batch_size:
             raise ValueError('Effective batch size does not match input batch size')
         
@@ -318,7 +318,7 @@ class DataSet(): # need to add new variable to 'params' further down
         
         if self.n_indexes!=len(list_IDs)/self.n_batches: 
           print('length of IDs = %s' %str(len(list_IDs)*len(self.labels)))
-          print('n_batches = %s' %self.n_batches*len(self.n_labels))
+          print('n_batches = %s' %self.n_batches*len(self.labels))
           print('n_indexes = %s' %self.n_indexes)
           print('len(list_IDs)/self.n_batches = %s' %(len(list_IDs)/self.n_batches))
           raise ValueError('n_batches does not match length of IDs')
