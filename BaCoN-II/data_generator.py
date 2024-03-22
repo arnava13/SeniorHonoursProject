@@ -53,7 +53,7 @@ def generate_noise(k, P,
 
 
 class DataSet(): # need to add new variable to 'params' further down
-    def __init__(self, list_IDs, labels, labels_dict, batch_size=32, 
+    def __init__(self, list_IDs, labels, labels_dict, n_examples, batch_size=32, 
                 data_root = 'data/', dim=(500, 4), n_channels=1,
                 shuffle=True, normalization='stdcosmo',
                 save_indexes=False, models_dir = 'models/', idx_file_name = '_',
@@ -106,6 +106,7 @@ class DataSet(): # need to add new variable to 'params' further down
         self.rng = tf.random.Generator.from_seed(self.seed)
         self.swap_axes = swap_axes 
         self.TPU = TPU
+        self.n_examples = n_examples
         
         self.k_max=k_max
         self.k_min=k_min
@@ -727,6 +728,7 @@ def create_datasets(FLAGS, strategy=None):
     ##Generate a random seed now to prevent issues in parallel processing when in TPU mode
     seed = np.random.randint(0, 2**32 - 1)
     
+    n_examples = n_labels_eff * len(val_index_1)/val_size
     
     params = {'dim': (FLAGS.im_depth, FLAGS.im_width),
           'batch_size':batch_size, # should satisfy  m x Batch size /n_noisy_samples =  n_indexes  with m a positive integer
@@ -769,9 +771,9 @@ def create_datasets(FLAGS, strategy=None):
         params['n_noisy_samples']=1
     
     print('\n--DataSet Train')
-    training_dataset = DataSet(partition['train'], labels, labels_dict, data_root = FLAGS.DIR, save_indexes=False, seed = seed, strategy=strategy, **params)
+    training_dataset = DataSet(partition['train'], labels, labels_dict, n_examples, data_root = FLAGS.DIR, save_indexes=False, seed = seed, strategy=strategy, **params)
     print('\n--DataSet Validation')
-    validation_dataset = DataSet(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False,strategy=strategy, seed = seed, **params)
+    validation_dataset = DataSet(partition['validation'], labels, labels_dict, n_examples, data_root = FLAGS.DIR,  save_indexes=False,strategy=strategy, seed = seed, **params)
 
     
     return training_dataset, validation_dataset #, params

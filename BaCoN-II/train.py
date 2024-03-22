@@ -158,9 +158,14 @@ def my_train(model, loss, epochs,
     
     callback = TrainingCallback(loss, ckpt, ckpt_manager, fname_hist=fname_hist, patience=10, save_ckpt=save_ckpt)
     if TPU:
+        print('val_dataset.n_examples: %s' %val_dataset.n_examples)
+        print('train_dataset.n_examples: %s' %train_dataset.n_examples)
+        print('val_dataset.batch_size: %s' %val_dataset.batch_size)
+        print('train_dataset.batch_size: %s' %train_dataset.batch_size)
+        print('num_replicas_in_sync: %s' %strategy.num_replicas_in_sync)
         with strategy.scope():
-            val_steps_per_epoch = len(val_dataset.list_IDs) // (val_dataset.batch_size * strategy.num_replicas_in_sync)
-            train_steps_per_epoch = len(train_dataset.list_IDs) // (train_dataset.batch_size * strategy.num_replicas_in_sync)
+            val_steps_per_epoch = val_dataset.n_examples // (val_dataset.batch_size * strategy.num_replicas_in_sync)
+            train_steps_per_epoch = train_dataset.n_examples // (train_dataset.batch_size * strategy.num_replicas_in_sync)
             train_dataset.dataset = strategy.experimental_distribute_dataset(train_dataset.dataset)
             val_dataset.dataset = strategy.experimental_distribute_dataset(val_dataset.dataset)
             history = model.fit(train_dataset.dataset, epochs=epochs,
