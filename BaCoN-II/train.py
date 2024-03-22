@@ -295,15 +295,7 @@ def main():
     FLAGS.strides_pooling = [int(z) for z in FLAGS.strides_pooling]
     FLAGS.c_1.sort()
     FLAGS.c_0.sort()
-
-    try:
-        shutil.rmtree('cache')
-        print(f"Cache folder deleted.")
-    except FileNotFoundError:
-        print(f"Cache folder does not exist.")
-    except Exception as e:
-        print(f"Error deleting cache folder.")
-
+    
     if FLAGS.TPU and FLAGS.GPU:
         print('Cannot use both TPU and GPU. Using GPU only ')
         FLAGS.TPU=False
