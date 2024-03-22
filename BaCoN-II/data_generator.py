@@ -451,7 +451,7 @@ class DataSet():
                     tf.print('axes not swapped')
                     tf.print('Dimension of NORM data:', tf.shape(divisor))
         if self.swap_axes:
-            X = X[:,:,0,:]
+            X = X[:,0,:,0]
         y = tf.cast(y, dtype=tf.int32)
         y = tf.one_hot(y, depth=self.n_classes_out)
 
