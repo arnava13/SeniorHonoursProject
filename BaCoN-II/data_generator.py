@@ -438,23 +438,23 @@ class DataSet(): # need to add new variable to 'params' further down
                 print('X first 10:') 
                 print(X[10])
                             
-            # Store class   
-            label = fname.split('/')[-2]
+        # Store class   
+        label = fname.split('/')[-2]
             
-            if not self.base_case_dataset:
-                label = self.group_lab_dict[label]
-                encoding = self.labels_dict[label]
-            elif (self.fine_tune and not self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and not self.dataset_balanced):
-                label = self.group_lab_dict[label]
-                encoding = self.labels_dict[label]
-            else:
-                # regular 5 labels case
-                encoding = self.labels_dict[label]
-            if self.Verbose:
-                print('Label for this example: %s' %label)
-                print('Encoding: %s' % encoding)
-            
-            y = encoding
+        if not self.base_case_dataset:
+            label = self.group_lab_dict[label]
+            encoding = self.labels_dict[label]
+        elif (self.fine_tune and not self.dataset_balanced) or (not self.fine_tune and self.one_vs_all and not self.dataset_balanced):
+            label = self.group_lab_dict[label]
+            encoding = self.labels_dict[label]
+        else:
+            # regular 5 labels case
+            encoding = self.labels_dict[label]
+        if self.Verbose:
+            print('Label for this example: %s' %label)
+            print('Encoding: %s' % encoding)
+        
+        y = encoding
         X = tf.convert_to_tensor(X, dtype=tf.float32)
         y = tf.convert_to_tensor(y, dtype=tf.int32)    
 
@@ -507,7 +507,6 @@ class DataSet(): # need to add new variable to 'params' further down
         if self.swap_axes:
             X = X[:,:,0,:]
             X = X[0,:,:]
-        y = tf.squeeze(y)
         y = tf.cast(y, dtype=tf.int32)
         y = tf.one_hot(y, depth=self.n_classes_out)
 
