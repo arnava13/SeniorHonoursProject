@@ -447,7 +447,6 @@ class DataSet():
                     tf.print('Dimension of NORM data:', tf.shape(divisor))
         if self.swap_axes:
             X = X[:,:,0,:]
-            X = X[0,:,:]
         y = tf.cast(y, dtype=tf.int32)
         y = tf.one_hot(y, depth=self.n_classes_out)
 
@@ -484,9 +483,9 @@ class DataSet():
         n_ks = tf.constant(len(self.all_ks), dtype=tf.int32)
 
         if self.swap_axes:
-            x_shape = (n_ks, 1, self.n_channels)
+            x_shape = (1, n_ks, 1, self.n_channels)
         else:
-            x_shape = (n_ks, self.n_channels, 1)
+            x_shape = (1, 1, n_ks, self.n_channels)
         
         self.all_curves = []
         if self.add_sys:
