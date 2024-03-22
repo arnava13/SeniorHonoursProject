@@ -258,10 +258,10 @@ class DataSet(): # need to add new variable to 'params' further down
         
         if not self.base_case_dataset:
             if self.batch_size%(self.n_examples):
-                print('batch_size,n_classes, len(c_1), n_noisy_samples= %s, %s, %s, %s '%(self.batch_size, self.n_classes, len(self.c_1), self.n_noisy_samples))
-                raise ValueError('batch size must be multiple of n_classes x len(c_1)')
+                print('batch_size, n_examples= %s, %s'%(self.batch_size, self.n_examples))
+                raise ValueError('batch size must be multiple of n_examples)')
         elif not(self.fine_tune and self.dataset_balanced) or not(not self.fine_tune and self.one_vs_all and self.dataset_balanced):
-            if self.batch_size%(self.n_classes*self.n_examples):
+            if self.batch_size%(self.n_examples):
                 raise ValueError('batch size must be multiple of n_examples')
         else:
             raise ValueError('check dataset_balanced and one_vs_all compatibility')
@@ -270,7 +270,7 @@ class DataSet(): # need to add new variable to 'params' further down
             if self.batch_size%(self.n_examples)!=0:
                 print('Batch size = %s' %self.batch_size)
                 #print('( n_labels x n_noisy_samples) = %s' %(self.n_classes*self.n_noisy_samples))
-                raise ValueError('Batch size must be multiple of n_classes x len(c_1)')
+                raise ValueError('Batch size must be multiple of n_examples')
             self.n_indexes = len(self.c_1)*self.batch_size//(self.n_examples) #len(self.c_1)*
             print('batch_size, n_classes, len(self.c_1), n_noisy_samples= %s, %s, %s, %s' %(self.batch_size, self.n_classes, len(self.c_1), self.n_noisy_samples))
             print('n_indexes=len(self.c_1)*batch_size//(n_classes*n_noisy_samples)=%s' %self.n_indexes)
