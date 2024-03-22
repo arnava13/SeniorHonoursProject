@@ -509,7 +509,6 @@ def main():
         filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense, padding = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense, FLAGS.padding
     
     if FLAGS.TPU:
-        rand_seed = tf.random.uniform(shape=(), minval=0, maxval=2**32, dtype=tf.int32)
         with strategy.scope():
             model=make_model(     model_name=model_name,
                         drop=drop, 
@@ -523,7 +522,7 @@ def main():
                         strides_pooling=strides_pooling,
                         activation=tf.nn.leaky_relu,
                         bayesian=bayesian, 
-                        n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm, seed = rand_seed
+                        n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
                             )
             if FLAGS.bayesian:
                 loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size, TPU=FLAGS.TPU)
@@ -623,7 +622,7 @@ def main():
                                        n_out_labels=training_dataset.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        trainable=FLAGS.trainable, 
-                                       drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last, seed = rand_seed)
+                                       drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
                     if FLAGS.bayesian:
                         loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
                         loss.set_model(model)
@@ -648,7 +647,7 @@ def main():
                     model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
                                        n_out_labels=training_dataset.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
-                                       drop=drop,  BatchNorm=FLAGS.BatchNorm, seed = rand_seed)
+                                       drop=drop,  BatchNorm=FLAGS.BatchNorm)
                     if FLAGS.bayesian:
                         loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
                         loss.set_model(model)
