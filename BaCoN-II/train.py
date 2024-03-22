@@ -212,7 +212,6 @@ def main():
     parser.add_argument("--TEST_DIR", default='data/test_data/', type=str, required=False)  
     parser.add_argument("--models_dir", default='models/', type=str, required=False)
     parser.add_argument("--save_ckpt", default=True, type=str2bool, required=False)
-    parser.add_argument("--save_indexes", default=False, type=str2bool, required=False)
     parser.add_argument("--out_path_overwrite", default=False, type=str2bool, required=False)
     parser.add_argument("--curves_folder", default=None, type=str, required=False)
     parser.add_argument("--save_processed_spectra", default=False, type=str2bool, required=False)    
@@ -659,7 +658,7 @@ def main():
                 training_dataset, 
                 validation_dataset, ckpts_path, ckpt, manager, TPU=FLAGS.TPU,
                 strategy=strategy, patience=FLAGS.patience, restore=FLAGS.restore, 
-                save_ckpt=FLAGS.save_ckpt, save_indexes = FLAGS.save_indexes #not(FLAGS.test_mode)
+                save_ckpt=FLAGS.save_ckpt #not(FLAGS.test_mode)
             )
     
     #Delete cached datasets
