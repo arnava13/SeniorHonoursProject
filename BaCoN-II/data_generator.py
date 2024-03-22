@@ -257,11 +257,11 @@ class DataSet(): # need to add new variable to 'params' further down
         ######
         
         if not self.base_case_dataset:
-            if self.batch_size%(self.n_examples):
+            if self.batch_size%(self.n_examples != 0):
                 print('batch_size, n_examples= %s, %s'%(self.batch_size, self.n_examples))
                 raise ValueError('batch size must be multiple of n_examples)')
         elif not(self.fine_tune and self.dataset_balanced) or not(not self.fine_tune and self.one_vs_all and self.dataset_balanced):
-            if self.batch_size%(self.n_examples):
+            if self.batch_size%(self.n_examples) != 0:
                 raise ValueError('batch size must be multiple of n_examples')
         else:
             raise ValueError('check dataset_balanced and one_vs_all compatibility')
