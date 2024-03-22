@@ -579,7 +579,7 @@ class DataSet(): # need to add new variable to 'params' further down
             if self.shuffle:
                 dataset = dataset.shuffle(buffer_size=len(list_IDs))
             dataset.cache()
-            global_batchsize = self.batch_sizenc
+            global_batchsize = self.batch_size
             global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
             dataset = dataset.batch(global_batchsize)
             dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
