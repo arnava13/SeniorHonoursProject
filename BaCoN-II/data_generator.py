@@ -386,7 +386,6 @@ class DataSet():
             if self.Verbose:
                 print('No noise')
             expanded = np.expand_dims(P_original, axis=2)
-
         # Store sample
         if self.Verbose:
             print('Dimension of data: %s' %str(expanded.shape))
@@ -402,7 +401,7 @@ class DataSet():
                 print('Final dimension of data: %s' %str(expanded.shape))
                 print('expanded first 10:') 
                 print(expanded[10])
-            # now shape of expanded is (1, n_data_points, 1, n_channels=3)
+            # now shape of expanded is (n_data_points, 1, n_channels=3)
         X = expanded  
 
         if self.Verbose:
@@ -485,9 +484,9 @@ class DataSet():
         n_ks = tf.constant(len(self.all_ks), dtype=tf.int32)
 
         if self.swap_axes:
-            x_shape = (1, n_ks, 1, self.n_channels)
+            x_shape = (n_ks, 1, self.n_channels)
         else:
-            x_shape = (1, 1, n_ks, self.n_channels)
+            x_shape = (n_ks, self.n_channels, 1)
         
 
         def data_generator(fname_list):
