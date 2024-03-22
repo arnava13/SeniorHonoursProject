@@ -108,8 +108,6 @@ class TrainingCallback(tf.keras.callbacks.Callback):
         for key in ['loss', 'val_loss', 'accuracy', 'val_accuracy']:  # Adjust according to your metrics
             if key in logs:
                 fname = os.path.join(self.fname_hist, f'{key}.txt')
-                if not os.path.exists(fname):
-                    open(fname, 'w').close()  # Create the file
                 with open(fname, 'a') as fh:
                     fh.write(f'{logs[key]}\n')
 
