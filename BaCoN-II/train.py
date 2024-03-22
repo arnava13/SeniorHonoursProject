@@ -21,12 +21,15 @@ import time
 import shutil
 
 class BayesianLoss(tf.keras.losses.Loss):
-    def __init__(self, n_train_examples, n_val_examples):
+    def __init__(self, n_train_examples, n_val_examples, TPU=False):
         super().__init__()
         self.n_examples = n_train_examples  # Default to training examples
         self.n_train_examples = n_train_examples
         self.n_val_examples = n_val_examples
-        self.base_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+        if TPU:
+            self.base_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+        else:
+            self.base_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
 
     def call(self, y_true, y_pred):
         kl_loss = sum(self.model.losses) / self.n_examples
@@ -183,10 +186,16 @@ def compute_loss(dataset, model, bayesian=False, TPU=False, strategy=None):
     x_batch_train, y_batch_train = dataset.take(0)
     logits = model(x_batch_train, training=False)
     if bayesian:
-            kl = sum(model.losses)/dataset.batch_size/dataset.n_batches
-            base_loss = tf.keras.losses.CategoricalCrossentropy(y_batch_train, logits, from_logits=True)
+            kl = sum(model.losses)/dataset.n_example
+            if TPU:
+                base_loss = tf.keras.losses.CategoricalCrossentropy(y_batch_train, logits, from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+            else:
+                base_loss = tf.keras.losses.CategoricalCrossentropy(y_batch_train, logits, from_logits=True)
             loss_0 = base_loss + kl
     else:
+        if TPU:
+            loss_0 = tf.keras.losses.categorical_crossentropy(y_batch_train, logits, from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+        else:
             loss_0 = tf.keras.losses.categorical_crossentropy(y_batch_train, logits, from_logits=True)
     return loss_0
 
@@ -527,10 +536,13 @@ def main():
                         n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
                             )
             if FLAGS.bayesian:
-                loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
+                loss=BayesianLoss(n_train_examples=training_dataset.n_examples, n_val_examples=validation_dataset.n_examples, TPU=FLAGS.TPU)
                 loss.set_model(model)
             else:
-                loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+                if FLAGS.TPU:
+                    loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+                else:
+                    loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
 
             model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
     else:
@@ -549,10 +561,13 @@ def main():
                           n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
                              )
         if FLAGS.bayesian:
-            loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
+            loss=BayesianLoss(n_train_examples=training_dataset.n_examples, n_val_examples=validation_dataset.n_examples)
             loss.set_model(model)
         else:
-            loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+            if FLAGS.TPU:
+                loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+            else:
+                loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
         model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'], jit_compile=True)
 
     print(model.summary())
@@ -620,10 +635,10 @@ def main():
                                        trainable=FLAGS.trainable, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
                     if FLAGS.bayesian:
-                        loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
+                        loss=BayesianLoss(n_train_examples=training_dataset.n_examples, n_val_examples=validation_dataset.n_examples)
                         loss.set_model(model)
                     else:
-                        loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+                        loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
                     model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
             else:
                 model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
@@ -632,7 +647,7 @@ def main():
                                        trainable=FLAGS.trainable, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
                 if FLAGS.bayesian:
-                    loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
+                    loss=BayesianLoss(n_train_examples=training_dataset.n_examples, n_val_examples=validation_dataset.n_examples)
                     loss.set_model(model)
                 else:
                     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
@@ -645,10 +660,10 @@ def main():
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm)
                     if FLAGS.bayesian:
-                        loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
+                        loss=BayesianLoss(n_train_examples=training_dataset.n_examples, n_val_examples=validation_dataset.n_examples)
                         loss.set_model(model)
                     else:
-                        loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+                        loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
                     model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
             else: 
                 model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
@@ -656,7 +671,7 @@ def main():
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm)
                 if FLAGS.bayesian:
-                    loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
+                    loss=BayesianLoss(n_train_examples=training_dataset.n_examples, n_val_examples=validation_dataset.n_examples)
                     loss.set_model(model)
                 else:
                     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
