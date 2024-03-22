@@ -485,7 +485,7 @@ def main():
             optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
     
     if FLAGS.bayesian:
-        loss=BayesianLoss(n_train_examples=training_dataset.n_examples, n_val_examples=validation_dataset.n_examples)
+        loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
         loss.set_model(model)
     else:
         loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
