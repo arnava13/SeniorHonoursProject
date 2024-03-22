@@ -428,7 +428,7 @@ def get_all_indexes(FLAGS, Test=False):
         dir_name=data_dir+'/'+l #+'_test'
     all_index = np.array([int(str.split(name, sep='.')[0]) for name in os.listdir(dir_name) if (os.path.isfile(os.path.join(dir_name, name)) and 'DS_Store' not in name)])
     assert all_index.shape[0]==n_samples
-    print('\nN. of data files: %s' %all_index.shape)
+    print('\nN. of data files: %s' %n_labels*all_index.shape)
     if FLAGS.test_mode: #and not Test:
         print('Choice with seed %s ' %FLAGS.seed)
         np.random.seed(FLAGS.seed)

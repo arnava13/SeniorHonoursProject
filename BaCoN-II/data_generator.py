@@ -424,7 +424,7 @@ class DataSet():
         y = encoding
 
         
-        yield X, y
+        return X, y
 
     @tf.function
     def normalize_and_onehot(self, X, y):
