@@ -563,9 +563,8 @@ class DataSet():
                         with open(spectra_file, "a+") as myCurvefile:
                             np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
        
-        self.xshape = ((self.batch_size * self.n_batches),) + tuple(self.xshape_file)
-        self.yshape = ((self.batch_size * self.n_batches),) + tuple(self.yshape_file)
-
+        self.xshape = self.xshape_file
+        self.yshape = self.xshape_file
         
         return dataset
 

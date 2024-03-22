@@ -39,7 +39,7 @@ def make_custom_model(drop=0.5,
                       bayesian=True, 
                       n_dense=1, 
                       swap_axes=True, 
-                      BatchNorm=True):
+                      BatchNorm=True, seed = None):
     n_conv = len(kernel_sizes)
     
     # Keeping original dynamic configurations but ensuring values are compile-time constants
@@ -59,7 +59,7 @@ def make_custom_model(drop=0.5,
             st = strides[i]
             ps = pool_sizes[i]
             spool = strides_pooling[i]
-            clayer = tfp.layers.Convolution1DFlipout if bayesian else tf.keras.layers.Conv1D
+            clayer = tfp.layers.Convolution1DFlipout(seed = seed) if bayesian else tf.keras.layers.Conv1D
             maxpoolL = tf.keras.layers.MaxPooling1D
         else:
 
@@ -67,7 +67,7 @@ def make_custom_model(drop=0.5,
             st = (strides[i], strides[i])
             ps = (pool_sizes[i], pool_sizes[i])
             spool = (strides_pooling[i], strides_pooling[i])
-            clayer = tfp.layers.Convolution2DFlipout if bayesian else tf.keras.layers.Conv2D
+            clayer = tfp.layers.Convolution2DFlipout(seed = seed) if bayesian else tf.keras.layers.Conv2D
             maxpoolL = tf.keras.layers.MaxPooling2D
 
         x = clayer(filters=filters[i], kernel_size=ks, strides=st, padding=padding, activation=activation)(x)
@@ -82,7 +82,7 @@ def make_custom_model(drop=0.5,
     x = flayer(x)
     
     for _ in range(n_dense):
-        dlayer = tfp.layers.DenseFlipout if bayesian else tf.keras.layers.Dense
+        dlayer = tfp.layers.DenseFlipout(seed = seed) if bayesian else tf.keras.layers.Dense
         x = dlayer(units=filters[-1], activation=activation)(x)
         if BatchNorm:
             x = tf.keras.layers.BatchNormalization(axis=-1, momentum=0.99)(x)
@@ -103,7 +103,7 @@ def make_custom_model(drop=0.5,
 
 
 def make_fine_tuning_model(base_model, input_shape, n_out_labels, dense_dim=0, 
-                           bayesian=True, trainable=True, drop=0.5, BatchNorm=True, include_last=False):
+                           bayesian=True, trainable=True, drop=0.5, BatchNorm=True, include_last=False, seed = None):
     inputs = tf.keras.Input(shape=input_shape)
     x = inputs
 
@@ -124,7 +124,7 @@ def make_fine_tuning_model(base_model, input_shape, n_out_labels, dense_dim=0,
 
     
     if dense_dim > 0:
-        dlayer = tfp.layers.DenseFlipout if bayesian else tf.keras.layers.Dense
+        dlayer = tfp.layers.DenseFlipout(seed = seed) if bayesian else tf.keras.layers.Dense
         x = dlayer(dense_dim, activation=tf.nn.relu)(x)  
 
         if BatchNorm:
@@ -153,7 +153,7 @@ def make_model_dummy(drop=0.,
                      padding='valid', 
                      k_1=96, k_2=256, k_3=384,
                      activation=tf.nn.leaky_relu,
-                     bayesian=False):
+                     bayesian=False, seed = None):
     # Initialize a Sequential model
     model = tf.keras.models.Sequential()
 
@@ -167,7 +167,8 @@ def make_model_dummy(drop=0.,
             kernel_size=(11, 1),  # Kernel size
             strides=(2, 1),  # Strides
             padding=padding,  # Padding
-            activation=activation  # Activation function
+            activation=activation,
+            seed = seed  # Activation function
         ))
     else:
         model.add(tf.keras.layers.Conv2D(
@@ -183,7 +184,7 @@ def make_model_dummy(drop=0.,
 
     # Define the output layer, choosing between Bayesian and non-Bayesian based on 'bayesian' flag
     if bayesian:
-        model.add(tfp.layers.DenseFlipout(n_labels))
+        model.add(tfp.layers.DenseFlipout(n_labels, seed = seed))
     else:
         model.add(tf.keras.layers.Dense(n_labels))
 
@@ -196,7 +197,7 @@ def make_model_dummy(drop=0.,
 
 
 def make_unfreeze_model(base_model, input_shape, n_out_labels, dense_dim=0, 
-                        bayesian=True, drop=0.5, BatchNorm=True):
+                        bayesian=True, drop=0.5, BatchNorm=True, seed = None):
     inputs = tf.keras.Input(shape=input_shape)
     x = inputs
 
@@ -212,7 +213,7 @@ def make_unfreeze_model(base_model, input_shape, n_out_labels, dense_dim=0,
 
     # Add additional Dense layer with specified dimensions if requested
     if dense_dim > 0:
-        dense_layer = tfp.layers.DenseFlipout(dense_dim, activation=tf.nn.relu) if bayesian else tf.keras.layers.Dense(dense_dim, activation=tf.nn.relu)
+        dense_layer = tfp.layers.DenseFlipout(dense_dim, activation=tf.nn.relu, seed = seed) if bayesian else tf.keras.layers.Dense(dense_dim, activation=tf.nn.relu)
         x = dense_layer(x)
 
         # Optionally include Batch Normalization
@@ -226,7 +227,7 @@ def make_unfreeze_model(base_model, input_shape, n_out_labels, dense_dim=0,
             x = dropout_layer(x)
 
     # Define the output layer
-    output_layer = tfp.layers.DenseFlipout(n_out_labels) if bayesian else tf.keras.layers.Dense(n_out_labels)
+    output_layer = tfp.layers.DenseFlipout(n_out_labels, seed = seed) if bayesian else tf.keras.layers.Dense(n_out_labels)
     outputs = output_layer(x)
 
     # Construct and return the new model
