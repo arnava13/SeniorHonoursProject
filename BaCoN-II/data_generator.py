@@ -313,22 +313,24 @@ class DataSet(): # need to add new variable to 'params' further down
         print('In total, for each batch we have %s training examples' %(n_ex))
         print('Input batch size: %s' %self.batch_size)
         print('N of batches to cover all file IDs: %s' %self.n_batches*len(self.labels))
+        """
         if n_ex!=self.batch_size:
-            raise ValueError('Effective batch size does not match input batch size')
-        
+            raise ValueError('Effective batch size does not match input batch size')"""
+        """
         if self.n_indexes%(self.batch_size/(n_check))!=0:
           print('Batch size = %s' %self.batch_size)
           print('( n_labels x n_noisy_samples) = %s' %(n_check*self.n_noisy_samples))
           print('n_indexes = %s' %self.n_indexes)
           raise ValueError('Batch size should satisfy  m x Batch size /( n_labels x n_noisy_samples) =  n_indexes  with m a positive integer ')
-        
-        
+        """
+        """
         if self.n_indexes!=len(list_IDs)/self.n_batches: 
           print('length of IDs = %s' %str(len(list_IDs)*len(self.labels)))
           print('n_batches = %s' %self.n_batches*len(self.labels))
           print('n_indexes = %s' %self.n_indexes)
           print('len(list_IDs)/self.n_batches = %s' %(len(list_IDs)/self.n_batches))
           raise ValueError('n_batches does not match length of IDs')
+        """
         self.Verbose=Verbose
         self.Verbose_2=Verbose_2
         self.dataset=self.__data_generation(self.list_IDs, self.list_IDs_dict)
