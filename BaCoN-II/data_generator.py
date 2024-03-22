@@ -431,6 +431,8 @@ class DataSet():
 
     @tf.function
     def normalize_and_onehot(self, X, y):
+        print("X into normalize_and_onehot: %s" %str(X.shape))
+        print("y into normalize_and_onehot: %s" %str(y.shape))
         if self.normalization == 'batch':
             mu_batch = tf.reduce_mean(X, axis=0)
             std_batch = tf.math.reduce_std(X, axis=0)
@@ -455,10 +457,9 @@ class DataSet():
 
         self.xshape_file = X.shape
         self.yshape_file = y.shape
-        
-        if self.Verbose:
-            tf.print('Dimension of data after normalising: %s' %str(X.shape))
-            tf.print('Dimension of labels after one-hot encoding: %s' %str(y.shape))
+    
+        print('Dimension of data after normalising: %s' %str(X.shape)))
+        print('Dimension of labels after one-hot encoding: %s' %str(y.shape)))
         return X, y
 
     def create_dataset(self, list_IDs, list_IDs_dict):
@@ -513,17 +514,18 @@ class DataSet():
                 P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
                 self.k_range = k
 
-                if self.Verbose:
-                    print('Dimension of original data: %s' %str(P_original.shape))
-                
-                if self.Verbose:
-                    print('dimension P_original: %s' %str(P_original.shape))    
-                    print('P_original first 10:') 
-                    print(P_original[10])
-                
+                if i==1:
+                    print('Dimension of P_original: %s' %str(P_original.shape))
+                    print('Dimension of k: %s' %str(k.shape))
+                #if self.Verbose:
+
+
                 for i_noise in range(self.n_noisy_samples):
                     j = i*self.n_noisy_samples + i_noise
                     X, y = self.noise_realisations(fname, P_original, k, i_noise, j)
+                    if i == 1:
+                        print('X shape: %s' %str(X.shape))
+                        print('y shape: %s' %str(y.shape))
                     yield X, y
 
         dataset = tf.data.Dataset.from_generator(data_generator,
