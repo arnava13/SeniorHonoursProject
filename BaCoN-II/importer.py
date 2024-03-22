@@ -17,8 +17,6 @@ from data_generator import create_test_dataset, create_datasets
 from models import *
 from utils import DummyHist, plot_hist, str2bool, get_flags
 
-from train import ELBO, my_loss
-
 
 def load_model_for_test(FLAGS, input_shape, n_classes=5,
                         dataset=None, FLAGS_ORIGINAL=None, new_fname=None):

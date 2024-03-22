@@ -19,7 +19,6 @@ from models import *
 from utils import DummyHist, plot_hist, str2bool, Logger, get_flags
 import sys
 import time
-from train import ELBO, my_loss
 
 
 def load_model_for_test(FLAGS, input_shape, n_classes=5,
