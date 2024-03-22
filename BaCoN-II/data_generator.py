@@ -531,7 +531,7 @@ class DataSet():
                 tf.TensorSpec(shape=x_shape, dtype=tf.float32),
                 tf.TensorSpec(shape=(), dtype=tf.int32)
             ),
-            args=(fname_list)
+            args=(fname_list,)
         )
 
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
