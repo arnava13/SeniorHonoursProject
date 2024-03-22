@@ -139,12 +139,12 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
   a = indexes.shape[0]
   if Verbose:
     print('Indexes length: %s' %a)
-  n_keep = a - (a % (bs//(n_labels*n_noise)))
+  n_keep = a - (a % (bs//(n_noise)))
   if Verbose:
     print('n_keep: %s' %n_keep)
     
-  #print('len(n_keep)/n_labels/n_noise=%s'%(n_keep/n_labels/n_noise))
-  if n_keep<a or not((n_keep/n_labels/n_noise).is_integer()):   
+  #print('len(n_keep)/n_noise=%s'%(n_keep/n_noise))
+  if n_keep<a or not((n_keep/n_noise).is_integer()):   
     if Verbose:
       print('Sampling')
     idxs_new = np.random.choice(indexes, int(a), replace=False)
@@ -152,7 +152,7 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
     if Verbose:
       print('Not sampling')
     idxs_new = indexes
-  check_val=int(idxs_new.shape[0]%(bs/(n_labels*n_noise)))
+  check_val=int(idxs_new.shape[0]%(bs/(n_noise)))
   if Verbose:
     print('New length: %s' %idxs_new.shape[0])
     
@@ -168,8 +168,8 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
               5: 'N of indexes in not multiple of min batch size',
               6: 'N of indexes in not multiple of number of noisy samples'}
   
-  n_batches=(idxs_new.shape[0]*n_noise*n_labels/(bs))
-  n_indexes=len_c1*bs/(n_labels*n_noise)
+  n_batches=(idxs_new.shape[0]*n_noise/(bs))
+  n_indexes=len_c1*bs/(n_noise)
   if Verbose:
       print('N batches: %s' %n_batches)
       print(' len_C1: %s' %len_c1)
@@ -178,33 +178,33 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
   if check_val!=0:
       case=1
       if Verbose:
-        print('idxs_new.shape0 mod  bs/ n_labels x n_noise : %s' %check_val )
+        print('idxs_new.shape0 mod  bs/n_noise : %s' %check_val )
         print(case_dict[case])
   if not((idxs_new.shape[0]/n_indexes).is_integer()):
       case=2
       if Verbose:
         print('len(idxs_new)/n_indexes=%s'%(idxs_new.shape[0]/n_indexes))
         print(case_dict[case])
-  if not((idxs_new.shape[0]*n_noise*n_labels/(bs)).is_integer()):
+  if not((idxs_new.shape[0]*n_noise/(bs)).is_integer()):
       case=3
       if Verbose:
-        print('len(idxs_new)x n_labels x n_noise /bs =%s'%((idxs_new.shape[0]*n_noise*n_labels/(bs))) )
+        print('len(idxs_new) x n_noise /bs =%s'%((idxs_new.shape[0]*n_noise/(bs))) )
         print(case_dict[case])
   if  not(n_batches.is_integer()):
       case=4
       if Verbose:
-        print('len(idxs_new)x n_labels x n_noise /bs =%s'%((idxs_new.shape[0]*n_noise*n_labels/(bs))) )
+        print('len(idxs_new) x n_noise /bs =%s'%((idxs_new.shape[0]*n_noise/(bs))) )
         print(case_dict[case])
-  if not((idxs_new.shape[0]/(n_noise*n_labels)).is_integer):  
+  if not((idxs_new.shape[0]/(n_noise)).is_integer):  
       case=5
       if Verbose:
-        print(' idxs_new.shape[0]/ n_noise x n_labels : %s' %(idxs_new.shape[0]/(n_noise*n_labels)) )
+        print(' idxs_new.shape[0]/ n_noise : %s' %(idxs_new.shape[0]/(n_noise)) )
         print(case_dict[case])
   
   if case==0:
     if Verbose:
         print(case_dict[case])
-  else:# check_val!=0 or not((idxs_new.shape[0]/n_noise).is_integer()) or not((idxs_new.shape[0]/(n_labels*n_noise)).is_integer()): #(n_labels*n_noise)%idxs_new.shape[0] !=0:
+  else:# check_val!=0 or not((idxs_new.shape[0]/n_noise).is_integer()) or not((idxs_new.shape[0]/(n_noise)).is_integer()): #(n_noise)%idxs_new.shape[0] !=0:
     if Verbose:
       print('Recursive call N %s' %nRec)
     nRec+=1
@@ -405,6 +405,7 @@ def get_all_indexes(FLAGS, Test=False):
     n_labels=len(np.unique([val for val in labels_dict.values()]))
     print('n_labels : %s' %n_labels)
     n_s=[]
+    all_index = []
     for l in all_labels:
         if not Test:
             dir_name=data_dir+'/'+l
@@ -413,18 +414,20 @@ def get_all_indexes(FLAGS, Test=False):
         n_samples = len([name for name in os.listdir(dir_name) if ( os.path.isfile(os.path.join(dir_name, name)) and 'DS_Store' not in name)]) 
         print('%s - %s training examples' %(l,n_samples))
         n_s.append(n_samples)
+        indices = [int(str.split(name, sep='.')[0]) for name in os.listdir(dir_name) if os.path.isfile(os.path.join(dir_name, name)) and 'DS_Store' not in name]
+        all_index.extend(indices)
+
+    n_samples = sum(n_samples)
+    all_index = np.array(all_index)
 
     for i in range(len(all_labels)-1):
         assert n_s[i] == n_s[i+1]
-    
-    n_samples = n_s[0]
     
     l = all_labels[0]#'lcdm'
     if not Test:
         dir_name=data_dir+'/'+l
     else:
         dir_name=data_dir+'/'+l #+'_test'
-    all_index = np.array([int(str.split(name, sep='.')[0]) for name in os.listdir(dir_name) if (os.path.isfile(os.path.join(dir_name, name)) and 'DS_Store' not in name)])
     assert all_index.shape[0]==n_samples
     print('\nN. of data files: %s' %all_index.shape)
     if FLAGS.test_mode: #and not Test:
@@ -445,8 +448,6 @@ def get_all_indexes(FLAGS, Test=False):
         val_size=None
     n_samples=all_index.shape[0]
     
-
-        
     print('get_all_indexes labels dict: %s' %str(labels_dict)) 
     return all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels
     

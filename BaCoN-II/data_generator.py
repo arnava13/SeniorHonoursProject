@@ -658,11 +658,11 @@ def create_datasets(FLAGS):
     print('--create_generators, train indexes')
     if FLAGS.test_mode:
         if case==3:
-            batch_size=train_index.shape[0]*n_labels_eff*n_noisy_samples
+            batch_size=train_index.shape[0]*n_noisy_samples
         elif case==2:
-            batch_size=train_index.shape[0]*n_labels*n_noisy_samples
+            batch_size=train_index.shape[0]*n_noisy_samples
         elif case==1:
-            batch_size=n_labels_eff*n_noisy_samples
+            batch_size=n_noisy_samples
     else:
         batch_size=FLAGS.batch_size
     print('batch_size: %s' %batch_size)
@@ -682,8 +682,8 @@ def create_datasets(FLAGS):
         print('Validation index: %s' %val_index_1)
     
     print('len(train_index_1), batch_size, n_labels_eff, n_noisy_samples = %s, %s, %s, %s' %(train_index_1.shape[0], batch_size, n_labels_eff,n_noisy_samples ))
-    assert train_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
-    assert val_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
+    assert train_index_1.shape[0]%(batch_size//(n_noisy_samples))==0
+    assert val_index_1.shape[0]%(batch_size//(n_noisy_samples))==0
     
     partition={'train': train_index_1, 'validation': val_index_1}
     
@@ -720,7 +720,7 @@ def create_datasets(FLAGS):
     
     
     params = {'dim': (FLAGS.im_depth, FLAGS.im_width),
-          'batch_size':batch_size, # should satisfy  m x Batch size /( n_labels x n_noisy_samples) =  n_indexes  with m a positive integer
+          'batch_size':batch_size, # should satisfy  m x Batch size /n_noisy_samples =  n_indexes  with m a positive integer
           'n_channels': FLAGS.im_channels,
           'shuffle': True,
           'normalization': FLAGS.normalization,
@@ -820,9 +820,9 @@ def create_test_dataset(FLAGS):
     print('--Train')
     if FLAGS.test_mode:
         if not FLAGS.fine_tune:
-            batch_size=all_index.shape[0]*n_labels_eff*n_noisy_samples
+            batch_size=all_index.shape[0]*n_noisy_samples
         else:
-            batch_size=n_labels_eff*n_noisy_samples
+            batch_size=n_noisy_samples
     else:
         batch_size=FLAGS.batch_size
     print('batch_size: %s' %batch_size)
@@ -830,7 +830,7 @@ def create_test_dataset(FLAGS):
     test_index_1  = cut_sample(all_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=True, len_c1=len_c1)
     n_test = test_index_1.shape[0]
 
-    assert test_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
+    assert test_index_1.shape[0]%(batch_size//n_noisy_samples)==0
 
     print('N. of test files used: %s' %n_test)
 
@@ -840,7 +840,7 @@ def create_test_dataset(FLAGS):
  
     
     params_test = {'dim': (FLAGS.im_depth, FLAGS.im_width),
-          'batch_size':batch_size, # should satisfy  m x Batch size /( n_labels x n_noisy_samples) =  n_indexes  with m a positive integer
+          'batch_size':batch_size, # should satisfy  m x Batch size /(n_noisy_samples) =  n_indexes  with m a positive integer
           'n_channels': FLAGS.im_channels,
           'shuffle': True,
           'normalization': FLAGS.normalization,
