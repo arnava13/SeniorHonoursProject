@@ -182,7 +182,7 @@ def my_train(model, loss, epochs,
 
 
 def compute_loss(dataset, model, bayesian=False, TPU=False, strategy=None):
-    x_batch_train, y_batch_train = dataset.take(0)
+    x_batch_train, y_batch_train = dataset.take(1)
     logits = model(x_batch_train, training=False)
     if bayesian:
             kl = sum(model.losses)/dataset.n_example

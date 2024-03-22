@@ -14,7 +14,7 @@ import tensorflow.compat.v2 as tf
 import tensorflow_probability as tfp
 tf.enable_v2_behavior()
 tfd = tfp.distributions
-from data_generator import create_test_generator, create_generators
+from data_generator import create_test_dataset, create_datasets
 from models import *
 from utils import DummyHist, plot_hist, str2bool, Logger, get_flags
 import sys
@@ -23,16 +23,18 @@ from train import ELBO, my_loss
 
 
 def load_model_for_test(FLAGS, input_shape, n_classes=5,
-                        generator=None, FLAGS_ORIGINAL=None, new_fname=None):
+                        dataset=None, FLAGS_ORIGINAL=None, new_fname=None):
          
 
     
     print('------------ BUILDING MODEL ------------\n')
     
     print('Model n_classes : %s ' %n_classes)
-    if generator is not None:
-        print('Features shape: %s' %str(generator[0][0].shape))
-        print('Labels shape: %s' %str(generator[0][1].shape))
+    if dataset is not None:
+        for batch in dataset.dataset.take(1):
+            x, y = batch
+            print('Features shape: %s' %str(x[0].shape))
+            print('Labels shape: %s' %str(y[0].shape))
     
     try:
         BatchNorm=FLAGS.BatchNorm
@@ -87,15 +89,15 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5,
             ft_ckpt_name+='_unfrozen'
         
             
-        model = make_fine_tuning_model(base_model=model, input_shape=input_shape, n_out_labels=generator.n_classes_out,
+        model = make_fine_tuning_model(base_model=model, input_shape=input_shape, n_out_labels=dataset.n_classes_out,
                                        dense_dim= dense_dim, bayesian=FLAGS.bayesian, trainable=False, drop=0, BatchNorm=FLAGS.BatchNorm,
                                        include_last=FLAGS.include_last)
         model.build(input_shape=input_shape)
     print(model.summary())
     
-    if generator is not None:
+    if dataset is not None:
         print('Computing loss for randomly initialized model...')
-        loss_0 = compute_loss(generator, model, bayesian=FLAGS.bayesian)
+        loss_0 = compute_loss(dataset, model, bayesian=FLAGS.bayesian)
         print('Loss before loading weights/ %s\n' %loss_0.numpy())
             
     
@@ -122,23 +124,22 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5,
         #print('Checkpoint not found')
     ckpt.restore(latest)
     
-    if generator is not None:
-        loss_1 = compute_loss(generator, model, bayesian=FLAGS.bayesian)
+    if dataset is not None:
+        loss_1 = compute_loss(dataset.dataset, model, bayesian=FLAGS.bayesian)
         print('Loss after loading weights/ %s\n' %loss_1.numpy())   
     
     return model
 
 
-def compute_loss(generator, model, bayesian=False):
-    x_batch_train, y_batch_train = generator[0]
+def compute_loss(dataset, model, bayesian=False):
+    x_batch_train, y_batch_train = dataset.take(1)
     logits = model(x_batch_train, training=False)
     if bayesian:
-            #print('Bayesian case')
-            kl = sum(model.losses)/generator.batch_size/generator.n_batches
-            loss_0 = ELBO(y_batch_train, logits, kl)
+        kl = sum(model.losses)/dataset.n_examples
+        base_loss = tf.keras.losses.CategoricalCrossentropy(y_batch_train, logits, from_logits=True)
+        loss_0 = base_loss + kl
     else:
-            #print('Frequentist')
-            loss_0 = my_loss(y_batch_train, logits)
+        loss_0 = tf.keras.losses.categorical_crossentropy(y_batch_train, logits, from_logits=True)
     return loss_0
 
   
@@ -189,11 +190,11 @@ def print_cm(cm, names, out_path, cm_name_custom,tot_acc,tot_acc_no_uncl, FLAGS)
     return matrix_proportions    
 
 
-def evaluate_accuracy(model, test_generator, out_path, cm_name_custom, names=None, FLAGS=None):
+def evaluate_accuracy(model, test_dataset, out_path, cm_name_custom, names=None, FLAGS=None):
     acc_total=0
     y_true_tot=[]
     y_pred_tot=[]
-    for batch_idx, batch in enumerate(test_generator):
+    for batch_idx, batch in enumerate(test_dataset.dataset):
         X, y = batch
         pred = model.predict(X, verbose=0)
         y_pred = tf.argmax(tf.nn.softmax(pred, axis=1), axis=1)
@@ -205,7 +206,7 @@ def evaluate_accuracy(model, test_generator, out_path, cm_name_custom, names=Non
         y_true_tot.append(y_true)
         y_pred_tot.append(y_pred)
 
-    tot_acc = acc_total/test_generator.n_batches
+    tot_acc = acc_total/test_dataset.n_batches
     print('-- Total accuracy: %s %%' %( tot_acc.numpy()))  
     tot_acc_no_uncl = 0
     
@@ -253,7 +254,7 @@ def my_predict(X, model, num_monte_carlo=100, th_prob=0.5, verbose=False):
   return sampled_probas, mean_proba, mean_pred 
 
 
-def evaluate_accuracy_bayes(model, test_generator, out_path, cm_name_custom, num_monte_carlo=50, th_prob=0.5, names=None, FLAGS=None):
+def evaluate_accuracy_bayes(model, test_dataset, out_path, cm_name_custom, num_monte_carlo=50, th_prob=0.5, names=None, FLAGS=None):
     acc_total=0
     acc_total_no_uncl=0
     y_true_tot=[]
@@ -261,7 +262,7 @@ def evaluate_accuracy_bayes(model, test_generator, out_path, cm_name_custom, num
     all_sampled_probas = []
 
     print('Threshold probability for classification: %s ' %th_prob)
-    for batch_idx, batch in enumerate(test_generator):
+    for batch_idx, batch in enumerate(test_dataset.dataset):
         X, y = batch
         y_true = tf.argmax(y, axis=1)
         
@@ -282,8 +283,8 @@ def evaluate_accuracy_bayes(model, test_generator, out_path, cm_name_custom, num
         y_true_tot.append(y_true)
         y_pred_tot.append(mean_pred)
         all_sampled_probas.append(sampled_probas)
-    tot_acc = acc_total/test_generator.n_batches
-    tot_acc_no_uncl = acc_total_no_uncl/test_generator.n_batches
+    tot_acc = acc_total/test_dataset.n_batches
+    tot_acc_no_uncl = acc_total_no_uncl/test_dataset.n_batches
     print('-- Accuracy on test set using median of sampled probabilities: %s %% \n' %( tot_acc.numpy()))
     print('-- Accuracy on test set using median of sampled probabilities, not considering unclassified examples: %s %% \n' %( tot_acc_no_uncl.numpy()))  
     
@@ -420,34 +421,34 @@ def main():
             print (key,value)
     
     
-    print('------------ CREATING DATA GENERATORS ------------\n')
-    test_generator = create_test_generator(FLAGS)
+    print('------------ CREATING DATASETS ------------\n')
+    test_dataset = create_test_dataset(FLAGS)
         
     print('------------ DONE ------------\n')
         
     
     if FLAGS.swap_axes:
-        input_shape = ( int(test_generator.dim[0]), 
-                   int(test_generator.n_channels))
+        input_shape = ( int(test_dataset.dim[0]), 
+                   int(test_dataset.n_channels))
     else:
-        input_shape = ( int(test_generator.dim[0]), 
-                   int(test_generator.dim[1]), 
-                   int(test_generator.n_channels))
+        input_shape = ( int(test_dataset.dim[0]), 
+                   int(test_dataset.dim[1]), 
+                   int(test_dataset.n_channels))
     print('Input shape %s' %str(input_shape))
     
              
-    model_loaded =  load_model_for_test(FLAGS, input_shape, n_classes=test_generator.n_classes_out,
-                                        generator=test_generator)
+    model_loaded =  load_model_for_test(FLAGS, input_shape, n_classes=test_dataset.n_classes_out,
+                                        generator=test_dataset)
     
     
-    names=[ test_generator.inv_labels_dict[i] for i in range(len(test_generator.inv_labels_dict.keys()))]
+    names=[ test_dataset.inv_labels_dict[i] for i in range(len(test_dataset.inv_labels_dict.keys()))]
     
     if FLAGS.bayesian:
-        _ = evaluate_accuracy_bayes(model_loaded, test_generator, out_path,cm_name_custom,  
+        _ = evaluate_accuracy_bayes(model_loaded, test_dataset, out_path,cm_name_custom,  
                                     num_monte_carlo = args.n_monte_carlo_samples, th_prob=args.th_prob, 
                                     names=names, FLAGS=FLAGS)
     else:
-         _ = evaluate_accuracy(model_loaded, test_generator, out_path,cm_name_custom,  names=names, FLAGS=FLAGS)
+         _ = evaluate_accuracy(model_loaded, test_dataset, out_path,cm_name_custom,  names=names, FLAGS=FLAGS)
     
     # LT: close log file
     #sys.stdout = sys.__stdout__
