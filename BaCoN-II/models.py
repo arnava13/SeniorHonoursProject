@@ -59,7 +59,7 @@ def make_custom_model(drop=0.5,
             st = strides[i]
             ps = pool_sizes[i]
             spool = strides_pooling[i]
-            clayer = tfp.layers.Convolution1DFlipout(seed = seed) if bayesian else tf.keras.layers.Conv1D
+            clayer = tfp.layers.Convolution1DFlipout if bayesian else tf.keras.layers.Conv1D
             maxpoolL = tf.keras.layers.MaxPooling1D
         else:
 
@@ -67,10 +67,13 @@ def make_custom_model(drop=0.5,
             st = (strides[i], strides[i])
             ps = (pool_sizes[i], pool_sizes[i])
             spool = (strides_pooling[i], strides_pooling[i])
-            clayer = tfp.layers.Convolution2DFlipout(seed = seed) if bayesian else tf.keras.layers.Conv2D
+            clayer = tfp.layers.Convolution2DFlipout if bayesian else tf.keras.layers.Conv2D
             maxpoolL = tf.keras.layers.MaxPooling2D
 
-        x = clayer(filters=filters[i], kernel_size=ks, strides=st, padding=padding, activation=activation)(x)
+        if bayesian:
+            x = clayer(filters=filters[i], kernel_size=ks, strides=st, padding=padding, activation=activation, seed = seed)(x)
+        else:
+            x = clayer(filters=filters[i], kernel_size=ks, strides=st, padding=padding, activation=activation)(x)
         
         if ps > 0:
             x = maxpoolL(pool_size=ps, strides=spool, padding=padding)(x)
@@ -82,7 +85,7 @@ def make_custom_model(drop=0.5,
     x = flayer(x)
     
     for _ in range(n_dense):
-        dlayer = tfp.layers.DenseFlipout(seed = seed) if bayesian else tf.keras.layers.Dense
+        dlayer = tfp.layers.DenseFlipout if bayesian else tf.keras.layers.Dense
         x = dlayer(units=filters[-1], activation=activation)(x)
         if BatchNorm:
             x = tf.keras.layers.BatchNormalization(axis=-1, momentum=0.99)(x)
@@ -124,7 +127,7 @@ def make_fine_tuning_model(base_model, input_shape, n_out_labels, dense_dim=0,
 
     
     if dense_dim > 0:
-        dlayer = tfp.layers.DenseFlipout(seed = seed) if bayesian else tf.keras.layers.Dense
+        dlayer = tfp.layers.DenseFlipout if bayesian else tf.keras.layers.Dense
         x = dlayer(dense_dim, activation=tf.nn.relu)(x)  
 
         if BatchNorm:
@@ -134,7 +137,7 @@ def make_fine_tuning_model(base_model, input_shape, n_out_labels, dense_dim=0,
             x = tf.keras.layers.Dropout(drop)(x)
 
     # Output Layer
-    outputs = dlayer(n_out_labels, activation=None)(x)  
+    outputs = dlayer(n_out_labels, activation=None, seed = seed)(x)  
     if include_last:
         outputs = tf.nn.softmax(outputs)  
 
