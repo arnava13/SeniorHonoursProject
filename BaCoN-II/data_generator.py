@@ -502,10 +502,9 @@ class DataSet():
                 P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
                 self.k_range = k
 
-                if i==1:
+                if self.Verbose:
                     print('Dimension of P_original: %s' %str(P_original.shape))
                     print('Dimension of k: %s' %str(k.shape))
-                #if self.Verbose:
 
 
                 for i_noise in range(self.n_noisy_samples):
