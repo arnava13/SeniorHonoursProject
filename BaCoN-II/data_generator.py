@@ -82,6 +82,7 @@ class DataSet(): # need to add new variable to 'params' further down
         print('DataSet Initialization')
         
         self.one_vs_all=one_vs_all
+        self.strategy = strategy
         self.dataset_balanced=dataset_balanced
         self.sigma_sys=sigma_sys
         self.add_shot=add_shot
