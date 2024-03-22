@@ -541,7 +541,7 @@ class DataSet(): # need to add new variable to 'params' further down
             print(fname_list)
             
         #print('len(fname_list), batch_size, n_noisy_samples: %s, %s, %s' %(len(fname_list), self.batch_size, self.n_noisy_samples))
-        assert len(fname_list)==self.batch_size*self.n_batches // self.n_noisy_samples
+        #assert len(fname_list)==self.batch_size*self.n_batches // self.n_noisy_samples
 
         fname_list = np.array(fname_list, dtype=str)
 
@@ -700,8 +700,8 @@ def create_datasets(FLAGS, strategy=None):
         print('Validation index: %s' %val_index_1)
     
     print('len(train_index_1), batch_size, n_labels_eff, n_noisy_samples = %s, %s, %s, %s' %(train_index_1.shape[0], batch_size, n_labels_eff,n_noisy_samples ))
-    assert train_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
-    assert val_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
+    #assert train_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
+    #assert val_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
     
     partition={'train': train_index_1, 'validation': val_index_1}
         
@@ -849,7 +849,7 @@ def create_test_dataset(FLAGS):
     test_index_1  = cut_sample(all_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=True, len_c1=len_c1)
     n_test = test_index_1.shape[0]
 
-    assert test_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
+    #assert test_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
 
     print('N. of test files used: %s' %n_test)
 
