@@ -113,7 +113,7 @@ class TrainingCallback(tf.keras.callbacks.Callback):
 
         # Print epoch summary
         total_time = time.time() - self.start_time
-        print(f"Time:  {total_time:.2fs}, ---- Loss: {logs.get('loss', 0):.4f}, Acc.: {logs.get('accuracy', 0):.4f}, Val. Loss: {logs.get('val_loss', 0):.4f}, Val. Acc.: {logs.get('val_accuracy', 0):.4f}\n")
+        print(f"Time:  {total_time:.2f}, ---- Loss: {logs.get('loss', 0):.4f}, Acc.: {logs.get('accuracy', 0):.4f}, Val. Loss: {logs.get('val_loss', 0):.4f}, Val. Acc.: {logs.get('val_accuracy', 0):.4f}\n")
 
 def my_train(model, loss, epochs, 
              train_dataset, 
@@ -295,7 +295,7 @@ def main():
     FLAGS.strides_pooling = [int(z) for z in FLAGS.strides_pooling]
     FLAGS.c_1.sort()
     FLAGS.c_0.sort()
-    
+
     if FLAGS.TPU and FLAGS.GPU:
         print('Cannot use both TPU and GPU. Using GPU only ')
         FLAGS.TPU=False
