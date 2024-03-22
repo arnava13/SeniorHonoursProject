@@ -53,7 +53,7 @@ def generate_noise(k, P,
 
 
 class DataSet(): 
-    def __init__(self, list_IDs, labels, labels_dict, n_examples, batch_size=32, 
+    def __init__(self, list_IDs, labels, labels_dict, batch_size=32, 
                 data_root = 'data/', dim=(500, 4), n_channels=1,
                 shuffle=True, normalization='stdcosmo',
                 save_indexes=False, models_dir = 'models/', idx_file_name = '_',
@@ -106,7 +106,6 @@ class DataSet():
         self.rng = tf.random.Generator.from_seed(self.seed)
         self.swap_axes = swap_axes 
         self.TPU = TPU
-        self.n_examples = n_examples
         
         self.k_max=k_max
         self.k_min=k_min
@@ -611,7 +610,7 @@ def create_datasets(FLAGS, strategy=None):
     
     # --------------------  CREATE DATA GENERATORS   --------------------
     
-    all_index, n_samples, n_examples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS)
+    all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS)
     print('create_generators n_labels: %s' %n_labels) 
     if (FLAGS.fine_tune or FLAGS.one_vs_all) and FLAGS.dataset_balanced:
         # balanced dataset , 1/2 lcdm , 1/2 rest in FT or one vs all mode
@@ -763,9 +762,9 @@ def create_datasets(FLAGS, strategy=None):
         params['n_noisy_samples']=1
     
     print('\n--DataSet Train')
-    training_dataset = DataSet(partition['train'], labels, labels_dict, n_examples, data_root = FLAGS.DIR, save_indexes=False, seed = seed, strategy=strategy, **params)
+    training_dataset = DataSet(partition['train'], labels, labels_dict, data_root = FLAGS.DIR, save_indexes=False, seed = seed, strategy=strategy, **params)
     print('\n--DataSet Validation')
-    validation_dataset = DataSet(partition['validation'], labels, labels_dict, n_examples, data_root = FLAGS.DIR,  save_indexes=False,strategy=strategy, seed = seed, **params)
+    validation_dataset = DataSet(partition['validation'], labels, labels_dict, data_root = FLAGS.DIR,  save_indexes=False,strategy=strategy, seed = seed, **params)
 
     
     return training_dataset, validation_dataset #, params
@@ -780,7 +779,7 @@ def create_test_dataset(FLAGS):
         print('Changing directory to %s' %FLAGS.my_path)
         os.chdir(FLAGS.my_path)
     
-    all_index, n_samples, n_examples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS, Test=True)
+    all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels = get_all_indexes(FLAGS, Test=True)
     
 
     if (FLAGS.fine_tune or FLAGS.one_vs_all) and FLAGS.dataset_balanced:
@@ -884,7 +883,7 @@ def create_test_dataset(FLAGS):
     seed = np.random.randint(0, 2**32 - 1) 
     
     test_dataset = DataSet(partition_test['test'], 
-                                   labels, labels_dict, n_examples, 
+                                   labels, labels_dict, 
                                    data_root=FLAGS.TEST_DIR , 
                                save_indexes = FLAGS.save_indexes,
                                models_dir=FLAGS.models_dir+FLAGS.fname,
