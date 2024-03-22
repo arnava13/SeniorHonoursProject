@@ -682,8 +682,8 @@ def create_datasets(FLAGS):
         print('Validation index: %s' %val_index_1)
     
     print('len(train_index_1), batch_size, n_labels_eff, n_noisy_samples = %s, %s, %s, %s' %(train_index_1.shape[0], batch_size, n_labels_eff,n_noisy_samples ))
-    assert train_index_1.shape[0]%(batch_size//(n_noisy_samples))==0
-    assert val_index_1.shape[0]%(batch_size//(n_noisy_samples))==0
+    assert train_index_1.shape[0]%(batch_size*(1-val_size))==0
+    assert val_index_1.shape[0]%(batch_size*val_size)==0
     
     partition={'train': train_index_1, 'validation': val_index_1}
     
