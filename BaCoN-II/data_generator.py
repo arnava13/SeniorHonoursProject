@@ -487,7 +487,6 @@ class DataSet():
                 if self.sample_pace != 1:
                     P_original = P_original[::self.sample_pace]
                     k = k[::self.sample_pace]
-                
                 P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
                 self.k_range = k
                 if self.Verbose:
@@ -501,6 +500,8 @@ class DataSet():
                         X_list.append(X)
                         y_list.append(y)
             if self.TPU:
+                print(len(X_list))
+                print(len(y_list))
                 return np.array(X_list), np.array(y_list)
 
         if self.TPU:
