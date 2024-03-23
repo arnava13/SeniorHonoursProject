@@ -31,7 +31,6 @@ class BayesianLoss(tf.keras.losses.Loss):
         else:
             self.base_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
 
-    @tf.function
     def call(self, y_true, y_pred):
         kl_loss = sum(self.model.losses) / self.n_examples
         neg_log_likelihood = self.base_loss(y_true, y_pred)
@@ -47,7 +46,6 @@ class BayesianLoss(tf.keras.losses.Loss):
         self.model = model
 
 class TrainingCallback(tf.keras.callbacks.Callback):
-    @tf.py_function(Tout=[])
     def __init__(self, loss, ckpt, checkpoint_manager, fname_hist, patience=10, best_loss = np.infty, restore=False, history=None, save_ckpt=False):
         self.ckpt = ckpt
         self.checkpoint_manager = checkpoint_manager
@@ -72,7 +70,6 @@ class TrainingCallback(tf.keras.callbacks.Callback):
     def set_model(self, model):
         self.model = model
 
-    @tf.py_function(Tout=[])
     def on_epoch_begin(self, epoch, logs=None):
         self.epoch_start_time = time.time()
         if epoch == 0 and self.restore:
@@ -84,7 +81,6 @@ class TrainingCallback(tf.keras.callbacks.Callback):
                         fh.write(str(el) + '\n')
             print(f'Re-wrote histories until epoch {len(self.history["val_accuracy"][:-1])}')
 
-    @tf.py_function(Tout=[])
     def on_epoch_end(self, epoch, logs=None):
         current_val_loss = logs.get('val_loss')
 
@@ -172,7 +168,7 @@ def my_train(model, loss, epochs,
         for _ in val_dataset.dataset:
             pass
 
-    callback = TrainingCallback(loss, ckpt, ckpt_manager, best_loss=best_loss, fname_hist=fname_hist, patience=10, save_ckpt=save_ckpt)
+    callback = TrainingCallback(loss, ckpt, ckpt_manager, best_loss=best_loss, fname_hist=fname_hist, patience=10, save_ckpt=save_ckpt, history=history)
     if TPU:
         with strategy.scope():
             val_steps_per_epoch = val_dataset.n_batches // strategy.num_replicas_in_sync
