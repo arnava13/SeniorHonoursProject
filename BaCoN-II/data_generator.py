@@ -475,6 +475,7 @@ class DataSet():
         
 
         def data_generator(fname_list):
+            print('Number of files:', len(fname_list))
             if self.TPU:
                 X_list = []
                 y_list = []
@@ -514,7 +515,7 @@ class DataSet():
                 ),
                 args=(fname_list,)
             )
-            
+
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
     
         
