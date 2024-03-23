@@ -478,7 +478,7 @@ class DataSet():
             if self.TPU:
                 X_list = []
                 y_list = []
-            for i, fname in enumerate(fname_list):
+            for fname in fname_list:
                 if self.Verbose:
                     print('Loading file %s' %fname)
                 loaded = np.loadtxt(fname)
@@ -502,7 +502,11 @@ class DataSet():
             if self.TPU:
                 return np.array(X_list), np.array(y_list)
 
-        if not self.TPU:
+        if self.TPU:
+            X_list, y_list = data_generator(fname_list)
+            dataset = tf.data.Dataset.from_tensor_slices(X_list, y_list)
+            del X_list, y_list
+        else:
             dataset = tf.data.Dataset.from_generator(data_generator,
             output_signature=(
                     tf.TensorSpec(shape=x_shape, dtype=tf.float32),
@@ -510,11 +514,7 @@ class DataSet():
                 ),
                 args=(fname_list,)
             )
-        else:
-            X_list, y_list = data_generator(fname_list)
-            dataset = tf.data.Dataset.from_tensor_slices(X_list, y_list)
-            del X_list, y_list
-
+            
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
     
         
