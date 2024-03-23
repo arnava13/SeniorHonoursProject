@@ -521,7 +521,6 @@ class DataSet():
             ),
             args=(fname_list,)
         )
-
         i_shape, P_orig_shape, k_shape = [], [self.k_range.shape[0], self.n_channels], [self.k_range.shape[0]]
         P_noise_shape, sys_curves_shape, y_shape = [n_ks, self.n_channels+1], [self.n_noisy_samples, self.original_k_length, self.n_channels+1], []
         @tf.function
@@ -538,7 +537,7 @@ class DataSet():
                 cond, 
                 body, 
                 [i, P_original, k, P_noise, sys_curves, X], 
-                shape_invariants=[i_shape, P_orig_shape, k_shape, P_noise_shape, sys_curves_shape, tf.TensorShape(x_shape)])
+                shape_invariants=[tf.TensorShape(i_shape), tf.TensorShape(P_orig_shape), tf.TensorShape(k_shape), tf.TensorShape(P_noise_shape), tf.TensorShape(sys_curves_shape), tf.TensorShape(x_shape)])
             return X, y
 
         self.z_bins_tensor = tf.convert_to_tensor(self.z_bins, dtype=tf.int32)
