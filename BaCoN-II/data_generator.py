@@ -522,10 +522,12 @@ class DataSet():
             args=(fname_list,)
         )
 
+        i_shape, P_orig_shape, k_shape = [], [self.k_range.shape[0], self.n_channels], [self.k_range.shape[0]]
+        P_noise_shape, sys_curves_shape, y_shape = [n_ks, self.n_channels+1], [self.n_noisy_samples, self.original_k_length, self.n_channels+1], []
         @tf.function
         def loop_over_noise(P_original, k, P_noise, sys_curves, y):
             i = 0
-            def cond(i, P_original, k, P_noise, sys_curves):
+            def cond(i, P_original, k, P_noise, sys_curves, X):
                 return i < self.n_noisy_samples
             def body(i, P_original, k, P_noise, sys_curves, X):
                 X = self.noise_realisations(i, P_original, k, P_noise, sys_curves)
@@ -536,15 +538,7 @@ class DataSet():
                 cond, 
                 body, 
                 [i, P_original, k, P_noise, sys_curves, X], 
-                shape_invariants=[
-                    tf.TensorShape([]),  # shape invariant for `i`
-                    tf.TensorShape([self.k_range.shape[0], self.n_channels]),  # shape invariant for `P_original`
-                    tf.TensorShape([self.k_range.shape[0]]),  # shape invariant for `k`
-                    tf.TensorShape([n_ks, self.n_channels+1]),  # shape invariant for `P_noise`
-                    tf.TensorShape([self.n_noisy_samples, self.original_k_length, self.n_channels+1]),  # shape invariant for `sys_curves`
-                    tf.TensorShape(x_shape)  # shape invariant for `X`
-                ]
-            )
+                shape_invariants=[i_shape, P_orig_shape, k_shape, P_noise_shape, sys_curves_shape, tf.TensorShape(x_shape)])
             return X, y
 
         self.z_bins_tensor = tf.convert_to_tensor(self.z_bins, dtype=tf.int32)
