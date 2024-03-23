@@ -542,7 +542,7 @@ class DataSet():
                     tf.TensorShape([self.k_range.shape[0]]),  # shape invariant for `k`
                     tf.TensorShape([n_ks, self.n_channels+1]),  # shape invariant for `P_noise`
                     tf.TensorShape([self.n_noisy_samples, self.original_k_length, self.n_channels+1]),  # shape invariant for `sys_curves`
-                    x_shape  # shape invariant for `X`
+                    tf.TensorShape(x_shape)  # shape invariant for `X`
                 ]
             )
             return X, y
