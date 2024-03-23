@@ -499,8 +499,8 @@ class DataSet():
                     else:
                         X_list.append(X)
                         y_list.append(y)
-                if self.TPU:
-                    return np.array(X_list), np.array(y_list)
+            if self.TPU:
+                return np.array(X_list), np.array(y_list)
 
         if not self.TPU:
             dataset = tf.data.Dataset.from_generator(data_generator,
