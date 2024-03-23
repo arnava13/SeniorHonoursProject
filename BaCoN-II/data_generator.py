@@ -481,7 +481,7 @@ class DataSet():
             for i, fname in enumerate(fname_list):
                 if self.Verbose:
                     print('Loading file %s' %fname)
-                loaded = np.loadtxt(fname.decode('utf-8'))
+                loaded = np.loadtxt(fname)
                 P_original, k = loaded[:, 1:], loaded[:, 0]
                 if self.sample_pace != 1:
                     P_original = P_original[::self.sample_pace]
