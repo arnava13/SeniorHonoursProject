@@ -511,7 +511,8 @@ class DataSet():
                 args=(fname_list,)
             )
         else:
-            dataset = tf.data.Dataset.from_tensor_slices((X, y))
+            X_list, y_list = data_generator(fname_list)
+            dataset = tf.data.Dataset.from_tensor_slices(X_list, y_list)
 
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
     
