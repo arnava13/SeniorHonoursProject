@@ -538,7 +538,7 @@ class DataSet():
                 [i, P_original, k, P_noise, sys_curves, X], 
                 shape_invariants=[
                     tf.TensorShape([]),  # shape invariant for `i`
-                    tf.TensorShape([self.k_range.shape[0], self.n_channels.shape[0]]),  # shape invariant for `P_original`
+                    tf.TensorShape([self.k_range.shape[0], self.n_channels]),  # shape invariant for `P_original`
                     tf.TensorShape([self.k_range.shape[0]]),  # shape invariant for `k`
                     tf.TensorShape([n_ks, self.n_channels.shape[0]+1]),  # shape invariant for `P_noise`
                     tf.TensorShape([self.n_noisy_samples, self.original_k_length, self.n_channels.shape[0]+1]),  # shape invariant for `sys_curves`
