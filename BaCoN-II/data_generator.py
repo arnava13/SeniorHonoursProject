@@ -532,7 +532,19 @@ class DataSet():
                 i = i + 1
                 return i, P_original, k, P_noise, sys_curves, X
             X = tf.zeros(x_shape, dtype=tf.float32)
-            i, P_original, k, P_noise, sys_curves, X = tf.while_loop(cond, body, [i, P_original, k, P_noise, sys_curves, X], shape_invariants=[(), (tf.size(self.k_range), self.n_channels), tf.size(self.k_range), (n_ks, self.n_channels+1), (self.n_noisy_samples, self.original_k_length, self.n_channels+1), x_shape])
+            i, P_original, k, P_noise, sys_curves, X = tf.while_loop(
+                cond, 
+                body, 
+                [i, P_original, k, P_noise, sys_curves, X], 
+                shape_invariants=[
+                    tf.TensorShape([]),  # shape invariant for `i`
+                    tf.TensorShape([tf.size(self.k_range), self.n_channels]),  # shape invariant for `P_original`
+                    tf.TensorShape([tf.size(self.k_range)]),  # shape invariant for `k`
+                    tf.TensorShape([n_ks, self.n_channels+1]),  # shape invariant for `P_noise`
+                    tf.TensorShape([self.n_noisy_samples, self.original_k_length, self.n_channels+1]),  # shape invariant for `sys_curves`
+                    x_shape  # shape invariant for `X`
+                ]
+            )
             return X, y
 
         self.z_bins_tensor = tf.convert_to_tensor(self.z_bins, dtype=tf.int32)
