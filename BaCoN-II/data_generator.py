@@ -456,9 +456,9 @@ class DataSet():
         n_ks = len(self.all_ks)
 
         if self.swap_axes:
-            x_shape = (n_ks, 1, self.n_channels)
+            x_shape = [n_ks, 1, self.n_channels]
         else:
-            x_shape = (n_ks, self.n_channels, 1)
+            x_shape = [n_ks, self.n_channels, 1]
         
 
         def data_generator(fname_list):
