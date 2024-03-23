@@ -394,7 +394,7 @@ class DataSet():
             print('dimension of X: %s' %str(X.shape))
             print('X first 10:') 
             print(X[10])
-        label = fname.decode('utf-8').split('/')[-2]
+        label = fname.split('/')[-2]
             
         if not self.base_case_dataset:
             label = self.group_lab_dict[label]
@@ -513,6 +513,7 @@ class DataSet():
         else:
             X_list, y_list = data_generator(fname_list)
             dataset = tf.data.Dataset.from_tensor_slices(X_list, y_list)
+            del X_list, y_list
 
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
     
