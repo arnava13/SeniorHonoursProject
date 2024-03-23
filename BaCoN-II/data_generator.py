@@ -496,10 +496,10 @@ class DataSet():
                     y_list.append(y)
             X_list = np.array(X_list, dtype=np.float32)
             y_list = np.array(y_list, dtype=np.int32)
-            dataset = tf.data.Dataset.from_tensor_slices(X_list, y_list)
+            dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
             del X_list, y_list
         else:
-            
+
             def data_generator(fname_list):
                 print('Number of files:', len(fname_list))
                 for fname in fname_list:
@@ -528,7 +528,7 @@ class DataSet():
             )
 
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
-    
+     
         
         if self.TPU:
             with self.strategy.scope():
