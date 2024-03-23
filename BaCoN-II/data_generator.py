@@ -453,7 +453,7 @@ class DataSet():
             print("list_IDs_dict")
             print(list_IDs_dict)
 
-        n_ks = tf.constant(len(self.all_ks), dtype=tf.int32)
+        n_ks = len(self.all_ks)
 
         if self.swap_axes:
             x_shape = (n_ks, 1, self.n_channels)
