@@ -521,26 +521,16 @@ class DataSet():
 
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
         
+        if self.shuffle:
+            dataset = dataset.shuffle(buffer_size=len(list_IDs))
+        dataset.cache()
+        global_batchsize = self.batch_size
+        global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
+        dataset = dataset.batch(global_batchsize)
+        dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
         if self.TPU:
-            with self.strategy.scope():
-                if self.shuffle:
-                    dataset = dataset.shuffle(buffer_size=len(list_IDs))
-                dataset.cache()
-                global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
-                global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
-                dataset = dataset.batch(global_batchsize)
-                dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-                dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-                dataset = self.strategy.experimental_distribute_dataset(dataset)
-        else:
-            if self.shuffle:
-                dataset = dataset.shuffle(buffer_size=len(list_IDs))
-            dataset.cache()
-            global_batchsize = self.batch_size
-            global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
-            dataset = dataset.batch(global_batchsize)
-            dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-            dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+            dataset = self.strategy.experimental_distribute_dataset(dataset)
 
         if self.save_processed_spectra:
 

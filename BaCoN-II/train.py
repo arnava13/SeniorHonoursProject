@@ -166,10 +166,11 @@ def my_train(model, loss, epochs,
         last_epoch = 0
     
     #Iterate through dataset once to ensure that it is generated and cached.
-    for _ in train_dataset.dataset:
-        pass
-    for _ in val_dataset.dataset:
-        pass
+    with tf.device('/cpu:0'):
+        for _ in train_dataset.dataset:
+            pass
+        for _ in val_dataset.dataset:
+            pass
 
     callback = TrainingCallback(loss, ckpt, ckpt_manager, best_loss=best_loss, fname_hist=fname_hist, patience=10, save_ckpt=save_ckpt)
     if TPU:
