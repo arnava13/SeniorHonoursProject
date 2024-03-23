@@ -474,36 +474,48 @@ class DataSet():
             x_shape = (n_ks, self.n_channels, 1)
         
 
-        def data_generator(fname_list):
-            print('Number of files:', len(fname_list))
-            if self.TPU:
+        if self.TPU:
+            def data_generator(fname_list):
                 X_list = []
                 y_list = []
-            for fname in fname_list:
-                if self.Verbose:
-                    print('Loading file %s' %fname)
-                loaded = np.loadtxt(fname)
-                P_original, k = loaded[:, 1:], loaded[:, 0]
-                if self.sample_pace != 1:
-                    P_original = P_original[::self.sample_pace]
-                    k = k[::self.sample_pace]
-                P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
-                self.k_range = k
-                if self.Verbose:
-                    print('Dimension of P_original: %s' %str(P_original.shape))
-                    print('Dimension of k: %s' %str(k.shape))
-                for i_noise in range(self.n_noisy_samples):
-                    X, y = self.noise_realisations(fname, P_original, k, i_noise)
-                    if not self.TPU:
-                        yield X, y
-                    else:
+                for fname in fname_list:
+                    if self.Verbose:
+                        print('Loading file %s' %fname)
+                    loaded = np.loadtxt(fname)
+                    P_original, k = loaded[:, 1:], loaded[:, 0]
+                    if self.sample_pace != 1:
+                        P_original = P_original[::self.sample_pace]
+                        k = k[::self.sample_pace]
+                    P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
+                    self.k_range = k
+                    if self.Verbose:
+                        print('Dimension of P_original: %s' %str(P_original.shape))
+                        print('Dimension of k: %s' %str(k.shape))
+                    for i_noise in range(self.n_noisy_samples):
+                        X, y = self.noise_realisations(fname, P_original, k, i_noise)
                         X_list.append(X)
                         y_list.append(y)
-            if self.TPU:
-                print(len(X_list))
-                print(len(y_list))
                 return np.array(X_list), np.array(y_list)
-
+        else:
+            def data_generator(fname_list):
+                print('Number of files:', len(fname_list))
+                for fname in fname_list:
+                    if self.Verbose:
+                        print('Loading file %s' %fname)
+                    loaded = np.loadtxt(fname)
+                    P_original, k = loaded[:, 1:], loaded[:, 0]
+                    if self.sample_pace != 1:
+                        P_original = P_original[::self.sample_pace]
+                        k = k[::self.sample_pace]
+                    P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
+                    self.k_range = k
+                    if self.Verbose:
+                        print('Dimension of P_original: %s' %str(P_original.shape))
+                        print('Dimension of k: %s' %str(k.shape))
+                    for i_noise in range(self.n_noisy_samples):
+                        X, y = self.noise_realisations(fname, P_original, k, i_noise)
+                        yield X, y
+                        
         if self.TPU:
             X_list, y_list = data_generator(fname_list)
             dataset = tf.data.Dataset.from_tensor_slices(X_list, y_list)
