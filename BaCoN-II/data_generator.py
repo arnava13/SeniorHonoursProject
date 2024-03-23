@@ -475,6 +475,9 @@ class DataSet():
         
 
         def data_generator(fname_list):
+            if self.TPU:
+                X_list = []
+                y_list = []
             for i, fname in enumerate(fname_list):
                 if self.Verbose:
                     print('Loading file %s' %fname)
@@ -491,14 +494,24 @@ class DataSet():
                     print('Dimension of k: %s' %str(k.shape))
                 for i_noise in range(self.n_noisy_samples):
                     X, y = self.noise_realisations(fname, P_original, k, i_noise)
-                    yield X, y
-        dataset = tf.data.Dataset.from_generator(data_generator,
-        output_signature=(
-                tf.TensorSpec(shape=x_shape, dtype=tf.float32),
-                tf.TensorSpec(shape=(), dtype=tf.int32)
-            ),
-            args=(fname_list,)
-        )
+                    if not self.TPU:
+                        yield X, y
+                    else:
+                        X_list.append(X)
+                        y_list.append(y)
+                if self.TPU:
+                    return np.array(X_list), np.array(y_list)
+
+        if not self.TPU:
+            dataset = tf.data.Dataset.from_generator(data_generator,
+            output_signature=(
+                    tf.TensorSpec(shape=x_shape, dtype=tf.float32),
+                    tf.TensorSpec(shape=(), dtype=tf.int32)
+                ),
+                args=(fname_list,)
+            )
+        else:
+            dataset = tf.data.Dataset.from_tensor_slices((X, y))
 
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
     
