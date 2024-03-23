@@ -330,7 +330,7 @@ class DataSet():
         self.dataset=self.create_dataset(self.list_IDs, self.list_IDs_dict)
 
     @tf.function     
-    def noise_realisations(self, i_noise, fname, P_original, k, P_noise, sys_curves):
+    def noise_realisations(self, i_noise, P_original, k, P_noise, sys_curves):
         if self.add_noise:
             P_noisy = P_original
             if self.Verbose:
@@ -509,11 +509,10 @@ class DataSet():
                 
                 y = encoding
                 
-                yield fname, P_original, k, P_noise, sys_curves, y
+                yield P_original, k, P_noise, sys_curves, y
 
         dataset = tf.data.Dataset.from_generator(data_generator,
         output_signature=(
-                tf.TensorSpec(shape=(), dtype=tf.string),
                 tf.TensorSpec(shape=(n_ks, self.n_channels), dtype=tf.float32),
                 tf.TensorSpec(shape=(n_ks), dtype=tf.float32),
                 tf.TensorSpec(shape=(n_ks, self.n_channels+1), dtype=tf.float32),
@@ -523,15 +522,17 @@ class DataSet():
             args=(fname_list,)
         )
 
-        def loop_over_noise(fname, P_original, k, P_noise, sys_curves, y):
+        @tf.function
+        def loop_over_noise(P_original, k, P_noise, sys_curves, y):
             i = 0
-            def cond(i, fname, P_original, k, P_noise, sys_curves):
+            def cond(i, P_original, k, P_noise, sys_curves):
                 return i < self.n_noisy_samples
-            def body(i, fname, P_original, k, P_noise, sys_curves):
-                X = self.noise_realisations(i, fname, P_original, k, P_noise, sys_curves)
+            def body(i, P_original, k, P_noise, sys_curves, X):
+                X = self.noise_realisations(i, P_original, k, P_noise, sys_curves)
                 i = i + 1
-                return i, X
-            i, X = tf.while_loop(cond, body, [i, fname, P_original, k, P_noise, sys_curves], shape_invariants=[(), x_shape])
+                return i, P_original, k, P_noise, sys_curves, X
+            X = tf.zeros(x_shape, dtype=tf.float32)
+            i, P_original, k, P_noise, sys_curves, X = tf.while_loop(cond, body, [i, P_original, k, P_noise, sys_curves, X], shape_invariants=[(), (tf.size(self.k_range), self.n_channels), tf.size(self.k_range), (n_ks, self.n_channels+1), (self.n_noisy_samples, self.original_k_length, self.n_channels+1), x_shape])
             return X, y
 
         self.z_bins_tensor = tf.convert_to_tensor(self.z_bins, dtype=tf.int32)
