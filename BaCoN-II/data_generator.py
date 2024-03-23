@@ -131,6 +131,7 @@ class DataSet():
         print('Normalisation file is %s' %norm_data_name)
 
         self.all_ks = np.loadtxt(self.norm_data_path)[:, 0]
+        self.original_k_length = self.all_ks.shape[0]
         if self.sample_pace !=1:
                 self.all_ks = np.loadtxt(self.norm_data_path)[0::sample_pace, 0]
         self.k_range = self.all_ks
@@ -516,7 +517,7 @@ class DataSet():
                 tf.TensorSpec(shape=(n_ks, self.n_channels), dtype=tf.float32),
                 tf.TensorSpec(shape=(n_ks), dtype=tf.float32),
                 tf.TensorSpec(shape=(n_ks, self.n_channels+1), dtype=tf.float32),
-                tf.TensorSpec(shape=(self.n_noisy_samples, n_ks, self.n_channels+1), dtype=tf.float32),
+                tf.TensorSpec(shape=(self.n_noisy_samples, self.original_k_length, self.n_channels+1), dtype=tf.float32),
                 tf.TensorSpec(shape=(), dtype=tf.int32)
             ),
             args=(fname_list,)
