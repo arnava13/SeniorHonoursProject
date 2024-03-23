@@ -531,7 +531,7 @@ class DataSet():
                 X = self.noise_realisations(i, fname, P_original, k, P_noise, sys_curves)
                 i = i + 1
                 return i, X
-            i, X = tf.while_loop(cond, body, [i, fname, P_original, k, P_noise, sys_curves], shape_invariants=[(), x_shape, ()])
+            i, X = tf.while_loop(cond, body, [i, fname, P_original, k, P_noise, sys_curves], shape_invariants=[(), x_shape])
             return X, y
 
         self.z_bins_tensor = tf.convert_to_tensor(self.z_bins, dtype=tf.int32)
