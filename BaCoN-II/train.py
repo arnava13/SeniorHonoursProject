@@ -491,16 +491,16 @@ def main():
             with strategy.scope():
                 n_batches_eff = training_dataset.n_batches // strategy.num_replicas_in_sync
                 lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, n_batches_eff, FLAGS.decay)
-                optimizer = tf.keras.optimizers.Adam(lr_fn)
+                optimizer = tf.keras.optimizers.legacy.Adam(lr_fn)
         else:
             lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, training_dataset.n_batches, FLAGS.decay)
-            optimizer = tf.keras.optimizers.Adam(lr_fn)
+            optimizer = tf.keras.optimizers.legacy.Adam(lr_fn)
     else:
         if FLAGS.TPU:
             with strategy.scope():
-                optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
+                optimizer = tf.keras.optimizers.legacy.Adam(lr=FLAGS.lr)
         else:
-            optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
+            optimizer = tf.keras.optimizers.legacy.Adam(lr=FLAGS.lr)
     
     if FLAGS.test_mode:
         drop=0
