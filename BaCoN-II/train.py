@@ -4,7 +4,8 @@
 Created on Wed Jun 17 13:21:14 2020
 
 @author: Michi
-@editor: Arnav, March 2024, add TPU support
+@editor: Arnav, 24/03/2024, Added TPU support and removed custom training loop. Everything follows tensorflow conventions now.
+                            Training will be faster on CPUs and GPUs as well.
 """
 import argparse
 import os
@@ -546,7 +547,7 @@ def main():
                     loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
                 else:
                     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
-
+            model.build(input_shape = (None,)+input_shape)
             model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
     else:
         model=make_model(     model_name=model_name,
@@ -571,6 +572,7 @@ def main():
                 loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
             else:
                 loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+        model.build(input_shape = (None,)+input_shape)
         model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'], jit_compile=True)
 
     print(model.summary())
@@ -642,6 +644,7 @@ def main():
                         loss.set_model(model)
                     else:
                         loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+                    model.build(input_shape = (None,)+input_shape)
                     model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
             else:
                 model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
@@ -654,6 +657,7 @@ def main():
                     loss.set_model(model)
                 else:
                     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+                model.build(input_shape = (None,)+input_shape)
                 model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'], jit_compile=True)
         else:
             if FLAGS.TPU:
@@ -667,6 +671,7 @@ def main():
                         loss.set_model(model)
                     else:
                         loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+                    model.build(input_shape = (None,)+input_shape)
                     model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
             else: 
                 model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
@@ -678,6 +683,7 @@ def main():
                     loss.set_model(model)
                 else:
                     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+                model.build(input_shape = (None,)+input_shape)
                 model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'], jit_compile=True)
         print(model.summary())
     elif FLAGS.one_vs_all:
