@@ -493,7 +493,9 @@ class DataSet():
     
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
      
-        
+        self.xshape = dataset.map(lambda x, y: x).batch(1).element_spec.shape
+        self.yshape = dataset.map(lambda x, y: y).batch(1).element_spec.shape
+
         if self.TPU:
             with self.strategy.scope():
                 if self.shuffle:
@@ -502,8 +504,6 @@ class DataSet():
                 global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
                 dataset = dataset.batch(global_batchsize)
                 dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-                self.xshape = dataset.map(lambda x, y: x).batch(1).element_spec.shape
-                self.yshape = dataset.map(lambda x, y: y).batch(1).element_spec.shape
                 dataset = dataset.cache()
                 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
                 dataset = self.strategy.experimental_distribute_dataset(dataset)
@@ -513,8 +513,6 @@ class DataSet():
             global_batchsize = tf.cast(self.batch_size, dtype=tf.int64)
             dataset = dataset.batch(global_batchsize)
             dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-            self.xshape = dataset.map(lambda x, y: x).batch(1).element_spec.shape
-            self.yshape = dataset.map(lambda x, y: y).batch(1).element_spec.shape
             dataset = dataset.cache()
             dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
         
