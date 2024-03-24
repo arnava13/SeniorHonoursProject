@@ -15,7 +15,7 @@ using namespace std;
 vector<vector<double> > allDatamult;
 
 int main(int argc, char* argv[]) {
-    ifstream fin("YOUR INPUT COSMOLOGY FILE FOR ENTIRE DATASET.txt");
+    ifstream fin("cosmo_ds_test.txt");
     string line;
     while (getline(fin, line)) {      // for each line
         vector<double> lineData;           // create a new row
@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
     }
 
     // New output file for ordered indices
-    ofstream fout("YOUR OUTPUT FILE WITH THE DESIRED ORDER OF ORIGINAL INDICES.txt");
+    ofstream fout("ds_test_indices.txt");
 
     int Ncos = allDatamult.size();
     cout << Ncos << "\n"; // Originally printed to console
@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
     double neworder[11];
 
     // Index of parameter we want to order
-    int paramindex = "INDEX OF THE PARAMETER TO ORDER UPON";
+    int paramindex =9;
 
     for(int i = 0; i < Ncos; i++) {
         for(int j = i + 1; j < Ncos; j++) {

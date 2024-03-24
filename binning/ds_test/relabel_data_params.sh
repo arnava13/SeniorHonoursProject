@@ -4,11 +4,11 @@ echo ""
 
 cd "$(dirname "$0")"
 
-indir=#YOUR_INPUT_UNORDERED_DATA_DIRECTORY
-outdir=#YOUR_OUTPUT_ORDERED_DATA_DIRECTORY
-unorderedTxt=#UNORDERED_COSMOLOGY_FILE_FOR_ENTIRE_DATASET
-orderedTxt=#OUTPUT_ORDERED_COSMOLOGY_FILE_FOR_DATA_SUBSET
-indicesFile=#FILE_CONTAINING_ORDERED_ORIGINAL_INDICES 
+indir=ds_test_unordered_1k
+outdir=ds_test_ordered_1k
+unorderedTxt=cosmo_ds_test.txt
+orderedTxt=cosmo_ds_test_ordered.txt
+indicesFile=ds_test_indices.txt
 
 # Ensure the ordered directory exists and is empty
 mkdir -p "$outdir/"

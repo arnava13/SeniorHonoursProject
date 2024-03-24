@@ -6,9 +6,9 @@ cd "$(dirname "$0")"
 
 echo $PWD
 n=0
-indir= #YOUR INPUT DIRECTORY HERE
-n_perbin= #NUMBER OF EXAMPLES PER BIN (TOTAL EXAMPLES / 4)
-cosmologyFile= #YOUR ORDERD COSMOLOGY FILE HERE
+indir=ds_test_unordered_1k
+n_perbin=250
+cosmologyFile=cosmo_ds_test_ordered.txt
 
 mkdir binA
 binAFile="binA.txt"

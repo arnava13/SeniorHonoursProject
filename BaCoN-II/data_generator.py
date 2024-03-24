@@ -856,7 +856,7 @@ def create_test_dataset(FLAGS):
                                    data_root=FLAGS.TEST_DIR , 
                                save_indexes = FLAGS.save_indexes,
                                models_dir=FLAGS.models_dir+FLAGS.fname,
-                               idx_file_name = FLAGS.fname, seed = seed
+                               idx_file_name = FLAGS.fname, seed = seed,
                                **params_test)
 
 
