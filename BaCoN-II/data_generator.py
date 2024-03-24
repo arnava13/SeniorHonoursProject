@@ -538,8 +538,8 @@ class DataSet():
         del self.norm_data
 
         global_batchsize = global_batchsize.numpy()
-        self.xshape = (global_batchsize,) + tuple(self.xshape_example)
-        self.yshape = (global_batchsize,) + tuple(self.yshape_example)
+        self.xshape = (global_batchsize,) + tuple(self.xshape_example[1:])
+        self.yshape = (global_batchsize,) + tuple(self.yshape_example[1:])
  
         return dataset
 
