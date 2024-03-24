@@ -340,8 +340,6 @@ def main():
             strategy = tf.distribute.TPUStrategy(tpu_resolver)
             tpu_device = tpu_resolver.master()  # Retrieves the TPU device URI
             print("Running on TPU:", tpu_device)
-            policy = tf.keras.mixed_precision.Policy('mixed_bfloat16')
-            tf.keras.mixed_precision.set_global_policy(policy)
 
         except:
             raise Exception("TPU not found. Check if TPU is enabled in the notebook settings")
@@ -702,8 +700,6 @@ def main():
             #raise SystemError('GPU device not found')
             print('GPU device not found ! Device: %s' %device_name)
         else: print('Found GPU at: {}'.format(device_name))
-        policy = tf.keras.mixed_precision.Policy('mixed_float16')
-        tf.keras.mixed_precision.set_global_policy(policy)
     
     
     print('------------ TRAINING ------------\n')
