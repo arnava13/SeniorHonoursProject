@@ -105,7 +105,7 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5,
         out_path = FLAGS.models_dir+FLAGS.fname
     else:
         out_path = FLAGS.models_dir+new_fname
-    optimizer = tf.keras.optimizers.legacy.Adam(lr=FLAGS.lr)
+    optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
     ckpts_path = out_path
     ckpts_path+='/tf_ckpts'
     if FLAGS.fine_tune:
