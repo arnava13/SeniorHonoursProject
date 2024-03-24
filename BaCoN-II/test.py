@@ -96,7 +96,7 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5,
     
     if dataset is not None:
         print('Computing loss for randomly initialized model...')
-        loss_0 = compute_loss(dataset.dataset, model, bayesian=FLAGS.bayesian)
+        loss_0 = compute_loss(dataset, model, bayesian=FLAGS.bayesian)
         print('Loss before loading weights/ %s\n' %loss_0.numpy())
             
     
@@ -124,17 +124,17 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5,
     ckpt.restore(latest)
     
     if dataset is not None:
-        loss_1 = compute_loss(dataset.dataset, model, bayesian=FLAGS.bayesian)
+        loss_1 = compute_loss(dataset, model, bayesian=FLAGS.bayesian)
         print('Loss after loading weights/ %s\n' %loss_1.numpy())   
     
     return model
 
 
 def compute_loss(dataset, model, bayesian=False):
-    for x_batch_train, y_batch_train in dataset.take(1):
+    for x_batch_train, y_batch_train in dataset.dataset.take(1):
         logits = model(x_batch_train, training=False)
     if bayesian:
-        kl = sum(model.losses)/dataset.n_examples
+        kl = sum(model.losses)/dataset.n_batches/dataset.batch_size
         base_loss = tf.keras.losses.CategoricalCrossentropy(y_batch_train, logits, from_logits=True)
         loss_0 = base_loss + kl
     else:
