@@ -442,7 +442,7 @@ class DataSet():
         y = tf.one_hot(y, depth=self.n_classes_out)
         self.xshape_example = X.shape
         self.yshape_example = y.shape
-        return X
+        return X, y
 
     def create_dataset(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
@@ -537,6 +537,7 @@ class DataSet():
        
         del self.norm_data
 
+        global_batchsize = global_batchsize.numpy()
         self.xshape = (global_batchsize,) + tuple(self.xshape_example)
         self.yshape = (global_batchsize,) + tuple(self.yshape_example)
  
