@@ -437,7 +437,7 @@ def main():
     
              
     model_loaded =  load_model_for_test(FLAGS, input_shape, n_classes=test_dataset.n_classes_out,
-                                        generator=test_dataset)
+                                        dataset=test_dataset)
     
     
     names=[ test_dataset.inv_labels_dict[i] for i in range(len(test_dataset.inv_labels_dict.keys()))]
