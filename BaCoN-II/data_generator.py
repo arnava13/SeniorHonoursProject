@@ -349,6 +349,7 @@ class DataSet():
                     curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
                     curve_loaded = np.loadtxt(curve_file)
                     noise_sys, k_sys = curve_loaded[:, 1:], curve_loaded[:, 0]
+                    del curve_loaded
                 if self.sample_pace!=1:
                     noise_sys = noise_sys[0::self.sample_pace, :]
                     k_sys = k_sys[0::self.sample_pace]
@@ -439,9 +440,6 @@ class DataSet():
             X = X[:,:,0]
         y = tf.cast(y, dtype=tf.int32)
         y = tf.one_hot(y, depth=self.n_classes_out)
-
-        self.xshape_file = X.shape
-        self.yshape_file = y.shape
         return X
 
     def create_dataset(self, list_IDs, list_IDs_dict):
@@ -466,99 +464,64 @@ class DataSet():
             print("list_IDs_dict")
             print(list_IDs_dict)
 
-        n_ks = tf.constant(len(self.all_ks), dtype=tf.int32)
+        X_list = []
+        y_list = []
+        for fname in fname_list:
+            if self.Verbose:
+                print('Loading file %s' %fname)
+            loaded = np.loadtxt(fname)
+            P_original, k = loaded[:, 1:], loaded[:, 0]
+            del loaded
+            if self.sample_pace != 1:
+                P_original = P_original[::self.sample_pace]
+                k = k[::self.sample_pace]
+            P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
+            self.k_range = k
+            if self.Verbose:
+                print('Dimension of P_original: %s' %str(P_original.shape))
+                print('Dimension of k: %s' %str(k.shape))
+            for i_noise in range(self.n_noisy_samples):
+                X, y = self.noise_realisations(fname, P_original, k, i_noise)
+                X_list.append(X)
+                y_list.append(y)
+        X_list = np.array(X_list, dtype=np.float32)
+        y_list = np.array(y_list, dtype=np.int32)
+        dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
+        del X_list, y_list
 
-        if self.swap_axes:
-            x_shape = (n_ks, 1, self.n_channels)
-        else:
-            x_shape = (n_ks, self.n_channels, 1)
-        
 
-        if self.TPU:
-            X_list = []
-            y_list = []
-            for fname in fname_list:
-                if self.Verbose:
-                    print('Loading file %s' %fname)
-                loaded = np.loadtxt(fname)
-                P_original, k = loaded[:, 1:], loaded[:, 0]
-                if self.sample_pace != 1:
-                    P_original = P_original[::self.sample_pace]
-                    k = k[::self.sample_pace]
-                P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
-                self.k_range = k
-                if self.Verbose:
-                    print('Dimension of P_original: %s' %str(P_original.shape))
-                    print('Dimension of k: %s' %str(k.shape))
-                for i_noise in range(self.n_noisy_samples):
-                    X, y = self.noise_realisations(fname, P_original, k, i_noise)
-                    X_list.append(X)
-                    y_list.append(y)
-            X_list = np.array(X_list, dtype=np.float32)
-            y_list = np.array(y_list, dtype=np.int32)
-            dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
-            del X_list, y_list
-        else:
-
-            def data_generator(fname_list):
-                print('Number of files:', len(fname_list))
-                for fname in fname_list:
-                    if self.Verbose:
-                        print('Loading file %s' %fname)
-                    loaded = np.loadtxt(fname)
-                    P_original, k = loaded[:, 1:], loaded[:, 0]
-                    if self.sample_pace != 1:
-                        P_original = P_original[::self.sample_pace]
-                        k = k[::self.sample_pace]
-                    P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
-                    self.k_range = k
-                    if self.Verbose:
-                        print('Dimension of P_original: %s' %str(P_original.shape))
-                        print('Dimension of k: %s' %str(k.shape))
-                    for i_noise in range(self.n_noisy_samples):
-                        X, y = self.noise_realisations(fname, P_original, k, i_noise)
-                        yield X, y
-
-            dataset = tf.data.Dataset.from_generator(data_generator,
-            output_signature=(
-                    tf.TensorSpec(shape=x_shape, dtype=tf.float32),
-                    tf.TensorSpec(shape=(), dtype=tf.int32)
-                ),
-                args=(fname_list,)
-            )
-
+    
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
      
         
         if self.TPU:
             with self.strategy.scope():
-                dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-                dataset = dataset.cache()
                 if self.shuffle:
                     dataset = dataset.shuffle(buffer_size=self.batch_size*self.n_batches)
                 global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
                 global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
                 dataset = dataset.batch(global_batchsize)
+                dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                dataset = dataset.cache()
                 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
                 dataset = self.strategy.experimental_distribute_dataset(dataset)
         else:
-            dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-            dataset = dataset.cache()
             if self.shuffle:
                 dataset = dataset.shuffle(buffer_size=self.batch_size*self.n_batches)
             global_batchsize = tf.cast(self.batch_size, dtype=tf.int64)
             dataset = dataset.batch(global_batchsize)
+            dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            dataset = dataset.cache()
             dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
         
         if self.save_processed_spectra:
             with tf.device('/CPU:0'):
-                for batch_idx, batch in enumerate(dataset):
+                for batch in dataset.take(1):
                     X, y = batch
-                    if batch_idx==0:
-                        name_spectra_folder = os.path.join(self.models_dir,self.fname,'processed_spectra') 
-                        if not os.path.exists(name_spectra_folder):
-                            print('Creating directory %s' %  name_spectra_folder)
-                            os.makedirs(name_spectra_folder)
+                    name_spectra_folder = os.path.join(self.models_dir,self.fname,'processed_spectra') 
+                    if not os.path.exists(name_spectra_folder):
+                        print('Creating directory %s' %  name_spectra_folder)
+                        os.makedirs(name_spectra_folder)
                     # new matrix for spectra, first column is class_idx, first row is k-values
                     X_save = np.empty((self.batch_size+1, len(self.all_ks)+1))
                     X_save[1:,0] = y  
@@ -571,8 +534,10 @@ class DataSet():
                             with open(spectra_file, "a+") as myCurvefile:
                                 np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
        
-        self.xshape = self.xshape_file
-        self.yshape = self.xshape_file
+        self.xshape = self.dataset.map(lambda x, y: x).batch(1).element_spec.shape
+        self.yshape = self.dataset.map(lambda x, y: y).batch(1).element_spec.shape
+
+        del self.norm_data, 
         
         return dataset
 

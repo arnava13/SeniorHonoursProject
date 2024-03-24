@@ -46,10 +46,9 @@ class BayesianLoss(tf.keras.losses.Loss):
         self.model = model
 
 class TrainingCallback(tf.keras.callbacks.Callback):
-    def __init__(self, loss, ckpt, checkpoint_manager, fname_hist, patience=10, best_loss = np.infty, restore=False, history=None, save_ckpt=False):
+    def __init__(self, loss, ckpt, checkpoint_manager, patience=10, best_loss = np.infty, restore=False, history=None, save_ckpt=False, TPU=False):
         self.ckpt = ckpt
         self.checkpoint_manager = checkpoint_manager
-        self.fname_hist = fname_hist
         self.patience = patience
         self.best_loss = best_loss
         self.count = 0
@@ -57,9 +56,13 @@ class TrainingCallback(tf.keras.callbacks.Callback):
         self.restore = restore
         self.history = history or {}
         self.loss_function = loss
+        self.TPU = TPU
+        self.log_data = {}
         # Ensure the checkpoint directory exists
-        tf.io.gfile.makedirs(checkpoint_manager.directory)
         self.start_time = time.time()  # Overall training start time
+        if self.TPU and self.save_ckpt:
+            print("Cannot save checkpoints in TPU training mode, proceeding without saving checkpoints.")
+            self.save_ckpt=False
     
     def on_train_batch_begin(self, batch, logs=None):
         self.loss_function.set_mode_training()
@@ -72,24 +75,18 @@ class TrainingCallback(tf.keras.callbacks.Callback):
 
     def on_epoch_begin(self, epoch, logs=None):
         self.epoch_start_time = time.time()
-        if epoch == 0 and self.restore:
-            # Rewriting historical data if restoring
-            for key in self.history.keys():
-                fname = os.path.join(self.fname_hist, f'{key}.txt')
-                with open(fname, 'a+') as fh:
-                    for el in self.history[key][:-1]:
-                        fh.write(str(el) + '\n')
-            print(f'Re-wrote histories until epoch {len(self.history["val_accuracy"][:-1])}')
 
     def on_epoch_end(self, epoch, logs=None):
         current_val_loss = logs.get('val_loss')
 
         if current_val_loss < self.best_loss:
             self.best_loss = current_val_loss
-            save_path = self.checkpoint_manager.save()
             self.count = 0
             if self.save_ckpt:
+                save_path = self.checkpoint_manager.save()
                 print(f"\nEpoch {epoch+1}: Validation loss decreased to {current_val_loss:.4f}. Checkpoint saved: {save_path}")
+            else:
+                print(f"\nEpoch {epoch+1}: Validation loss decreased to {current_val_loss:.4f}.")
         else:
             self.count += 1
             print(f'\nEpoch {epoch+1}: Loss did not decrease. Count = {self.count}')
@@ -105,13 +102,16 @@ class TrainingCallback(tf.keras.callbacks.Callback):
         # Log metrics and epoch duration
         for key in ['loss', 'val_loss', 'accuracy', 'val_accuracy']: 
             if key in logs:
-                fname = os.path.join(self.fname_hist, f'{key}.txt')
-                with open(fname, 'a+') as fh:
-                    fh.write(f'{logs[key]}\n')
+                # Save the logs as an attribute
+                if not hasattr(self, 'log_data'):
+                    self.log_data = {}
+                if key not in self.log_data:
+                    self.log_data[key] = []
+                self.log_data[key].append(logs[key])
 
         # Print epoch summary
         total_time = time.time() - self.start_time
-        print(f"Time:  {total_time:.2f}, ---- Loss: {logs.get('loss', 0):.4f}, Acc.: {logs.get('accuracy', 0):.4f}, Val. Loss: {logs.get('val_loss', 0):.4f}, Val. Acc.: {logs.get('val_accuracy', 0):.4f}\n")
+        print(f"Time:  {total_time:.2f}") # ---- Loss: {logs.get('loss', 0):.4f}, Acc.: {logs.get('accuracy', 0):.4f}, Val. Loss: {logs.get('val_loss', 0):.4f}, Val. Acc.: {logs.get('val_accuracy', 0):.4f}\n")
 
 def my_train(model, loss, epochs,
              train_dataset, 
@@ -120,6 +120,8 @@ def my_train(model, loss, epochs,
     fname_hist = os.path.join(ckpt_path, 'hist')
     if not os.path.exists(fname_hist):
         os.makedirs(fname_hist)
+    if not os.path.exists(ckpt_path):
+        os.makedirs(ckpt_path)
     if restore:
         print('Restoring ckpt...')
         if ckpt_manager.latest_checkpoint:
@@ -136,6 +138,8 @@ def my_train(model, loss, epochs,
                 for key in ['loss', 'val_loss', 'accuracy', 'val_accuracy']
             }
 
+            print(f'Re-wrote histories until epoch {len(history["val_accuracy"][:-1])}')
+
             # Rename original history files to keep a backup
             for key in history.keys():
                 fname = fname_hist+'_'+key+'.txt'
@@ -150,6 +154,9 @@ def my_train(model, loss, epochs,
             # Print last learning rate
             print('Last learning rate was %s' % ckpt.optimizer.learning_rate.numpy())
             last_epoch = hist_start
+            # Rewriting historical data if restoring
+
+            
         else:
             print("Checkpoint not found. Initializing checkpoint from scratch.")
             history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy':[] }
@@ -160,15 +167,8 @@ def my_train(model, loss, epochs,
         history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy':[] }
         best_loss = np.infty
         last_epoch = 0
-    
-    #Iterate through dataset once to ensure that it is generated and cached.
-    with tf.device('/cpu:0'):
-        for _ in train_dataset.dataset:
-            pass
-        for _ in val_dataset.dataset:
-            pass
 
-    callback = TrainingCallback(loss, ckpt, ckpt_manager, best_loss=best_loss, fname_hist=fname_hist, patience=10, save_ckpt=save_ckpt, history=history)
+    callback = TrainingCallback(loss, ckpt, ckpt_manager, best_loss=best_loss, patience=10, save_ckpt=save_ckpt, history=history, TPU=TPU)
     if TPU:
         with strategy.scope():
             val_steps_per_epoch = val_dataset.n_batches // strategy.num_replicas_in_sync
@@ -184,6 +184,12 @@ def my_train(model, loss, epochs,
     # Append new history to existing history
     for key in history.keys():
         history[key].extend(new_history.history[key])
+    
+    for key in callback.log_data:
+        fname = os.path.join(fname_hist, f'{key}.txt')
+        with open(fname, 'a+') as fh:
+            for log in callback.log_data[key]:
+                fh.write(f'{log}\n')
 
     return model, history
 
@@ -334,6 +340,9 @@ def main():
             strategy = tf.distribute.TPUStrategy(tpu_resolver)
             tpu_device = tpu_resolver.master()  # Retrieves the TPU device URI
             print("Running on TPU:", tpu_device)
+            policy = tf.keras.mixed_precision.Policy('mixed_bfloat16')
+            tf.keras.mixed_precision.set_global_policy(policy)
+
         except:
             raise Exception("TPU not found. Check if TPU is enabled in the notebook settings")
     else:
@@ -693,6 +702,8 @@ def main():
             #raise SystemError('GPU device not found')
             print('GPU device not found ! Device: %s' %device_name)
         else: print('Found GPU at: {}'.format(device_name))
+        policy = tf.keras.mixed_precision.Policy('mixed_float16')
+        tf.keras.mixed_precision.set_global_policy(policy)
     
     
     print('------------ TRAINING ------------\n')
@@ -708,17 +719,7 @@ def main():
                 strategy=strategy, patience=FLAGS.patience, restore=FLAGS.restore, shuffle=FLAGS.shuffle, 
                 save_ckpt=FLAGS.save_ckpt #not(FLAGS.test_mode)
             )
-    
-    #Delete cached datasets
-    if not FLAGS.TPU:
-        try:
-            shutil.rmtree('cache')
-            print(f"Cache folder deleted.")
-        except FileNotFoundError:
-            print(f"Cache folder does not exist.")
-        except Exception as e:
-            print(f"Error deleting cache folder.")
-    
+        
     hist_path =  out_path+'/hist.png'
     if FLAGS.fine_tune:
         if FLAGS.test_mode:
