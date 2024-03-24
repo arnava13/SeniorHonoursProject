@@ -96,7 +96,7 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5,
     
     if dataset is not None:
         print('Computing loss for randomly initialized model...')
-        loss_0 = compute_loss(dataset, model, bayesian=FLAGS.bayesian)
+        loss_0 = compute_loss(dataset.dataset, model, bayesian=FLAGS.bayesian)
         print('Loss before loading weights/ %s\n' %loss_0.numpy())
             
     
