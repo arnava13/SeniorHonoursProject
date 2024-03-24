@@ -440,6 +440,8 @@ class DataSet():
             X = X[:,:,0]
         y = tf.cast(y, dtype=tf.int32)
         y = tf.one_hot(y, depth=self.n_classes_out)
+        self.xshape_example = X.shape
+        self.yshape_example = y.shape
         return X
 
     def create_dataset(self, list_IDs, list_IDs_dict):
@@ -503,8 +505,6 @@ class DataSet():
                 dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
                 dataset = dataset.cache()
                 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-                self.xshape = dataset.element_spec[0].shape
-                self.yshape = dataset.element_spec[1].shape
                 dataset = self.strategy.experimental_distribute_dataset(dataset)
         else:
             if self.shuffle:
@@ -514,8 +514,6 @@ class DataSet():
             dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
             dataset = dataset.cache()
             dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-            self.xshape = dataset.element_spec[0].shape
-            self.yshape = dataset.element_spec[1].shape
         
         if self.save_processed_spectra:
             with tf.device('/CPU:0'):
@@ -539,6 +537,9 @@ class DataSet():
        
         del self.norm_data
 
+        self.xshape = (global_batchsize,) + tuple(self.xshape_example)
+        self.yshape = (global_batchsize,) + tuple(self.yshape_example)
+ 
         return dataset
 
 
