@@ -498,9 +498,9 @@ def main():
     else:
         if FLAGS.TPU:
             with strategy.scope():
-                optimizer = tf.keras.optimizers.legacy.Adam(lr=FLAGS.lr)
+                optimizer = tf.keras.optimizers.legacy.Adam(FLAGS.lr)
         else:
-            optimizer = tf.keras.optimizers.legacy.Adam(lr=FLAGS.lr)
+            optimizer = tf.keras.optimizers.legacy.Adam(FLAGS.lr)
     
     if FLAGS.test_mode:
         drop=0
