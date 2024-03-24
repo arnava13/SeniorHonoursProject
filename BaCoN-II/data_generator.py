@@ -492,9 +492,6 @@ class DataSet():
 
     
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
-     
-        self.xshape = dataset.map(lambda x, y: x).batch(1).element_spec.shape
-        self.yshape = dataset.map(lambda x, y: y).batch(1).element_spec.shape
 
         if self.TPU:
             with self.strategy.scope():
@@ -537,6 +534,9 @@ class DataSet():
                                 np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
        
         del self.norm_data
+
+        self.xshape = dataset.element_spec[0].shape
+        self.yshape = dataset.element_spec[1].shape
         
         return dataset
 
