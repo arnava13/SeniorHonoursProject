@@ -502,6 +502,8 @@ class DataSet():
                 global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
                 dataset = dataset.batch(global_batchsize)
                 dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                self.xshape = dataset.map(lambda x, y: x).batch(1).element_spec.shape
+                self.yshape = dataset.map(lambda x, y: y).batch(1).element_spec.shape
                 dataset = dataset.cache()
                 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
                 dataset = self.strategy.experimental_distribute_dataset(dataset)
@@ -511,6 +513,8 @@ class DataSet():
             global_batchsize = tf.cast(self.batch_size, dtype=tf.int64)
             dataset = dataset.batch(global_batchsize)
             dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            self.xshape = dataset.map(lambda x, y: x).batch(1).element_spec.shape
+            self.yshape = dataset.map(lambda x, y: y).batch(1).element_spec.shape
             dataset = dataset.cache()
             dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
         
@@ -534,9 +538,6 @@ class DataSet():
                             with open(spectra_file, "a+") as myCurvefile:
                                 np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
        
-        self.xshape = dataset.map(lambda x, y: x).batch(1).element_spec.shape
-        self.yshape = dataset.map(lambda x, y: y).batch(1).element_spec.shape
-
         del self.norm_data
         
         return dataset
