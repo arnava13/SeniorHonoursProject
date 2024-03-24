@@ -135,13 +135,12 @@ def compute_loss(dataset, model, bayesian=False):
         logits = model(x_batch_train, training=False)
     if bayesian:
         kl = sum(model.losses)/dataset.n_batches/dataset.batch_size
-        base_loss = tf.keras.losses.CategoricalCrossentropy(y_batch_train, logits, from_logits=True)
+        loss_fn = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+        base_loss = loss_fn(y_batch_train, logits)
         loss_0 = base_loss + kl
     else:
         loss_0 = tf.keras.losses.categorical_crossentropy(y_batch_train, logits, from_logits=True)
     return loss_0
-
-  
 
 
 def print_cm(cm, names, out_path, cm_name_custom,tot_acc,tot_acc_no_uncl, FLAGS):
@@ -422,6 +421,8 @@ def main():
     
     print('------------ CREATING DATASETS ------------\n')
     test_dataset = create_test_dataset(FLAGS)
+    for _ in test_dataset.dataset:
+        pass
         
     print('------------ DONE ------------\n')
         

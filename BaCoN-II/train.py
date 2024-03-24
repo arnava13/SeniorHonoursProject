@@ -198,18 +198,15 @@ def my_train(model, loss, epochs,
 def compute_loss(dataset, model, bayesian=False, TPU=False, strategy=None):
     x_batch_train, y_batch_train = dataset.take(1)
     logits = model(x_batch_train, training=False)
+    if TPU:
+        base_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+    else:
+        base_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
     if bayesian:
             kl = sum(model.losses)/dataset.n_example
-            if TPU:
-                base_loss = tf.keras.losses.CategoricalCrossentropy(y_batch_train, logits, from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
-            else:
-                base_loss = tf.keras.losses.CategoricalCrossentropy(y_batch_train, logits, from_logits=True)
-            loss_0 = base_loss + kl
+            loss_0 = base_loss(y_batch_train, logits) + kl
     else:
-        if TPU:
-            loss_0 = tf.keras.losses.categorical_crossentropy(y_batch_train, logits, from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
-        else:
-            loss_0 = tf.keras.losses.categorical_crossentropy(y_batch_train, logits, from_logits=True)
+        loss_0 = base_loss(y_batch_train, logits)
     return loss_0
 
 def main():
