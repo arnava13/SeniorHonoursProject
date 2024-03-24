@@ -478,10 +478,10 @@ def main():
     else:
         eff_batch_size = None
     if FLAGS.swap_axes:
-        input_shape = (eff_batch_size, int(training_dataset.dim[0]), 
+        input_shape = (int(training_dataset.dim[0]), 
                    int(training_dataset.n_channels))
     else:
-        input_shape = (eff_batch_size, int(training_dataset.dim[0]), 
+        input_shape = (int(training_dataset.dim[0]), 
                    int(training_dataset.dim[1]), 
                    int(training_dataset.n_channels))
     print('Input shape %s' %str(input_shape))
