@@ -534,10 +534,10 @@ class DataSet():
                             with open(spectra_file, "a+") as myCurvefile:
                                 np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
        
-        self.xshape = self.dataset.map(lambda x, y: x).batch(1).element_spec.shape
-        self.yshape = self.dataset.map(lambda x, y: y).batch(1).element_spec.shape
+        self.xshape = dataset.map(lambda x, y: x).batch(1).element_spec.shape
+        self.yshape = dataset.map(lambda x, y: y).batch(1).element_spec.shape
 
-        del self.norm_data, 
+        del self.norm_data
         
         return dataset
 
