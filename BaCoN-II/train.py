@@ -476,11 +476,15 @@ def main():
     
     
     print('------------ BUILDING MODEL ------------')
+    if FLAGS.TPU:
+        eff_batch_size = int(training_dataset.batch_size * strategy.num_replicas_in_sync)
+    else:
+        eff_batch_size = None
     if FLAGS.swap_axes:
-        input_shape = ( int(training_dataset.dim[0]), 
+        input_shape = (eff_batch_size, int(training_dataset.dim[0]), 
                    int(training_dataset.n_channels))
     else:
-        input_shape = ( int(training_dataset.dim[0]), 
+        input_shape = (eff_batch_size, int(training_dataset.dim[0]), 
                    int(training_dataset.dim[1]), 
                    int(training_dataset.n_channels))
     print('Input shape %s' %str(input_shape))
@@ -547,7 +551,7 @@ def main():
                     loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
                 else:
                     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
-            model.build(input_shape = (None,)+input_shape)
+            model.build(input_shape = input_shape)
             model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
     else:
         model=make_model(     model_name=model_name,
@@ -572,7 +576,7 @@ def main():
                 loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
             else:
                 loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
-        model.build(input_shape = (None,)+input_shape)
+        model.build(input_shape =input_shape)
         model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'], jit_compile=True)
 
     print(model.summary())
@@ -644,7 +648,7 @@ def main():
                         loss.set_model(model)
                     else:
                         loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
-                    model.build(input_shape = (None,)+input_shape)
+                    model.build(input_shape = input_shape)
                     model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
             else:
                 model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
@@ -657,7 +661,7 @@ def main():
                     loss.set_model(model)
                 else:
                     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
-                model.build(input_shape = (None,)+input_shape)
+                model.build(input_shape = input_shape)
                 model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'], jit_compile=True)
         else:
             if FLAGS.TPU:
@@ -671,7 +675,7 @@ def main():
                         loss.set_model(model)
                     else:
                         loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
-                    model.build(input_shape = (None,)+input_shape)
+                    model.build(input_shape = input_shape)
                     model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
             else: 
                 model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
@@ -683,7 +687,7 @@ def main():
                     loss.set_model(model)
                 else:
                     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
-                model.build(input_shape = (None,)+input_shape)
+                model.build(input_shape = input_shape)
                 model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'], jit_compile=True)
         print(model.summary())
     elif FLAGS.one_vs_all:

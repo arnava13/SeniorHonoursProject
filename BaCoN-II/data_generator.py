@@ -501,7 +501,7 @@ class DataSet():
                     dataset = dataset.shuffle(buffer_size=self.batch_size*self.n_batches)
                 global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
                 global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
-                dataset = dataset.batch(global_batchsize)
+                dataset = dataset.batch(global_batchsize, drop_remainder=True)
                 dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
                 dataset = dataset.cache()
                 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
