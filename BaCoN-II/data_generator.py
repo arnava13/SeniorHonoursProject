@@ -503,6 +503,8 @@ class DataSet():
                 dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
                 dataset = dataset.cache()
                 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+                self.xshape = dataset.element_spec[0].shape
+                self.yshape = dataset.element_spec[1].shape
                 dataset = self.strategy.experimental_distribute_dataset(dataset)
         else:
             if self.shuffle:
@@ -512,6 +514,8 @@ class DataSet():
             dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
             dataset = dataset.cache()
             dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+            self.xshape = dataset.element_spec[0].shape
+            self.yshape = dataset.element_spec[1].shape
         
         if self.save_processed_spectra:
             with tf.device('/CPU:0'):
@@ -535,9 +539,6 @@ class DataSet():
        
         del self.norm_data
 
-        self.xshape = dataset.element_spec[0].shape
-        self.yshape = dataset.element_spec[1].shape
-        
         return dataset
 
 
