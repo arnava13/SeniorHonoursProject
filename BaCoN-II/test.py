@@ -131,8 +131,8 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5,
 
 
 def compute_loss(dataset, model, bayesian=False):
-    x_batch_train, y_batch_train = dataset.take(1)
-    logits = model(x_batch_train, training=False)
+    for x_batch_train, y_batch_train in dataset.take(1):
+        logits = model(x_batch_train, training=False)
     if bayesian:
         kl = sum(model.losses)/dataset.n_examples
         base_loss = tf.keras.losses.CategoricalCrossentropy(y_batch_train, logits, from_logits=True)
