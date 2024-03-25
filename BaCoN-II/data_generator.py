@@ -509,8 +509,8 @@ class DataSet():
         if self.group_lab_dict:
             keys = list(self.group_lab_dict.keys())
             values = list(self.group_lab_dict.values())
-            self.group_lab_dict = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(keys, values), default_value="ERROR")
-        self.labels_dict = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(list(self.labels_dict.keys()), list(self.labels_dict.values())), default_value="ERROR")
+            self.group_lab_dict = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(keys, values), default_value=-1)
+        self.labels_dict = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(list(self.labels_dict.keys()), list(self.labels_dict.values())), default_value=-1)
 
         Original_Ps = []
         Original_ks = []
