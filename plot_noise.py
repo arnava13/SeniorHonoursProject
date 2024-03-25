@@ -1,12 +1,9 @@
-import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
 import argparse
-import sys
 import os
 
-def sigma(k, z, k_values):
+def sigma(k, z, k_values, delta_k = 0.055):
     """Calculate the cosmic variance level for a given k and z value."""
     if z == 1.5:
         V = 10.43e9
@@ -19,34 +16,48 @@ def sigma(k, z, k_values):
     else:
         raise(ValueError('z must be 1.5, 0.785, 0.478, or 0.1'))
     constsquared = 4*np.pi**2 / V
-    k_index = np.where(k_values == k)[0][0]
-    delta_k = np.abs(k_values[k_index] - k_values[k_index - 1])
     sig = np.sqrt(constsquared/(delta_k*k**2))
     return(sig)
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('spectrum_dir', type=str, help='Path to the data file')
+    parser.add_argument('theoryerr_dir', type=str, help='Path to the directory containing the theory error curves, or single curve if in single mode')
     parser.add_argument('--theoryerr_mode', type=str, default='averaged', help='Mode for theory error. Options are \'single\' or \'averaged\'')
     parser.add_argument('--sigma_curves', type=float, default=0.05, help='The scale factor for the theory error curves used in training.')
-    parser.add_argument('spectrum_dir', type=str, help='Path to the data file')
-    parser.add_argument('theoryerr_dir', type=str, help='Path to the directory containing the theory error curves')
-    parser.add_argument('fracnoisediff', type=float, help='The minimum ratio of variation in theory error to cosmic variance desired for k > k_min')
+    parser.add_argument('--sigma_curves_default', type=float, default=0.05, help='Generation scale factor of theory error curves.')
+    parser.add_argument('--delta_k', type=float, default=0.055, help='Spacing of k values.')
     args = parser.parse_args()
     spectrum_dir = args.spectrum_dir
     theoryerr_dir = args.theoryerr_dir
     theoryerror_mode = args.theoryerr_mode
     sigma_curves = args.sigma_curves
-    fracnoisediff = args.fracnoisediff
+    sigma_curves_default = args.sigma_curves_default
+
+    plt.figure(1, figsize=(7, 5))
+    plt.xlabel('k')
+    plt.xlim(0.01,5.0)
+    plt.ylabel('Theory Error (Scaled)')
+    plt.title('Theory Error Across Redshifts')
+
+    plt.figure(2, figsize=(7, 5))
+    plt.xlabel('k')
+    plt.xlim(0.01,5.0)
+    plt.ylabel('Cosmic Variance')
+    plt.title('Cosmic Variance Across Redshifts')
+
+    plt.figure(3, figsize=(7, 5))
+    plt.xlabel('k')
+    plt.ylabel('Total Noise')
+    plt.title('Total Noise Across Redshifts')
 
     with open(spectrum_dir) as example_spectrum:
-        example_spectrum = pd.read_csv(example_spectrum, sep=r'\s+', header=None, engine='python')
-        k_values = example_spectrum.iloc[:, 0].to_numpy()
+        example_spectrum = np.loadtxt(example_spectrum)
+        k_values = example_spectrum[:,0]
     
     if theoryerror_mode == 'single':
         if theoryerr_dir.endswith(".txt"):
-            with open(theoryerr_dir) as theory_err:
-                theoryerr = pd.read_csv(theory_err, sep=r'\s+', header=None, engine='python')
-                theoryerr.rename(columns={0: 'k', 1: '1.5', 2: '0.783', 3: '0.478', 4: '0.1'}, inplace=True)
+            theoryerr = np.loadtxt(theoryerr_dir)[:,1:]
         else:
             raise Exception('In single curve mode, a specific .txt file must be provided for the theory error.')
 
@@ -55,60 +66,28 @@ def main():
             raise Exception('In averaged curve mode, a directory must be provided containing the theory error curves')
         else:
             files = [f for f in os.listdir(theoryerr_dir) if f.endswith('.txt')]
-            df_list = []
+            curves_list = []
             for file in files:
-                with open(os.path.join(theoryerr_dir, file)) as f:
-                    df = pd.read_csv(f, sep=r'\s+', header=None, engine='python')
-                    df_list.append(df)
-            theoryerr = pd.concat(df_list)
-            theoryerr = theoryerr.groupby(theoryerr.index).mean()
-    
-    theoryerr.rename(columns={0: 'k', 1: '1.5', 2: '0.783', 3: '0.478', 4: '0.1'}, inplace=True)
+                curve = np.loadtxt(os.path.join(theoryerr_dir, file))[:,1:]
+                curves_list.append(curve)
+            theoryerr = np.mean(curves_list, axis=0)
 
-    plt.figure(1, figsize=(7, 5))
-    plt.xlabel('k')
-    plt.xlim(0.01,5.0)
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.ylabel('Theory Error (Scaled)')
-    plt.title('Theory Error Across Redshifts')
-
-    plt.figure(2, figsize=(7, 5))
-    plt.xlabel('k')
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.xlim(0.01,5.0)
-    plt.ylabel('Cosmic Variance')
-    plt.title('Cosmic Variance Across Redshifts')
-
-    plt.figure(3, figsize=(7, 5))
-    plt.xlabel('k')
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.ylabel('Total Noise')
-    plt.title('Total Noise Across Redshifts')
-
-    k_min_forzs = np.zeros(4)
-    for z in [1.5, 0.783, 0.478, 0.1]:
-        theoryerror_forz = np.array([])
+    for i, z in enumerate([1.5, 0.783, 0.478, 0.1]):
+        theoryerr_forz = np.array([])
         cosmicvariance_forz = np.array([])
-        for i, k in enumerate(k_values):
+        for k in k_values:
             sig = sigma(k, z, k_values)
-            theoryerr_ind = sigma_curves * theoryerr[str(z)].iloc[i]
+            theoryerr_forz = (theoryerr[:,i] - 1) * sigma_curves/sigma_curves_default
             cosmicvariance_forz = np.append(cosmicvariance_forz, sig)
-            theoryerror_forz = np.append(theoryerror_forz, theoryerr_ind)
     
         plt.figure(1)
-        plt.plot(k_values, theoryerror_forz, label=f'z={z}')
+        plt.plot(k_values, theoryerr_forz, label=f'z={z}')
 
         plt.figure(2)
         plt.plot(k_values, cosmicvariance_forz, label=f'z={z}')
 
         plt.figure(3)
-        plt.plot(k_values, theoryerror_forz + cosmicvariance_forz, label=f'z={z}')
-
-    k_min = np.max(k_min_forzs)
-    z_index = np.where(k_min_forzs == k_min)[0][0]
+        plt.plot(k_values, theoryerr_forz + cosmicvariance_forz, label=f'z={z}')
 
     plt.figure(1)
     plt.legend()
@@ -117,8 +96,6 @@ def main():
     plt.legend()
 
     plt.figure(3)
-    plt.xlim(k_min, 5.0)
-    plt.ylim(0.05, 0.05 + y_var)
     plt.legend()
 
     plt.show()
