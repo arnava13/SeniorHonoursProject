@@ -24,17 +24,17 @@ def generate_noise(k, P,
                 sys_scaled=False,
                 sys_factor=0.03,
                 sys_max=False,
-                V=tf.constant([10.43, 6.27, 3.34, 0.283]), 
-                nbar=tf.constant([0.000358, 0.000828, 0.00103, 0.00128]),
+                V=tf.constant([10.43, 6.27, 3.34, 0.283], dtype=tf.float32), 
+                nbar=tf.constant([0.000358, 0.000828, 0.00103, 0.00128], dtype=tf.float32),
                 delta_k = 0.055,  sigma_sys=15, quadrature=True):
     
     sigma_noise = tf.zeros_like(P)
-    sigma_hat_noise = (2*tf.constant(np.pi)/((k[:, None])*tf.sqrt(V*(1e3)**3*delta_k)))
+    sigma_hat_noise = (2*tf.constant(np.pi, dtype=tf.float32)/((k[:, None])*tf.sqrt(V*(1e3)**3*delta_k)))
     if add_cosvar:
             sigma_noise = tf.abs(P*sigma_hat_noise)
             
     if add_shot:
-            sigma_noise_shot=(sigma_hat_noise/tf.constant(nbar))
+            sigma_noise_shot=(sigma_hat_noise/nbar)
             sigma_noise = sigma_noise+sigma_noise_shot
     if add_sys:
             if sys_scaled:
@@ -526,6 +526,8 @@ class DataSet():
                 P_original = P_original[::self.sample_pace]
                 k = k[::self.sample_pace]
             P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
+            P_original = tf.convert_to_tensor(P_original, dtype=tf.float32)
+            k = tf.convert_to_tensor(k, dtype=tf.float32)
             Original_Ps.append(P_original)
             Original_ks.append(k)
             is_files.append(i)
