@@ -328,10 +328,17 @@ class DataSet():
           raise ValueError('n_batches does not match length of IDs')
         self.Verbose=Verbose
         self.Verbose_2=Verbose_2
+
         self.dataset=self.create_dataset(self.list_IDs, self.list_IDs_dict)
+
         if self.save_processed_spectra:
             for X, y in self.dataset.take(1):
                 self.save_spectra(X, y)
+
+        if self.TPU:
+            self.global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
+        else:
+            self.global_batchsize = self.batch_size
 
     @tf.function
     def noise_realisations(self, fname, P_original, k, i_file):
@@ -468,18 +475,15 @@ class DataSet():
         dataset = dataset.flat_map(lambda x,y: tf.data.Dataset.from_tensor_slices((x,y)))
         if self.shuffle:
             dataset = dataset.shuffle(buffer_size=self.batch_size*self.n_batches)
-        if self.TPU:
-            global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
-        else:
-            global_batchsize = self.batch_size
-        global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
-        dataset = dataset.batch(global_batchsize, drop_remainder=True)
+        batchsize = tf.cast(self.global_batchsize, dtype=tf.int64)
+        dataset = dataset.batch(batchsize, drop_remainder=True)
         dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         del self.norm_data
         dataset = dataset.cache()
         dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
         if self.TPU:
             dataset = self.strategy.experimental_distribute_dataset(dataset)
+        return dataset
 
     def create_dataset(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
@@ -550,10 +554,9 @@ class DataSet():
                 dataset = self.transformations(dataset)
         else:
             dataset = self.transformations(dataset)
-        
-        global_batchsize = global_batchsize.numpy()
-        self.xshape = (global_batchsize,) + tuple(self.xshape_example[1:])
-        self.yshape = (global_batchsize,) + tuple(self.yshape_example[1:])
+    
+        self.xshape = (self.batch_size,) + tuple(self.xshape_example[1:])
+        self.yshape = (self.batch_size,) + tuple(self.yshape_example[1:])
  
         return dataset
     
