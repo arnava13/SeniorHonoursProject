@@ -424,7 +424,8 @@ class DataSet():
             X = (X - mu_batch) / std_batch
         elif self.normalization == 'stdcosmo':
             if self.swap_axes:
-                X = X / self.norm_data - 1
+                divisor = tf.expand_dims(tf.expand_dims(self.norm_data, axis=0), axis=2)
+                X = X / divisor - 1
                 if self.Verbose:
                     tf.print('axes swapped')
                     tf.print('NORM first 10:', divisor[:10])
@@ -525,7 +526,7 @@ class DataSet():
                                     np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
        
             with self.strategy.scope():
-                dataset = dataset.map((lambda x, y: x, tf.one_hot(y, depth=self.n_classes_out)), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                dataset = dataset.map(lambda x, y: (x, tf.one_hot(y, depth=self.n_classes_out)), num_parallel_calls=tf.data.experimental.AUTOTUNE)
                 dataset = dataset.cache()
                 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
                 dataset = self.strategy.experimental_distribute_dataset(dataset)
@@ -557,7 +558,7 @@ class DataSet():
                                 with open(spectra_file, "a+") as myCurvefile:
                                     np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
                                     
-            dataset = dataset.map((lambda x, y: x, tf.one_hot(y, depth=self.n_classes_out)), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            dataset = dataset.map(lambda x, y: (x, tf.one_hot(y, depth=self.n_classes_out)), num_parallel_calls=tf.data.experimental.AUTOTUNE)
             dataset = dataset.cache()
             dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
         
