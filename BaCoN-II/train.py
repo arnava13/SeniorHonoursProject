@@ -115,7 +115,7 @@ class TrainingCallback(tf.keras.callbacks.Callback):
 
 def my_train(model, loss, epochs,
              train_dataset, 
-             val_dataset, ckpt_path, ckpt, ckpt_manager, TPU=False, strategy=None,
+             val_dataset, ckpt_path, ckpt, ckpt_manager, TPU=False, strategy=None, cpu_strategy=None,
              restore=False, patience=100, shuffle=True, save_ckpt=False):
     fname_hist = os.path.join(ckpt_path, 'hist')
     if not os.path.exists(fname_hist):
@@ -192,8 +192,9 @@ def my_train(model, loss, epochs,
                 fh.write(f'{log}\n')
 
     if TPU and save_ckpt:
-        save_path = ckpt_manager.save()
-        print(f"Final checkpoint saved: {save_path}")
+        with cpu_strategy.scope():
+            save_path = ckpt_manager.save()
+            print(f"Final checkpoint saved: {save_path}")
 
     return model, history
 
@@ -337,6 +338,7 @@ def main():
             strategy = tf.distribute.TPUStrategy(tpu_resolver)
             tpu_device = tpu_resolver.master()  # Retrieves the TPU device URI
             print("Running on TPU:", tpu_device)
+            cpu_strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
 
         except:
             raise Exception("TPU not found. Check if TPU is enabled in the notebook settings")
@@ -718,7 +720,7 @@ def main():
                 FLAGS.n_epochs, 
                 training_dataset, 
                 validation_dataset, ckpts_path, ckpt, manager, TPU=FLAGS.TPU,
-                strategy=strategy, patience=FLAGS.patience, restore=FLAGS.restore, shuffle=FLAGS.shuffle, 
+                strategy=strategy, cpu_strategy=cpu_strategy, patience=FLAGS.patience, restore=FLAGS.restore, shuffle=FLAGS.shuffle, 
                 save_ckpt=FLAGS.save_ckpt #not(FLAGS.test_mode)
             )
         
