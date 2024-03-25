@@ -537,7 +537,7 @@ class DataSet():
             self.therr_curves = []
             for _ in range(len(fname_list)*self.n_noisy_samples):
                 curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1000, dtype=tf.int32)
-                curve_random_nr = tf.strings.as_string(curve_random_nr)
+                curve_random_nr = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
                 curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
                 curve_loaded = np.loadtxt(curve_file)
                 self.therr_curves.append(curve_loaded)
