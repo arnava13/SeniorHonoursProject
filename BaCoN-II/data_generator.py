@@ -338,9 +338,9 @@ class DataSet():
         if self.Verbose:
             tf.print('Dimension of P_original: %s' %tf.strings.as_string(P_original.shape))
             tf.print('Dimension of k: %s' %tf.strings.as_string(k.shape))
-        X_realisations = tf.TensorArray(tf.float32, size=self.n_noisy_samples)
-        y_realisations = tf.TensorArray(tf.int32, size=self.n_noisy_samples)
         def loop_over_noise(fname, P_original, k):
+            X_realisations = tf.TensorArray(tf.float32, size=self.n_noisy_samples)
+            y_realisations = tf.TensorArray(tf.int32, size=self.n_noisy_samples)
             def cond(fname, P_original, k, i_noise):
                 return i_noise < self.n_noisy_samples
             def body(fname, P_original, k, i_noise):
@@ -425,8 +425,8 @@ class DataSet():
                 return fname, P_original, k, i_noise+1
             i_noise = tf.constant(0)
             fname, P_original, k, i_noise = tf.while_loop(cond, body, [fname, P_original, k, i_noise])
-        loop_over_noise(fname, P_original, k)
-        return X_realisations.stack(), y_realisations.stack()
+            return X_realisations.stack(), y_realisations.stack()
+        return loop_over_noise(fname, P_original, k)
     
     @tf.function
     def normalize_and_onehot(self, X, y):
