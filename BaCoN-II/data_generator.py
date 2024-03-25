@@ -60,7 +60,7 @@ class DataSet():
                 #fname_user='my_model',
                 curves_folder = 'curve_files_sys/curve_files_train1k_sysFactor0o04_start0o03_dirChange0',
                 sample_pace = 4, pad=False, 
-                Verbose=False, Verbose_2=False,
+                Verbose=True, Verbose_2=False,
                 k_max=2.5, i_max = None,
                 k_min=0.0, i_min = None,
                 add_noise=True, n_noisy_samples = 10, 
@@ -418,6 +418,8 @@ class DataSet():
 
     @tf.function
     def normalize(self, X, y):
+        if self.Verbose and X[0]==0:
+            tf.print("X shape into normalize: ", tf.shape(X))
         if self.normalization == 'batch':
             mu_batch = tf.reduce_mean(X, axis=0)
             std_batch = tf.math.reduce_std(X, axis=0)
@@ -435,10 +437,14 @@ class DataSet():
                 if self.Verbose:
                     tf.print('axes not swapped')
                     tf.print('Dimension of NORM data:', tf.shape(divisor))
+        if self.Verbose and X[0]==0:
+            tf.print("X shape before normalize slicing: ", tf.shape(X))
         if self.swap_axes:
             X = X[:,0,:]
         else:
             X = X[:,:,0]
+        if self.Verbose and X[0]==0:
+            tf.print("X shape after normalize slicing: ", tf.shape(X))
         y = tf.cast(y, dtype=tf.int32)
         self.xshape_example = X.shape
         self.yshape_example = y.shape
