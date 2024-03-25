@@ -417,7 +417,7 @@ class DataSet():
         return X, y
 
     @tf.function
-    def normalize_and_onehot(self, X, y):
+    def normalize(self, X, y):
         if self.normalization == 'batch':
             mu_batch = tf.reduce_mean(X, axis=0)
             std_batch = tf.math.reduce_std(X, axis=0)
@@ -439,7 +439,6 @@ class DataSet():
         else:
             X = X[:,:,0]
         y = tf.cast(y, dtype=tf.int32)
-        y = tf.one_hot(y, depth=self.n_classes_out)
         self.xshape_example = X.shape
         self.yshape_example = y.shape
         return X, y
@@ -502,7 +501,31 @@ class DataSet():
                 global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
                 global_batchsize = tf.cast(global_batchsize, dtype=tf.int64)
                 dataset = dataset.batch(global_batchsize, drop_remainder=True)
-                dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                dataset = dataset.map(self.normalize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                del self.norm_data
+
+            if self.save_processed_spectra:
+                with tf.device('/CPU:0'):
+                    for batch in dataset.take(1):
+                        X, y = batch
+                        name_spectra_folder = os.path.join(self.models_dir,self.fname,'processed_spectra') 
+                        if not os.path.exists(name_spectra_folder):
+                            print('Creating directory %s' %  name_spectra_folder)
+                            os.makedirs(name_spectra_folder)
+                        # new matrix for spectra, first column is class_idx, first row is k-values
+                        X_save = np.empty((self.batch_size+1, len(self.all_ks)+1))
+                        X_save[1:,0] = y  
+                        X_save[0,1:] = self.all_ks
+                        for i_z in self.z_bins:
+                            X_save[1:,1:] = X[:,:,0,i_z]
+                            spectra_file = os.path.join(name_spectra_folder, 'processed_spectra_zbin{}.txt'.format(i_z))
+                            if not os.path.exists(spectra_file):
+                                print('Saving processed (noisy and normalised) spectra in %s' % spectra_file)
+                                with open(spectra_file, "a+") as myCurvefile:
+                                    np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
+       
+            with self.strategy.scope():
+                dataset = dataset.map(lambda x, y: x, tf.one_hot(y, depth=self.n_classes_out), num_parallel_calls=tf.data.experimental.AUTOTUNE)
                 dataset = dataset.cache()
                 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
                 dataset = self.strategy.experimental_distribute_dataset(dataset)
@@ -511,31 +534,34 @@ class DataSet():
                 dataset = dataset.shuffle(buffer_size=self.batch_size*self.n_batches)
             global_batchsize = tf.cast(self.batch_size, dtype=tf.int64)
             dataset = dataset.batch(global_batchsize)
-            dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            dataset = dataset.map(self.normalize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            del self.norm_data
+
+            if self.save_processed_spectra:
+                with tf.device('/CPU:0'):
+                    for batch in dataset.take(1):
+                        X, y = batch
+                        name_spectra_folder = os.path.join(self.models_dir,self.fname,'processed_spectra') 
+                        if not os.path.exists(name_spectra_folder):
+                            print('Creating directory %s' %  name_spectra_folder)
+                            os.makedirs(name_spectra_folder)
+                        # new matrix for spectra, first column is class_idx, first row is k-values
+                        X_save = np.empty((self.batch_size+1, len(self.all_ks)+1))
+                        X_save[1:,0] = y  
+                        X_save[0,1:] = self.all_ks
+                        for i_z in self.z_bins:
+                            X_save[1:,1:] = X[:,:,0,i_z]
+                            spectra_file = os.path.join(name_spectra_folder, 'processed_spectra_zbin{}.txt'.format(i_z))
+                            if not os.path.exists(spectra_file):
+                                print('Saving processed (noisy and normalised) spectra in %s' % spectra_file)
+                                with open(spectra_file, "a+") as myCurvefile:
+                                    np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
+                                    
+            dataset = dataset.map(lambda x, y: x, tf.one_hot(y, depth=self.n_classes_out), num_parallel_calls=tf.data.experimental.AUTOTUNE)
             dataset = dataset.cache()
             dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
         
-        if self.save_processed_spectra:
-            with tf.device('/CPU:0'):
-                for batch in dataset.take(1):
-                    X, y = batch
-                    name_spectra_folder = os.path.join(self.models_dir,self.fname,'processed_spectra') 
-                    if not os.path.exists(name_spectra_folder):
-                        print('Creating directory %s' %  name_spectra_folder)
-                        os.makedirs(name_spectra_folder)
-                    # new matrix for spectra, first column is class_idx, first row is k-values
-                    X_save = np.empty((self.batch_size+1, len(self.all_ks)+1))
-                    X_save[1:,0] = y  
-                    X_save[0,1:] = self.all_ks
-                    for i_z in self.z_bins:
-                        X_save[1:,1:] = X[:,:,0,i_z]
-                        spectra_file = os.path.join(name_spectra_folder, 'processed_spectra_zbin{}.txt'.format(i_z))
-                        if not os.path.exists(spectra_file):
-                            print('Saving processed (noisy and normalised) spectra in %s' % spectra_file)
-                            with open(spectra_file, "a+") as myCurvefile:
-                                np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
-       
-        del self.norm_data
+        
 
         global_batchsize = global_batchsize.numpy()
         self.xshape = (global_batchsize,) + tuple(self.xshape_example[1:])

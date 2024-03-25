@@ -62,8 +62,7 @@ class TrainingCallback(tf.keras.callbacks.Callback):
         # Ensure the checkpoint directory exists
         self.start_time = time.time()  # Overall training start time
         if self.TPU and self.save_ckpt:
-            print("Cannot save checkpoints in TPU training mode, proceeding without saving checkpoints.")
-            self.save_ckpt=False
+            print("Cannot only save final checkpoint in TPU mode. Intermediate checkpoints won't be saved.")
     
     def on_train_batch_begin(self, batch, logs=None):
         self.loss_function.set_mode_training()
@@ -83,7 +82,7 @@ class TrainingCallback(tf.keras.callbacks.Callback):
         if current_val_loss < self.best_loss:
             self.best_loss = current_val_loss
             self.count = 0
-            if self.save_ckpt:
+            if self.save_ckpt and not self.TPU:
                 save_path = self.checkpoint_manager.save()
                 print(f"\nEpoch {epoch+1}: Validation loss decreased to {current_val_loss:.4f}. Checkpoint saved: {save_path}")
             else:
@@ -191,6 +190,10 @@ def my_train(model, loss, epochs,
         with open(fname, 'a+') as fh:
             for log in callback.log_data[key]:
                 fh.write(f'{log}\n')
+
+    if TPU and save_ckpt:
+        save_path = ckpt_manager.save()
+        print(f"Final checkpoint saved: {save_path}")
 
     return model, history
 
@@ -325,11 +328,7 @@ def main():
     if FLAGS.TPU and FLAGS.GPU:
         print('Cannot use both TPU and GPU. Using GPU only ')
         FLAGS.TPU=False
-    
-    if FLAGS.TPU and FLAGS.save_ckpt:
-        print("Cannot save checkpoints in TPU training mode, proceeding without saving checkpoints.")
-        FLAGS.save_ckpt=False
-    
+        
     if FLAGS.TPU:
         try:
             tpu_resolver = tf.distribute.cluster_resolver.TPUClusterResolver()  # Automatically detects the TPU
