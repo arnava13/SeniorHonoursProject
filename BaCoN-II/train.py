@@ -494,7 +494,7 @@ def main():
                 optimizer = tf.keras.optimizers.legacy.Adam(lr_fn)
         else:
             lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, training_dataset.n_batches, FLAGS.decay)
-            optimizer = tf.keras.optimizers.legacy.Adam(lr_fn)
+            optimizer = tf.keras.optimizers.leaegacy.Adam(lr_fn)
     else:
         if FLAGS.TPU:
             with strategy.scope():
