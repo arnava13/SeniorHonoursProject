@@ -388,7 +388,7 @@ class DataSet():
                 if self.swap_axes:
                     if self.Verbose:
                         tf.print('Reshaping')
-                    expanded = tf.transpose(expanded, perm=[1, 0, 2])
+                    expanded = tf.transpose(expanded, perm=[0, 2, 1])
                     if self.Verbose:
                         tf.print('New dimension of data: %s' %tf.strings.as_string(expanded.shape))
                     expanded = tf.gather(expanded, self.z_bins, axis=2)
@@ -396,7 +396,7 @@ class DataSet():
                         tf.print('Dimension of data before normalising: %s' %tf.strings.as_string(expanded.shape))
                         tf.print('expanded first 10:') 
                         tf.print(expanded[10])
-                    # now shape of expanded is (n_data_points, 1, n_channels=3)
+                    # now shape of expanded is (n_data_points, 1, n_channels=4)
                 X = expanded  
                 if self.Verbose:
                     tf.print('dimension of X: %s' %str(X.shape))
