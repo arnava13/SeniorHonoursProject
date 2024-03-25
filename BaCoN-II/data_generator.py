@@ -465,7 +465,7 @@ class DataSet():
     @tf.function
     def transformations(self, dataset):
         dataset = dataset.map(self.noise_realisations, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        dataset = dataset.flat_map(tf.data.Dataset.from_tensor_slices)
+        dataset = dataset.flat_map(lambda x: tf.data.Dataset.from_tensor_slices(x))
         if self.shuffle:
             dataset = dataset.shuffle(buffer_size=self.batch_size*self.n_batches)
         if self.TPU:
