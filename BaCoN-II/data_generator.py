@@ -426,7 +426,8 @@ class DataSet():
             i_noise = tf.constant(0)
             fname, P_original, k, i_file, X_realisations, y_realisations, i_noise = tf.while_loop(cond, body, [fname, P_original, k, i_file, X_realisations, y_realisations, i_noise])
             return X_realisations.stack(), y_realisations.stack()
-        return loop_over_noise(fname, P_original, k, i_file)
+        X_realisations, y_realisations = loop_over_noise(fname, P_original, k, i_file)
+        return X_realisations, y_realisations
     
     @tf.function
     def normalize_and_onehot(self, X, y):
