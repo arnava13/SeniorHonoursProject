@@ -517,7 +517,7 @@ class DataSet():
                         X_save[1:,0] = y  
                         X_save[0,1:] = self.all_ks
                         for i_z in self.z_bins:
-                            X_save[1:,1:] = X[:,0,i_z]
+                            X_save[1:,1:] = X[:,:,i_z]
                             spectra_file = os.path.join(name_spectra_folder, 'processed_spectra_zbin{}.txt'.format(i_z))
                             if not os.path.exists(spectra_file):
                                 print('Saving processed (noisy and normalised) spectra in %s' % spectra_file)
@@ -525,7 +525,7 @@ class DataSet():
                                     np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
        
             with self.strategy.scope():
-                dataset = dataset.map(lambda x, y: x, tf.one_hot(y, depth=self.n_classes_out), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                dataset = dataset.map((lambda x, y: x, tf.one_hot(y, depth=self.n_classes_out)), num_parallel_calls=tf.data.experimental.AUTOTUNE)
                 dataset = dataset.cache()
                 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
                 dataset = self.strategy.experimental_distribute_dataset(dataset)
@@ -557,7 +557,7 @@ class DataSet():
                                 with open(spectra_file, "a+") as myCurvefile:
                                     np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
                                     
-            dataset = dataset.map(lambda x, y: x, tf.one_hot(y, depth=self.n_classes_out), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            dataset = dataset.map((lambda x, y: x, tf.one_hot(y, depth=self.n_classes_out)), num_parallel_calls=tf.data.experimental.AUTOTUNE)
             dataset = dataset.cache()
             dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
         
