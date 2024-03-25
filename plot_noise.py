@@ -69,12 +69,14 @@ def main():
     plt.xlabel('k')
     plt.xlim(0.01,5.0)
     plt.xscale('log')
+    plt.yscale('log')
     plt.ylabel('Theory Error (Scaled)')
     plt.title('Theory Error Across Redshifts')
 
     plt.figure(2, figsize=(7, 5))
     plt.xlabel('k')
     plt.xscale('log')
+    plt.yscale('log')
     plt.xlim(0.01,5.0)
     plt.ylabel('Cosmic Variance')
     plt.title('Cosmic Variance Across Redshifts')
@@ -82,31 +84,19 @@ def main():
     plt.figure(3, figsize=(7, 5))
     plt.xlabel('k')
     plt.xscale('log')
+    plt.yscale('log')
     plt.ylabel('Total Noise')
     plt.title('Total Noise Across Redshifts')
 
     k_min_forzs = np.zeros(4)
-    max_y_var_forzs = np.zeros(4)
-    fracvar_forzs = np.zeros(4)
-    for j, z in enumerate([1.5, 0.783, 0.478, 0.1]):
+    for z in [1.5, 0.783, 0.478, 0.1]:
         theoryerror_forz = np.array([])
         cosmicvariance_forz = np.array([])
-        noise = np.array([])
         for i, k in enumerate(k_values):
             sig = sigma(k, z, k_values)
             theoryerr_ind = sigma_curves * theoryerr[str(z)].iloc[i]
             cosmicvariance_forz = np.append(cosmicvariance_forz, sig)
             theoryerror_forz = np.append(theoryerror_forz, theoryerr_ind)
-        for i, k in enumerate(k_values):
-            theoryerr_range = np.max(theoryerror_forz[i:]) - np.min(theoryerror_forz[i:])
-            cosmicvar_range = np.max(cosmicvariance_forz[i:]) - np.min(cosmicvariance_forz[i:])
-            fracvar = theoryerr_range / cosmicvar_range
-            if fracvar >= fracnoisediff:
-                k_min_forzs[j] = k
-                max_y_var_forzs[j] = np.max([cosmicvar_range, theoryerr_range])
-                fracvar_forzs[j] = fracvar
-                k_min = k
-                break
     
         plt.figure(1)
         plt.plot(k_values, theoryerror_forz, label=f'z={z}')
@@ -119,8 +109,6 @@ def main():
 
     k_min = np.max(k_min_forzs)
     z_index = np.where(k_min_forzs == k_min)[0][0]
-    y_var = max_y_var_forzs[z_index]
-    fracvar = np.max(fracvar_forzs)
 
     plt.figure(1)
     plt.legend()
@@ -132,9 +120,6 @@ def main():
     plt.xlim(k_min, 5.0)
     plt.ylim(0.05, 0.05 + y_var)
     plt.legend()
-
-    print(f'Minimum k for variation in theory error to be >{np.round(fracnoisediff * 100, 2)}% of variation in cosmic variance across all redshift bins: {k_min}')
-    print(f'Variation of theory_error across redshift bins for k > {k_min} is at least {np.round(fracvar *100,2)}% of the variation in cosmic variance')
 
     plt.show()
             
