@@ -574,7 +574,7 @@ def main():
             else:
                 loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
         model.build(input_shape =input_shape)
-        model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'], jit_compile=True)
+        model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
 
     print(model.summary())
     
@@ -659,7 +659,7 @@ def main():
                 else:
                     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
                 model.build(input_shape = input_shape)
-                model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'], jit_compile=True)
+                model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
         else:
             if FLAGS.TPU:
                 with strategy.scope():
@@ -685,7 +685,7 @@ def main():
                 else:
                     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
                 model.build(input_shape = input_shape)
-                model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'], jit_compile=True)
+                model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
         print(model.summary())
     elif FLAGS.one_vs_all:
         if not FLAGS.test_mode:
