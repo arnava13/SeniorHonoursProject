@@ -386,7 +386,7 @@ class DataSet():
                 print('New dimension of data: %s' %str(expanded.shape))
             expanded = expanded[:,:,self.z_bins]
             if self.Verbose:
-                print('Final dimension of data: %s' %str(expanded.shape))
+                print('Dimension of data before normalising: %s' %str(expanded.shape))
                 print('expanded first 10:') 
                 print(expanded[10])
             # now shape of expanded is (n_data_points, 1, n_channels=3)
@@ -440,9 +440,7 @@ class DataSet():
         if self.Verbose:
             tf.print("X shape before normalize slicing: ", tf.shape(X))
         if self.swap_axes:
-            X = X[:,0,:]
-        else:
-            X = X[:,:,0]
+            X = X[:,:,0,:]
         if self.Verbose:
             tf.print("X shape after normalize slicing: ", tf.shape(X))
         y = tf.cast(y, dtype=tf.int32)
