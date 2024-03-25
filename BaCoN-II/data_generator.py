@@ -550,7 +550,7 @@ class DataSet():
                         X_save[1:,0] = y  
                         X_save[0,1:] = self.all_ks
                         for i_z in self.z_bins:
-                            X_save[1:,1:] = X[:,:,0,i_z]
+                            X_save[1:,1:] = X[:,0,i_z]
                             spectra_file = os.path.join(name_spectra_folder, 'processed_spectra_zbin{}.txt'.format(i_z))
                             if not os.path.exists(spectra_file):
                                 print('Saving processed (noisy and normalised) spectra in %s' % spectra_file)
