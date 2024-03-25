@@ -495,7 +495,7 @@ def main():
                 optimizer = tf.keras.optimizers.legacy.Adam(learning_rate = lr_fn)
         else:
             lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, training_dataset.n_batches, FLAGS.decay)
-            optimizer = tf.keras.optimizers.leaegacy.Adam(learning_rate = lr_fn)
+            optimizer = tf.keras.optimizers.legacy.Adam(learning_rate = lr_fn)
     else:
         if FLAGS.TPU:
             with strategy.scope():
@@ -575,7 +575,7 @@ def main():
             else:
                 loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
         model.build(input_shape =input_shape)
-        model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'], jit_compile=True)
+        model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
 
     print(model.summary())
     
@@ -660,7 +660,7 @@ def main():
                 else:
                     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
                 model.build(input_shape = input_shape)
-                model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'], jit_compile=True)
+                model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
         else:
             if FLAGS.TPU:
                 with strategy.scope():
@@ -686,7 +686,7 @@ def main():
                 else:
                     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
                 model.build(input_shape = input_shape)
-                model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'], jit_compile=True)
+                model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
         print(model.summary())
     elif FLAGS.one_vs_all:
         if not FLAGS.test_mode:
