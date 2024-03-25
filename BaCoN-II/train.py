@@ -344,6 +344,7 @@ def main():
             raise Exception("TPU not found. Check if TPU is enabled in the notebook settings")
     else:
         strategy = None
+        cpu_strategy = None
                   
     #if not FLAGS.fine_tune:
     #    if not FLAGS.dataset_balanced and FLAGS.one_vs_all:
