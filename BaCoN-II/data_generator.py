@@ -335,11 +335,6 @@ class DataSet():
             for X, y in self.dataset.take(1):
                 self.save_spectra(X, y)
 
-        if self.TPU:
-            self.global_batchsize = self.batch_size * self.strategy.num_replicas_in_sync
-        else:
-            self.global_batchsize = self.batch_size
-
     @tf.function
     def noise_realisations(self, fname, P_original, k, i_file):
         if self.Verbose:
@@ -475,7 +470,11 @@ class DataSet():
         dataset = dataset.flat_map(lambda x,y: tf.data.Dataset.from_tensor_slices((x,y)))
         if self.shuffle:
             dataset = dataset.shuffle(buffer_size=self.batch_size*self.n_batches)
-        batchsize = tf.cast(self.global_batchsize, dtype=tf.int64)
+        if self.TPU:
+            batchsize = self.batch_size * self.strategy.num_replicas_in_sync
+        else:
+            batchsize = self.batch_size
+        batchsize = tf.cast(batchsize, dtype=tf.int64)
         dataset = dataset.batch(batchsize, drop_remainder=True)
         dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         del self.norm_data
