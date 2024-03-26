@@ -167,58 +167,49 @@ def my_train(model, optimizer, loss,
             lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)/ float(val_dataset.n_batches)
         val_loss_value += lv
     
-    if TPU:
-        with cpu_strategy.scope():
-            if val_loss_value.numpy()<best_loss: #int(ckpt.step) % 10 == 0:
-                if save_ckpt:
-                    save_path = manager.save()
-                    print("Validation loss decreased. Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
-                else:
-                    #print('Creating directory %s' %manager.directory)
-                    tf.io.gfile.makedirs(manager.directory)
+    if type(val_loss_value) is not float:
+        val_loss_value = val_loss_value.numpy()
+    if type(loss_value) is not float:
+        loss_value = loss_value.numpy()
 
-                best_loss = val_loss_value.numpy()      
-                #print("New loss {:1.2f}".format(best_loss))
-                count = 0
-            else:
-                count +=1
-                print('Loss did not decrease. Count = %s' %count)
-                if count==patience:
-                    print('Max patience reached. ')
-                    break
-    else:
-        if val_loss_value.numpy()<best_loss:
-            if save_ckpt:
+    if val_loss_value<best_loss: #int(ckpt.step) % 10 == 0:
+        if save_ckpt and not TPU:
+            save_path = manager.save()
+            print("Validation loss decreased. Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
+        elif save_ckpt and TPU:
+            with cpu_strategy.scope():
                 save_path = manager.save()
                 print("Validation loss decreased. Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
-            else:
+        elif not TPU:
+            #print('Creating directory %s' %manager.directory)
+            tf.io.gfile.makedirs(manager.directory)
+        else:
+            with cpu_strategy.scope():
                 #print('Creating directory %s' %manager.directory)
                 tf.io.gfile.makedirs(manager.directory)
-            
-            best_loss = val_loss_value.numpy()
-            #print("New loss {:1.2f}".format(best_loss))
-            count = 0
-        else:
-            count +=1
-            print('Loss did not decrease. Count = %s' %count)
-            if count==patience:
-                print('Max patience reached. ')
-                break
-    
-    
-    
+
+        best_loss = val_loss_value
+        #print("New loss {:1.2f}".format(best_loss))
+        count = 0
+    else:
+        count +=1
+        print('Loss did not decrease. Count = %s' %count)
+        if count==patience:
+            print('Max patience reached. ')
+            break
+
     ckpt.step.assign_add(1)
     if TPU:
         with cpu_strategy.scope():
             train_acc = train_acc_metric.result().numpy()
-            train_loss = loss_value.numpy()
+            train_loss = loss_value
             val_acc = val_acc_metric.result().numpy()
-            val_loss = val_loss_value.numpy()
+            val_loss = val_loss_value
     else:
         train_acc = train_acc_metric.result().numpy()
-        train_loss = loss_value.numpy()
+        train_loss = loss_value
         val_acc = val_acc_metric.result().numpy()
-        val_loss = val_loss_value.numpy()
+        val_loss = val_loss_value
     history['loss'].append(train_loss)
     history['accuracy'].append(train_acc)
     train_acc_metric.reset_states()
@@ -564,6 +555,7 @@ def main():
             BatchNorm=True
         filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense
     if FLAGS.TPU:
+        seed = np.random.randint(0, 2**31 - 1)
         with strategy.scope():
             model=make_model(     model_name=model_name,
                          drop=drop, 
@@ -577,7 +569,7 @@ def main():
                           strides_pooling=strides_pooling,
                           activation=tf.nn.leaky_relu,
                           bayesian=bayesian, 
-                          n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
+                          n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm, seed = seed
                              )
     else:
         model=make_model(     model_name=model_name,
@@ -668,12 +660,13 @@ def main():
         
         if not FLAGS.unfreeze:
             if FLAGS.TPU:
+                seed = np.random.randint(0, 2**31 - 1)
                 with strategy.scope():
                     model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
                                        n_out_labels=training_dataset.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        trainable=FLAGS.trainable, 
-                                       drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
+                                       drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last, seed=seed)
             else:
                 model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
                                         n_out_labels=training_dataset.n_classes_out,
