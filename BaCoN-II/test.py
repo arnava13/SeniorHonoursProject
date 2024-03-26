@@ -148,8 +148,23 @@ def print_cm(cm, names, out_path, cm_name_custom,tot_acc,tot_acc_no_uncl, FLAGS)
     import matplotlib.pyplot as plt
     plt.rcParams["font.family"] = 'serif'
     plt.rcParams["mathtext.fontset"] = "cm"
+    plt.rc('text', usetex=True)
     import seaborn as sns
     
+    for i, name in enumerate(names):
+        if name == 'dgp':
+            names[i] = 'DGP'
+        if name == 'ds':
+            names[i] = 'DS'
+        if name == 'fr':
+            names[i] = '$f(R)$'
+        if name == 'lcdm':
+            names[i] = '$\Lambda$CDM'
+        if name == 'rand':
+            names[i] = 'Random'
+        if name == 'wcdm':
+            names[i] = '$w$CDM'
+
     matrix_proportions = np.zeros((len(names),len(names)))
     for i in range(0,len(names)):
         np.seterr(invalid='ignore') # Suppress/hide the warning when divide by zero
