@@ -547,7 +547,7 @@ class DataSet():
                     if self.sample_pace != 1:
                         k_sys = curve_loaded[0::self.sample_pace,0]
                     k_sys = k_sys[self.i_min:self.i_max]
-                    if k_sys != k_range.numpy():
+                    if k_sys.all() != k_range.numpy().all():
                         print('ERROR: k-values of all spectra and theory-error curve files not identical')
                 self.therr_curves.append(curve_loaded)
             self.therr_curves = tf.convert_to_tensor(self.therr_curves, dtype=tf.float32)

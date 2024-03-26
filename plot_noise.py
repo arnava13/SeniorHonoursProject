@@ -34,22 +34,6 @@ def main():
     sigma_curves = args.sigma_curves
     sigma_curves_default = args.sigma_curves_default
 
-    plt.figure(1, figsize=(7, 5))
-    plt.xlabel('k')
-    plt.xlim(0.01,5.0)
-    plt.ylabel('Theory Error (Scaled)')
-    plt.title('Theory Error Across Redshifts')
-
-    plt.figure(2, figsize=(7, 5))
-    plt.xlabel('k')
-    plt.xlim(0.01,5.0)
-    plt.ylabel('Cosmic Variance')
-    plt.title('Cosmic Variance Across Redshifts')
-
-    plt.figure(3, figsize=(7, 5))
-    plt.xlabel('k')
-    plt.ylabel('Total Noise')
-    plt.title('Total Noise Across Redshifts')
 
     with open(spectrum_dir) as example_spectrum:
         example_spectrum = np.loadtxt(example_spectrum)
@@ -72,33 +56,23 @@ def main():
                 curves_list.append(curve)
             theoryerr = np.mean(curves_list, axis=0)
 
+
     for i, z in enumerate([1.5, 0.783, 0.478, 0.1]):
-        theoryerr_forz = np.array([])
-        cosmicvariance_forz = np.array([])
+        theoryerr = (1- theoryerr[:,i]) * sigma_curves/sigma_curves_default
+        cosmicvariance = np.array([])
         for k in k_values:
             sig = sigma(k, z, k_values)
-            theoryerr_forz = (theoryerr[:,i] - 1) * sigma_curves/sigma_curves_default
-            cosmicvariance_forz = np.append(cosmicvariance_forz, sig)
+            cosmicvariance = np.append(cosmicvariance, sig)
     
-        plt.figure(1)
-        plt.plot(k_values, theoryerr_forz, label=f'z={z}')
-
-        plt.figure(2)
-        plt.plot(k_values, cosmicvariance_forz, label=f'z={z}')
-
-        plt.figure(3)
-        plt.plot(k_values, theoryerr_forz + cosmicvariance_forz, label=f'z={z}')
-
-    plt.figure(1)
-    plt.legend()
-
-    plt.figure(2)
-    plt.legend()
-
-    plt.figure(3)
-    plt.legend()
-
-    plt.show()
+        plt.figure()
+        plt.title("Theory Error and Cosmic Variance at z = " + str(z))
+        plt.xlabel("k")
+        plt.ylabel("Fractional Error")
+        plt.plot(k_values, theoryerr, label="Theory Error")
+        plt.plot(k_values, cosmicvariance, label="Cosmic Variance")
+        plt.ylim(0, 0.05)
+        plt.legend()
+        plt.show()
             
     
 if __name__ == "__main__":
