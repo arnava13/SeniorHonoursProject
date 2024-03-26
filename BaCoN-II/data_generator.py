@@ -494,16 +494,7 @@ class DataSet():
         if self.Verbose_2:
             print("list_IDs_dict")
             print(list_IDs_dict)
-
-        self.P_noise = tf.convert_to_tensor(self.norm_data[:, self.z_bins], dtype=tf.float32)
-        self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
-        self.n_noisy_samples = tf.constant(self.n_noisy_samples, dtype=tf.int32)
-        if self.group_lab_dict:
-            keys = list(self.group_lab_dict.keys())
-            values = list(self.group_lab_dict.values())
-            self.group_lab_dict = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(keys, values), default_value=-1)
-        self.labels_dict = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(list(self.labels_dict.keys()), list(self.labels_dict.values())), default_value=-1)
-
+            
         X_list = []
         y_list = []
         for fname in fname_list:
