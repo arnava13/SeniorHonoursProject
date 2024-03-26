@@ -519,13 +519,11 @@ def main():
         filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense, padding = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense, FLAGS.padding
     
 
-    acc_instance = tf.keras.metrics.Accuracy()
-
     def accuracy(y_true, y_pred):
         probs = tf.nn.softmax(y_pred)
         preds = tf.argmax(probs, axis=1)
         y_true = tf.argmax(y_true, axis=1)
-        return acc_instance(y_true, preds)
+        return tf.reduce_mean(tf.cast(tf.equal(y_true, preds), dtype=tf.float32))
 
     acc_metric = accuracy
         
