@@ -735,8 +735,8 @@ def main():
     
     
     #print('Model n_classes : %s ' %n_classes)
-    print('Features shape: %s' %str(training_dataset[0][0].shape))
-    print('Labels shape: %s' %str(training_dataset[0][1].shape))   
+    print('Features shape: %s' %str(training_dataset.xshape))
+    print('Labels shape: %s' %str(training_dataset.yshape))   
     model, history = my_train(model, optimizer, loss,
              FLAGS.n_epochs, 
              training_dataset, 
