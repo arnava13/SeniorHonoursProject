@@ -462,10 +462,6 @@ class DataSet():
         dataset = dataset.batch(batchsize, drop_remainder=True)
         dataset = dataset.map(self.normalize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         del self.norm_data
-        dataset = dataset.cache()
-        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-        if self.TPU:
-            dataset = self.strategy.experimental_distribute_dataset(dataset)
         return dataset
 
     def create_dataset(self, list_IDs, list_IDs_dict):
@@ -527,6 +523,11 @@ class DataSet():
         for x, y in dataset.take(1):
             self.xshape = x.shape
             self.yshape = y.shape
+
+        dataset = dataset.cache()
+        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+        if self.TPU:
+            dataset = self.strategy.experimental_distribute_dataset(dataset)
 
         return dataset
     
