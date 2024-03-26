@@ -532,30 +532,30 @@ class DataSet():
             dataset = self.transformations(dataset)
 
         self.xshape = (self.batch_size,) + tuple(self.xshape_example[1:])
-        self.yshape = (self.batch_size,) + tuple(self.yshape_example.numpy()[1:])
+        self.yshape = (self.batch_size,) + tuple(self.yshape_example.as_list()[1:])
  
         return dataset
     
     def save_spectra(self, X, y):
         with tf.device('/CPU:0'):
-                    for batch in self.dataset.take(1):
-                        X, y = batch
-                        y = tf.argmax(y, axis=-1)
-                        name_spectra_folder = os.path.join(self.models_dir,self.fname,'processed_spectra') 
-                        if not os.path.exists(name_spectra_folder):
-                            print('Creating directory %s' %  name_spectra_folder)
-                            os.makedirs(name_spectra_folder)
-                        # new matrix for spectra, first column is class_idx, first row is k-values
-                        X_save = np.empty((self.batch_size+1, len(self.all_ks)+1))
-                        X_save[1:,0] = y  
-                        X_save[0,1:] = self.all_ks
-                        for i_z in self.z_bins:
-                            X_save[1:,1:] = X[:,:,i_z]
-                            spectra_file = os.path.join(name_spectra_folder, 'processed_spectra_zbin{}.txt'.format(i_z))
-                            if not os.path.exists(spectra_file):
-                                print('Saving processed (noisy and normalised) spectra in %s' % spectra_file)
-                                with open(spectra_file, "a+") as myCurvefile:
-                                    np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
+            for batch in self.dataset.take(1):
+                X, y = batch
+                y = tf.argmax(y, axis=-1)
+                name_spectra_folder = os.path.join(self.models_dir,self.fname,'processed_spectra') 
+                if not os.path.exists(name_spectra_folder):
+                    print('Creating directory %s' %  name_spectra_folder)
+                    os.makedirs(name_spectra_folder)
+                # new matrix for spectra, first column is class_idx, first row is k-values
+                X_save = np.empty((self.batch_size+1, len(self.all_ks)+1))
+                X_save[1:,0] = y  
+                X_save[0,1:] = self.all_ks
+                for i_z in self.z_bins:
+                    X_save[1:,1:] = X[:,:,i_z]
+                    spectra_file = os.path.join(name_spectra_folder, 'processed_spectra_zbin{}.txt'.format(i_z))
+                    if not os.path.exists(spectra_file):
+                        print('Saving processed (noisy and normalised) spectra in %s' % spectra_file)
+                        with open(spectra_file, "a+") as myCurvefile:
+                            np.savetxt(myCurvefile, X_save, delimiter=' ', newline='\r\n')
 
 
 
