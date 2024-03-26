@@ -36,14 +36,14 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
                 loss_value = loss(y, logits, TPU=TPU)
             grads = tape.gradient(loss_value, model.trainable_weights)
             optimizer.apply_gradients(zip(grads, model.trainable_weights))
-        return loss_value, logits
+        proba = tf.nn.softmax(logits)
+        prediction = tf.argmax(proba, axis=1)
+        train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
+        return loss_value
     if TPU:
-        loss_value, logits = strategy.run(step_fn, args=(x, y))
+        loss_value = strategy.run(step_fn, args=(x, y))
     else:
-        loss_value, logits = step_fn(x, y)
-    proba = tf.nn.softmax(logits)
-    prediction = tf.argmax(proba, axis=1)
-    train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
+        loss_value = step_fn(x, y)
     return loss_value
 
 @tf.function
@@ -55,14 +55,14 @@ def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10
             val_loss_value = loss(y, val_logits, val_kl, TPU)
         else:
             val_loss_value = loss(y, val_logits, TPU)
-        return val_loss_value, val_logits
+        val_proba = tf.nn.softmax(val_logits)
+        val_prediction = tf.argmax(val_proba, axis=1)
+        val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
+        return val_loss_value
     if TPU:
-        val_loss_value, val_logits = strategy.run(step_fn, args=(x, y))
+        val_loss_value = strategy.run(step_fn, args=(x, y))
     else:
-        val_loss_value, val_logits = step_fn(x, y)
-    val_proba = tf.nn.softmax(val_logits)
-    val_prediction = tf.argmax(val_proba, axis=1)
-    val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
+        val_loss_value = step_fn(x, y)
     return val_loss_value
 
 
