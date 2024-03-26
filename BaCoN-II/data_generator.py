@@ -449,7 +449,7 @@ class DataSet():
         if self.Verbose:
             tf.print("X shape after normalize slicing: ", tf.shape(X))
         self.xshape_example = X.shape
-        self.yshape_example = y.shape
+        self.yshape_example = tf.shape(y)
         return X, y
     
     @tf.function
@@ -532,7 +532,7 @@ class DataSet():
             dataset = self.transformations(dataset)
 
         self.xshape = (self.batch_size,) + tuple(self.xshape_example[1:])
-        self.yshape = (self.batch_size,) + tuple(self.yshape_example[1:])
+        self.yshape = (self.batch_size,) + tuple(self.yshape_example.numpy()[1:])
  
         return dataset
     
