@@ -363,8 +363,6 @@ class DataSet():
                             noise_sys = noise_sys[0::self.sample_pace, :]
                             k_sys = k_sys[0::self.sample_pace]
                         noise_sys, k_sys = noise_sys[self.i_min:self.i_max], k_sys[self.i_min:self.i_max]
-                        if not tf.reduce_all(tf.math.equal(k, k_sys)):
-                            tf.print('ERROR: k-values in spectrum and theory-error curve file not identical')
                         # rescale noise_sys curves according to error (10% default from production curves), 
                         # rescale by Gaussian with sigma = 1
                         # multiply with normalisation spectrum
@@ -545,6 +543,9 @@ class DataSet():
                 curve_random_nr = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
                 curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
                 curve_loaded = np.loadtxt(curve_file)
+                for k_range in Original_ks:
+                    if curve_loaded[:,0] != k_range.numpy():
+                        print('ERROR: k-values of all spectra and theory-error curve files not identical')
                 self.therr_curves.append(curve_loaded)
             self.therr_curves = tf.convert_to_tensor(self.therr_curves, dtype=tf.float32)
 
