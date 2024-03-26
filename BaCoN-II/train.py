@@ -607,10 +607,11 @@ def main():
     if FLAGS.decay is not None:
         if FLAGS.TPU:
             with strategy.scope():
-                lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_dataset), FLAGS.decay)
+                n_batches_eff = training_dataset.n_batches / strategy.num_replicas_in_sync
+                lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, n_batches_eff, FLAGS.decay)
                 optimizer = tf.keras.optimizers.Adam(lr_fn)
         else:
-            lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_dataset), FLAGS.decay)
+            lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, training_dataset.n_batches, FLAGS.decay)
             optimizer = tf.keras.optimizers.Adam(lr_fn)
     elif FLAGS.TPU:
         with strategy.scope():
@@ -619,7 +620,11 @@ def main():
         optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
     
     if FLAGS.restore and FLAGS.decay is not None:
-        decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / len(training_dataset))
+        if FLAGS.TPU:
+            n_batches_eff = training_dataset.n_batches / strategy.num_replicas_in_sync
+            decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / n_batches_eff)
+        else:
+            decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / training_dataset.n_batches)
         
     #optimizer.iterations  # this access will invoke optimizer._iterations method and create optimizer.iter attribute
     #if FLAGS.decay is not None:
