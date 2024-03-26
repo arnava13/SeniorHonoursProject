@@ -530,9 +530,9 @@ class DataSet():
             dataset = self.transformations(dataset)
 
         for x, y in dataset.take(1):
-            self.xshape = x.shape
+            self.xshape = x.shape#
             self.yshape = y.shape
-            
+
         return dataset
     
     def save_spectra(self, X, y):
