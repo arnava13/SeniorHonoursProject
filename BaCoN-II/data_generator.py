@@ -448,8 +448,6 @@ class DataSet():
             X = X[:,:,0,:]
         if self.Verbose:
             tf.print("X shape after normalize slicing: ", tf.shape(X))
-        self.xshape_example = X.shape
-        self.yshape_example = tf.shape(y)
         return X, y
     
     @tf.function
@@ -531,9 +529,10 @@ class DataSet():
         else:
             dataset = self.transformations(dataset)
 
-        self.xshape = (self.batch_size,) + tuple(self.xshape_example[1:])
-        self.yshape = (self.batch_size,) + tuple(self.yshape_example.as_list()[1:])
- 
+        for x, y in dataset.take(1):
+            self.xshape = x.shape
+            self.yshape = y.shape
+            
         return dataset
     
     def save_spectra(self, X, y):
