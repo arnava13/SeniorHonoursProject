@@ -512,18 +512,9 @@ class DataSet():
                 y_list.append(y)
         X_list = np.array(X_list, dtype=np.float32)
         y_list = np.array(y_list, dtype=np.int32)
+        y_list = tf.keras.util.to_categorical(y_list, num_classes=self.n_classes_out)
         dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
         del X_list, y_list
-
-        def to_categorical_pyfunc(y):
-            def to_categorical(y):
-                y = tf.keras.utils.to_categorical(y.numpy(), num_classes=self.n_classes_out, dtype='float32')
-                return y
-            y = tf.py_function(func=to_categorical, inp=[y], Tout=tf.float32)
-            y.set_shape([None, self.n_classes_out])
-            return y
-        
-        dataset = dataset.map(lambda x, y: (x, to_categorical_pyfunc(y)), num_parallel_calls=tf.data.AUTOTUNE)
 
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
 
@@ -534,7 +525,7 @@ class DataSet():
             dataset = self.transformations(dataset)
 
         for x, y in dataset.take(1):
-            self.xshape = x.shape#
+            self.xshape = x.shape
             self.yshape = y.shape
 
         return dataset
