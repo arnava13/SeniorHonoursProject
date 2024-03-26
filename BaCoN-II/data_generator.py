@@ -450,7 +450,7 @@ class DataSet():
         if self.Verbose:
             tf.print("X shape after normalize slicing: ", tf.shape(X))
         y = tf.cast(y, dtype=tf.int32)
-        y = tf.one_hot(y, depth=self.n_classes_out)
+        y = tf.keras.utils.to_categorical(y, num_classes=self.n_classes)
         self.xshape_example = X.shape
         self.yshape_example = y.shape
         return X, y
@@ -494,7 +494,7 @@ class DataSet():
         if self.Verbose_2:
             print("list_IDs_dict")
             print(list_IDs_dict)
-            
+
         X_list = []
         y_list = []
         for fname in fname_list:
