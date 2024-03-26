@@ -544,6 +544,9 @@ class DataSet():
                 curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
                 curve_loaded = np.loadtxt(curve_file)
                 for k_range in Original_ks:
+                    if self.sample_pace != 1:
+                        k_sys = curve_loaded[:,0,self.sample_pace]
+                    k_sys = k_sys[self.i_min:self.i_max]
                     if curve_loaded[:,0] != k_range.numpy():
                         print('ERROR: k-values of all spectra and theory-error curve files not identical')
                 self.therr_curves.append(curve_loaded)
