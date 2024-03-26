@@ -451,10 +451,6 @@ def main():
         training_dataset, validation_dataset = create_datasets(FLAGS, strategy=strategy)
     else:
         training_dataset, validation_dataset = create_datasets(FLAGS)
-
-    cache_dir = 'cache'
-    if not os.path.exists(cache_dir):
-        os.makedirs(cache_dir)
     
     if FLAGS.fine_tune:
         print('\n------------ CREATING ORIGINAL DATASETS FOR CHECK------------')
@@ -475,10 +471,6 @@ def main():
     
     
     print('------------ BUILDING MODEL ------------')
-    if FLAGS.TPU:
-        eff_batch_size = int(training_dataset.batch_size * strategy.num_replicas_in_sync)
-    else:
-        eff_batch_size = None
     if FLAGS.swap_axes:
         input_shape = (int(training_dataset.dim[0]), 
                    int(training_dataset.n_channels))
@@ -528,9 +520,11 @@ def main():
     
     if FLAGS.TPU:
         with strategy.scope():
-            acc_metric = tf.keras.metrics.Accuracy()
+            acc_instance = tf.keras.metrics.Accuracy()
+            acc_metric = lambda y_true, y_pred: acc_instance(tf.argmax(y_true, axis=1), tf.argmax(tf.nn.softmax(y_pred), axis=1))
     else:
-        acc_metric = tf.keras.metrics.Accuracy()
+        acc_instance = tf.keras.metrics.Accuracy()
+        acc_metric = lambda y_true, y_pred: acc_instance(tf.argmax(y_true, axis=1), tf.argmax(tf.nn.softmax(y_pred), axis=1))
         
 
     if FLAGS.TPU:
@@ -753,8 +747,6 @@ def main():
 
 
      
-        
 if __name__=='__main__':
     
     main()
-    

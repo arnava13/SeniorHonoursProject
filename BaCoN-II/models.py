@@ -44,7 +44,7 @@ def make_custom_model(    drop=0.5,
     
     
     if swap_axes:
-        print('using 1D layers and %s channels' %input_shape[-1])
+        tf.print('using 1D layers and %s channels' %input_shape[-1])
         is_1D = True
         flayer =  tf.keras.layers.GlobalAveragePooling1D()
 
@@ -60,7 +60,7 @@ def make_custom_model(    drop=0.5,
             clayer = tfp.layers.Convolution1DFlipout
             dlayer = tfp.layers.DenseFlipout
     else:
-        print('using 2D layers and %s channels' %input_shape[-1])
+        tf.print('using 2D layers and %s channels' %input_shape[-1])
         is_1D=False
         f_dim_0=input_shape[0]
         f_dim_1=input_shape[1]
@@ -82,36 +82,46 @@ def make_custom_model(    drop=0.5,
     
     
     for i in range(n_conv):
-    
-    #  Convolutional Layers
-    
-        ks=(kernel_sizes[i],1)
-        st=(strides[i],1)
-        ps=(pool_sizes[i],1)
-        spool=(strides_pooling[i],1)
+            # Convolutional Layers
+        ks = (kernel_sizes[i], 1) if is_1D else (kernel_sizes[i], kernel_sizes[i])
+        st = (strides[i], 1) if is_1D else (strides[i], strides[i])
+        ps = (pool_sizes[i], 1) if is_1D else (pool_sizes[i], pool_sizes[i])
+        spool = (strides_pooling[i], 1) if is_1D else (strides_pooling[i], strides_pooling[i])
         if is_1D:
             ks, st, ps, spool= (ks[0],), (st[0],), (ps[0],), (spool[0],)
 
         conv1 = clayer(filters=filters[i], input_shape=input_shape, 
-                                  kernel_size=ks, strides=st, 
-                                  padding=padding, activation=activation)
-        #if not is_1D:
-        f_dim_0 = (f_dim_0 - ks[0])/st[0]+1
-        print('Expected output dimension of layer %s: %s' %(conv1.name, f_dim_0))
+                    kernel_size=ks, strides=st, 
+                    padding=padding, activation=activation)
+
+        if padding == 'valid':
+            # Calculation for 'valid' padding
+            f_dim_0 = tf.math.ceil((f_dim_0 - ks[0] + 1) / st[0])
+        elif padding == 'same':
+            # Calculation for 'same' padding
+            f_dim_0 = tf.math.ceil(f_dim_0 / st[0])
 
         if first_layer:
             x = conv1(inputs)
-            first_layer=False
+            first_layer = False
         else:
-            x=conv1(x)
+            x = conv1(x)
         
-        if ps[0]!=0:
+        if ps[0] != 0:
             # Pooling 
             maxPool = maxpoolL(pool_size=ps, strides=spool, padding=padding)
-            x=maxPool(x)
-            #if not is_1D:
-            f_dim_0 = (f_dim_0 - ps[0])/spool[0]+1
-            print('Expected output dimension of layer %s: %s' %(maxPool.name, f_dim_0))
+            x = maxPool(x)
+            
+            if padding == 'valid':
+                # Calculation for 'valid' padding for pooling layers
+                f_dim_0 = tf.math.ceil((f_dim_0 - ps[0] + 1) / spool[0])
+            elif padding == 'same':
+                # Calculation for 'same' padding for pooling layers
+                f_dim_0 = tf.math.ceil(f_dim_0 / spool[0])
+
+        # Since TensorFlow operations are used, the result of f_dim_0 is a tensor.
+        # Printing tensors directly in graph mode requires tf.print instead of tf.print.
+        tf.print('Expected output dimension after layer:', conv1.name, ':', f_dim_0)
         # Batch Normalisation
         if i<n_conv and BatchNorm:
                 x=tf.keras.layers.BatchNormalization(axis=-1, momentum=0.99)(x)
@@ -163,19 +173,19 @@ def make_fine_tuning_model(base_model, input_shape, n_out_labels, dense_dim=0,
         else:
           x=layer(x, training=trainable)
         if not layer.trainable:
-            print('Layer ' + layer.name + ' frozen.')
-        #print(layer.name)
-        #print(layer.trainable)
+            tf.print('Layer ' + layer.name + ' frozen.')
+        #tf.print(layer.name)
+        #tf.print(layer.trainable)
     if include_last:
         last_layer = base_model.layers[-1]
         last_layer.trainable = trainable
         x=last_layer(x, training=trainable)
         if not last_layer.trainable:
-            print('Layer ' + last_layer.name + ' frozen.')
+            tf.print('Layer ' + last_layer.name + ' frozen.')
         else:
-            print('Layer ' + last_layer.name + ' not frozen.')
+            tf.print('Layer ' + last_layer.name + ' not frozen.')
         x=tf.nn.softmax(x)
-    #print('\nBase model done\n')
+    #tf.print('\nBase model done\n')
     if bayesian and dense_dim>0.:
         denseL = tfp.layers.DenseFlipout(dense_dim)
     elif not bayesian:
@@ -186,26 +196,26 @@ def make_fine_tuning_model(base_model, input_shape, n_out_labels, dense_dim=0,
           x=tfp.layers.DenseFlipout(dense_dim)(x)
         else:
           x=tf.keras.layers.Dense(dense_dim)(x)
-        #print(denseL.name)
-        #print(denseL.trainable)
+        #tf.print(denseL.name)
+        #tf.print(denseL.trainable)
         if  BatchNorm:
             x = tf.keras.layers.BatchNormalization(axis=-1, momentum=0.99)(x)
         if not bayesian and drop!=0.:
             x = tf.keras.layers.Dropout(drop)(x)
     #else:
-      #print('No additional dense layer added')
+      #tf.print('No additional dense layer added')
     if bayesian:
         outL = tfp.layers.DenseFlipout(n_out_labels)
     else:
         outL = tf.keras.layers.Dense(n_out_labels)
     outputs = outL(x, training=True)
-    #print(outL.name)
-    #print(outL.trainable)
+    #tf.print(outL.name)
+    #tf.print(outL.trainable)
     
   
     model = tf.keras.Model(inputs, outputs)
 
-    #print('\nDone.')
+    #tf.print('\nDone.')
     return model
 
 
@@ -263,23 +273,23 @@ def make_model_dummy(drop=0.,
 
 def make_unfreeze_model(base_model, input_shape, n_out_labels, dense_dim=0, 
                            bayesian=True, drop=0.5, BatchNorm=True,):
-    #print('Making unfrozen model')
+    #tf.print('Making unfrozen model')
     inputs = tf.keras.Input(shape=input_shape)
     first_layer=True
     for layer in base_model.layers[:-1]: # go through until last layer
         layer.trainable = True
-        #print(layer.name)
+        #tf.print(layer.name)
         if first_layer:
           x=layer(inputs, training=True)
           first_layer=False
         else:
           x=layer(x, training=True)
-        #print(x.shape)
+        #tf.print(x.shape)
           
     last_layer=base_model.layers[-1]
     last_layer.trainable = True
     outputs=last_layer(x, training=True)
     model = tf.keras.Model(inputs, outputs)
 
-    #print('\nDone.')
+    #tf.print('\nDone.')
     return model
