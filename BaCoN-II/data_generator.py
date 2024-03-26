@@ -523,12 +523,7 @@ class DataSet():
         for x, y in dataset.take(1):
             self.xshape = x.shape
             self.yshape = y.shape
-
-        dataset = dataset.cache()
-        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-        if self.TPU:
-            dataset = self.strategy.experimental_distribute_dataset(dataset)
-
+            
         return dataset
     
     def save_spectra(self, X, y):

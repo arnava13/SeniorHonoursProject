@@ -4,7 +4,8 @@
 Created on Wed Jun 17 13:21:14 2020
 
 @author: Michi
-@editor: Linus, Feb 2023, add norm_data_name
+@editor: Arnav, 24/03/2024, Added TPU support and removed custom training loop. Everything follows tensorflow conventions now.
+                            Training will be faster on CPUs and GPUs as well.
 """
 import argparse
 import os
@@ -18,257 +19,199 @@ from models import *
 from utils import DummyHist, plot_hist, str2bool, Logger, get_flags
 import sys
 import time
+import shutil
 
-
-
-@tf.function
-def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=False, n_train_example=60000, TPU=False, strategy=None):
-    def step_fn(x, y):
-        with tf.GradientTape() as tape:
-            tape.watch(model.trainable_variables) 
-            for layer in model.layers:  # In order to support frozen weights
-                x = layer(x, training=layer.trainable)
-            logits=x
-            if bayesian:
-                kl = sum(model.losses)/n_train_example
-                loss_value = loss(y, logits, kl)
-            else:
-                loss_value = loss(y, logits)
-            grads = tape.gradient(loss_value, model.trainable_weights)
-            optimizer.apply_gradients(zip(grads, model.trainable_weights))
-        return loss_value, logits
-    if TPU:
-        loss_value, logits = strategy.run(step_fn, args=(x, y))
-    else:
-        loss_value, logits = step_fn(x, y)
-    proba = tf.nn.softmax(logits)
-    prediction = tf.argmax(proba, axis=1)
-    train_acc_metric.update_state(tf.argmax(y, axis=1), prediction)
-    return loss_value
-
-@tf.function
-def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10000, TPU=False, strategy=None):
-    def step_fn(x, y):
-        val_logits = model(x, training=False)
-        if bayesian:
-            val_kl = sum(model.losses)/n_val_example
-            val_loss_value = loss(y, val_logits, val_kl, TPU)
+class BayesianLoss(tf.keras.losses.Loss):
+    def __init__(self, n_train_examples, n_val_examples, TPU=False):
+        super().__init__()
+        self.n_examples = n_train_examples  # Default to training examples
+        self.n_train_examples = n_train_examples
+        self.n_val_examples = n_val_examples
+        if TPU:
+            self.base_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
         else:
-            val_loss_value = loss(y, val_logits, TPU)
-        return val_loss_value, val_logits
-    if TPU:
-        val_loss_value, val_logits = strategy.run(step_fn, args=(x, y))
-    else:
-        val_loss_value, val_logits = step_fn(x, y)
-    val_proba = tf.nn.softmax(val_logits)
-    val_prediction = tf.argmax(val_proba, axis=1)
-    val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
-    return val_loss_value
+            self.base_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
 
+    def call(self, y_true, y_pred):
+        kl_loss = sum(self.model.losses) / self.n_examples
+        neg_log_likelihood = self.base_loss(y_true, y_pred)
+        return neg_log_likelihood + kl_loss
 
-@tf.function
-def my_loss(y, logits, TPU=False):
-    if TPU:
-        loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
-    else:
-        loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
-    return loss_f(y, logits) 
+    def set_mode_training(self):
+        self.n_examples = self.n_train_examples
 
+    def set_mode_validation(self):
+        self.n_examples = self.n_val_examples
 
-@tf.function
-def ELBO(y, logits, kl, TPU=False):
-    neg_log_likelihood = my_loss(y, logits, TPU)   
-    return neg_log_likelihood + kl
+    def set_model(self, model):
+        self.model = model
 
+class TrainingCallback(tf.keras.callbacks.Callback):
+    def __init__(self, loss, ckpt, checkpoint_manager, patience=10, best_loss = np.infty, restore=False, history=None, save_ckpt=False, TPU=False):
+        self.ckpt = ckpt
+        self.checkpoint_manager = checkpoint_manager
+        self.patience = patience
+        self.best_loss = best_loss
+        self.count = 0
+        self.save_ckpt = save_ckpt
+        self.restore = restore
+        self.history = history or {}
+        self.loss_function = loss
+        self.TPU = TPU
+        self.log_data = {}
+        # Ensure the checkpoint directory exists
+        self.start_time = time.time()  # Overall training start time
+        if self.TPU and self.save_ckpt:
+            print("Cannot only save final checkpoint in TPU mode. Intermediate checkpoints won't be saved.")
+    
+    def on_train_batch_begin(self, batch, logs=None):
+        self.loss_function.set_mode_training()
+    
+    def on_test_batch_begin(self, batch, logs=None):
+        self.loss_function.set_mode_validation()
+    
+    def set_model(self, model):
+        self.model = model
 
+    def on_epoch_begin(self, epoch, logs=None):
+        self.epoch_start_time = time.time()
 
-def my_train(model, optimizer, loss,
-             epochs, 
+    def on_epoch_end(self, epoch, logs=None):
+        current_val_loss = logs.get('val_loss')
+
+        if current_val_loss < self.best_loss:
+            self.best_loss = current_val_loss
+            self.count = 0
+            if self.save_ckpt and not self.TPU:
+                save_path = self.checkpoint_manager.save()
+                print(f"\nEpoch {epoch+1}: Validation loss decreased to {current_val_loss:.4f}. Checkpoint saved: {save_path}")
+            else:
+                print(f"\nEpoch {epoch+1}: Validation loss decreased to {current_val_loss:.4f}.")
+        else:
+            self.count += 1
+            print(f'\nEpoch {epoch+1}: Loss did not decrease. Count = {self.count}')
+
+        # Early stopping check
+        if self.count >= self.patience:
+            print('Max patience reached. Stopping training.')
+            self.model.stop_training = True
+
+        # Increment the checkpoint step
+        self.ckpt.step.assign_add(1)
+
+        # Log metrics and epoch duration
+        for key in ['loss', 'val_loss', 'accuracy', 'val_accuracy']: 
+            if key in logs:
+                # Save the logs as an attribute
+                if not hasattr(self, 'log_data'):
+                    self.log_data = {}
+                if key not in self.log_data:
+                    self.log_data[key] = []
+                self.log_data[key].append(logs[key])
+
+        # Print epoch summary
+        total_time = time.time() - self.start_time
+        print(f"Time:  {total_time:.2f}") # ---- Loss: {logs.get('loss', 0):.4f}, Acc.: {logs.get('accuracy', 0):.4f}, Val. Loss: {logs.get('val_loss', 0):.4f}, Val. Acc.: {logs.get('val_accuracy', 0):.4f}\n")
+
+def my_train(model, loss, epochs,
              train_dataset, 
-             val_dataset, manager, ckpt,            
-             train_acc_metric, val_acc_metric,
-             restore=False, patience=100,
-             bayesian=False, save_ckpt=False, decayed_lr_value=None, TPU=False, strategy=None, cpu_strategy=None
-              ):
-  fname_hist = manager.directory+'/hist'
-  fname_idxs_train = manager.directory+'/idxs_train.txt'
-  fname_idxs_val = manager.directory+'/idxs_val.txt'
-  if not restore:
-      history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy':[] }
-      best_loss=np.infty
-      print("Initializing checkpoint from scratch.")
-  else:
-      print('Restoring ckpt...')
-      ckpt.restore(manager.latest_checkpoint)
-      print('ckpt step: %s' %ckpt.step)
-      hist_start=int(ckpt.step)
-      print('Starting from history at step %s' %hist_start)
-      history = {'loss': np.loadtxt(fname_hist+'_loss.txt').tolist()[0:hist_start], 
-                 'val_loss': np.loadtxt(fname_hist+'_val_loss.txt').tolist()[0:hist_start], 
-                 'accuracy': np.loadtxt(fname_hist+'_accuracy.txt').tolist()[0:hist_start], 
-                 'val_accuracy':np.loadtxt(fname_hist+'_val_accuracy.txt').tolist()[0:hist_start] }
-      for key in history.keys():
-        fname = fname_hist+'_'+key+'.txt'
-        fname_new = fname_hist+'_'+key+'_original.txt'
-        os.rename(fname, fname_new)
-      print('Saved copy of original histories.')
-      if manager.latest_checkpoint:
-          print("Restoring checkpoint from {}".format(manager.latest_checkpoint))
-          best_train_loss = history['loss'][-1]
-          best_loss = history['val_loss'][-1]
-          print('Starting from  (loss, val_loss) =  %.4f, %.4f' %(best_train_loss, best_loss ))
-      else:
-          print("Checkpoint not found. Initializing checkpoint from scratch.")
-      
-      print('Last learning rate was %s' %ckpt.optimizer.learning_rate)
-      #if decayed_lr_value is not None:
-        #lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_dataset), FLAGS.decay)
-      #  ckpt.optimizer.learning_rate = decayed_lr_value(hist_start) #FLAGS.lr
-      #  print('Learning rate set to %s' %ckpt.optimizer.learning_rate)
-      #else:
-      #    print('Re-starting from this value for the learing rate')
+             val_dataset, ckpt_path, ckpt, ckpt_manager, TPU=False, strategy=None, cpu_strategy=None,
+             restore=False, patience=100, shuffle=True, save_ckpt=False):
+    fname_hist = os.path.join(ckpt_path, 'hist')
+    if not os.path.exists(fname_hist):
+        os.makedirs(fname_hist)
+    if not os.path.exists(ckpt_path):
+        os.makedirs(ckpt_path)
+    if restore:
+        print('Restoring ckpt...')
+        if ckpt_manager.latest_checkpoint:
+            ckpt.restore(ckpt_manager.latest_checkpoint)
+            print("Restored checkpoint from {}".format(ckpt_manager.latest_checkpoint))
+            print('ckpt step: %s' % ckpt.step.numpy())
 
-  n_val_example=val_dataset.batch_size*val_dataset.n_batches
-  n_train_example=train_dataset.batch_size*train_dataset.n_batches
-  
-  train_dataset.dataset = train_dataset.dataset.cache()
-  val_dataset.dataset = val_dataset.dataset.cache()
-  train_dataset.dataset = train_dataset.dataset.prefetch(tf.data.experimental.AUTOTUNE)
-  val_dataset.dataset = val_dataset.dataset.prefetch(tf.data.experimental.AUTOTUNE)  
-  if TPU:
-    train_dataset = strategy.experimental_distribute_dataset(train_dataset.dataset)
-    val_dataset = strategy.experimental_distribute_dataset(val_dataset.dataset)
+            hist_start = int(ckpt.step)
+            print('Starting from history at step %s' % hist_start)
 
-  count = 0
-  for epoch in range(epochs):
-    print("Epoch %d" % (epoch,))
-    start_time = time.time()
+            # Load history from files
+            history = {
+                key: np.loadtxt(fname_hist+'_'+key+'.txt').tolist()[0:hist_start] 
+                for key in ['loss', 'val_loss', 'accuracy', 'val_accuracy']
+            }
 
-    # Run train loop
-    for batch in train_dataset.dataset:
-        x_batch_train, y_batch_train = batch
-        if TPU:
-            with strategy.scope():
-                loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy)
-        else:
-            loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy)
- 
-    
-    # Run  validation loop
-    val_loss_value = 0.
-    for val_batch in val_dataset.dataset:      
-        x_batch_val, y_batch_val = val_batch
-        if TPU:
-            with strategy.scope():
-                lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)/ float(val_dataset.n_batches)
-        else:
-            lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)/ float(val_dataset.n_batches)
-        val_loss_value += lv
-    
-    if TPU:
-        with cpu_strategy.scope():
-            if val_loss_value.numpy()<best_loss: #int(ckpt.step) % 10 == 0:
-                if save_ckpt:
-                    save_path = manager.save()
-                    print("Validation loss decreased. Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
-                else:
-                    #print('Creating directory %s' %manager.directory)
-                    tf.io.gfile.makedirs(manager.directory)
+            print(f'Re-wrote histories until epoch {len(history["val_accuracy"][:-1])}')
 
-                best_loss = val_loss_value.numpy()      
-                #print("New loss {:1.2f}".format(best_loss))
-                count = 0
-            else:
-                count +=1
-                print('Loss did not decrease. Count = %s' %count)
-                if count==patience:
-                    print('Max patience reached. ')
-                    break
-    else:
-        if val_loss_value.numpy()<best_loss:
-            if save_ckpt:
-                save_path = manager.save()
-                print("Validation loss decreased. Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
-            else:
-                #print('Creating directory %s' %manager.directory)
-                tf.io.gfile.makedirs(manager.directory)
-            
-            best_loss = val_loss_value.numpy()
-            #print("New loss {:1.2f}".format(best_loss))
-            count = 0
-        else:
-            count +=1
-            print('Loss did not decrease. Count = %s' %count)
-            if count==patience:
-                print('Max patience reached. ')
-                break
-    
-    
-    
-    ckpt.step.assign_add(1)
-    if TPU:
-        with cpu_strategy.scope():
-            train_acc = train_acc_metric.result().numpy()
-            train_loss = loss_value.numpy()
-            val_acc = val_acc_metric.result().numpy()
-            val_loss = val_loss_value.numpy()
-    else:
-        train_acc = train_acc_metric.result().numpy()
-        train_loss = loss_value.numpy()
-        val_acc = val_acc_metric.result().numpy()
-        val_loss = val_loss_value.numpy()
-    history['loss'].append(train_loss)
-    history['accuracy'].append(train_acc)
-    train_acc_metric.reset_states()
-    history['val_loss'].append(val_loss)
-    history['val_accuracy'].append(val_acc)
-    val_acc_metric.reset_states()
-    
-
-    if epoch==0:
-        if restore:          
+            # Rename original history files to keep a backup
             for key in history.keys():
                 fname = fname_hist+'_'+key+'.txt'
-                with open(fname, 'a') as fh:
-                    for el in history[key][:-1]:
-                        fh.write(str(el) +'\n')
-            print('Re-wrote histories until epoch %s' %str(len(history['val_accuracy'][:-1])) )
-                    
-        with open(fname_idxs_train, 'a') as fit:
-            for ID in train_dataset.list_IDs:
-                fit.write(str(ID) +'\n')
-        with open(fname_idxs_val, 'a') as fiv:
-            for ID in val_dataset.list_IDs:   
-                fiv.write( str(ID) +'\n' )
-    
-    for key in history.keys():
-            fname = fname_hist+'_'+key+'.txt'
-            with open(fname, 'a') as fh:
-                fh.write(str(history[key][-1])+'\n') 
-                
-    ###
-    # Uncomment if training in a jupyter notebook, to print the status on epoch bar
-    ###
-    #epoch_bar.set_postfix(train_loss=loss_value.numpy(), val_loss=val_loss_value.numpy(), 
-    #                      train_accuracy = train_acc.numpy(), val_accuracy=val_acc.numpy())
-    #print("Time taken: %.2fs" % (time.time() - start_time))
-    print("Time:  %.2fs, ---- Loss: %.4f, Acc.: %.4f, Val. Loss: %.4f, Val. Acc.: %.4f\n" % (time.time() - start_time, train_loss, train_acc, val_loss, val_acc))
+                fname_new = fname_hist+'_'+key+'_original.txt'
+                os.rename(fname, fname_new)
+            print('Saved copy of original histories.')
+            
+            best_train_loss = history['loss'][-1]
+            best_loss = history['val_loss'][-1]
+            print(f"Starting from (loss, val_loss) = {best_train_loss:.4f}, {best_loss:.4f}")
 
-  return model, history
+            # Print last learning rate
+            print('Last learning rate was %s' % ckpt.optimizer.learning_rate.numpy())
+            last_epoch = hist_start
+            # Rewriting historical data if restoring
 
-
-def compute_loss(dataset, model, bayesian=False, TPU=False):
-    x_batch_train, y_batch_train = dataset.dataset.take(0).as_numpy_iterator().next()
-    logits = model(x_batch_train, training=False)
-    if bayesian:
-            kl = sum(model.losses)/dataset.batch_size/dataset.n_batches
-            loss_0 = ELBO(y_batch_train, logits, kl, TPU)
+            
+        else:
+            print("Checkpoint not found. Initializing checkpoint from scratch.")
+            history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy':[] }
+            best_loss = np.infty
+            last_epoch = 0
     else:
-            loss_0 = my_loss(y_batch_train, logits, TPU)
+        print("Initializing checkpoint from scratch.")
+        history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy':[] }
+        best_loss = np.infty
+        last_epoch = 0
+
+    callback = TrainingCallback(loss, ckpt, ckpt_manager, best_loss=best_loss, patience=10, save_ckpt=save_ckpt, history=history, TPU=TPU)
+    if TPU:
+        with strategy.scope():
+            val_steps_per_epoch = val_dataset.n_batches // strategy.num_replicas_in_sync
+            train_steps_per_epoch = train_dataset.n_batches // strategy.num_replicas_in_sync
+            new_history = model.fit(train_dataset.dataset, epochs=epochs,
+                                validation_data=val_dataset.dataset,
+                                callbacks=[callback], steps_per_epoch=train_steps_per_epoch, validation_steps=val_steps_per_epoch, initial_epoch=last_epoch)
+    else:
+        new_history = model.fit(train_dataset.dataset, epochs=epochs,
+                            validation_data=val_dataset.dataset,
+                            callbacks=[callback], initial_epoch=last_epoch)
+
+    # Append new history to existing history
+    for key in history.keys():
+        history[key].extend(new_history.history[key])
+    
+    for key in callback.log_data:
+        fname = os.path.join(fname_hist, f'{key}.txt')
+        with open(fname, 'a+') as fh:
+            for log in callback.log_data[key]:
+                fh.write(f'{log}\n')
+
+    if TPU and save_ckpt:
+        with cpu_strategy.scope():
+            save_path = ckpt_manager.save()
+            print(f"Final checkpoint saved: {save_path}")
+
+    return model, history
+
+
+def compute_loss(dataset, model, bayesian=False, TPU=False, strategy=None):
+    x_batch_train, y_batch_train = dataset.take(1)
+    logits = model(x_batch_train, training=False)
+    if TPU:
+        base_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+    else:
+        base_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+    if bayesian:
+            kl = sum(model.losses)/dataset.n_example
+            loss_0 = base_loss(y_batch_train, logits) + kl
+    else:
+        loss_0 = base_loss(y_batch_train, logits)
     return loss_0
-
-
-
 
 def main():
     
@@ -371,7 +314,6 @@ def main():
     parser.add_argument("--BatchNorm", default=True, type=str2bool, required=False)
     parser.add_argument("--padding", default='valid', type=str, required=False)
     parser.add_argument("--shuffle", default='False', type=str2bool, required=False)
-    
 
     FLAGS = parser.parse_args()
     
@@ -383,6 +325,26 @@ def main():
     FLAGS.strides_pooling = [int(z) for z in FLAGS.strides_pooling]
     FLAGS.c_1.sort()
     FLAGS.c_0.sort()
+
+    if FLAGS.TPU and FLAGS.GPU:
+        print('Cannot use both TPU and GPU. Using GPU only ')
+        FLAGS.TPU=False
+        
+    if FLAGS.TPU:
+        try:
+            tpu_resolver = tf.distribute.cluster_resolver.TPUClusterResolver()  # Automatically detects the TPU
+            tf.config.experimental_connect_to_cluster(tpu_resolver)  # Connects to the TPU cluster
+            tf.tpu.experimental.initialize_tpu_system(tpu_resolver)  # Initializes the TPU system
+            strategy = tf.distribute.TPUStrategy(tpu_resolver)
+            tpu_device = tpu_resolver.master()  # Retrieves the TPU device URI
+            print("Running on TPU:", tpu_device)
+            cpu_strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
+
+        except:
+            raise Exception("TPU not found. Check if TPU is enabled in the notebook settings")
+    else:
+        strategy = None
+        cpu_strategy = None
                   
     #if not FLAGS.fine_tune:
     #    if not FLAGS.dataset_balanced and FLAGS.one_vs_all:
@@ -474,26 +436,6 @@ def main():
     logfile = os.path.join(out_path, FLAGS.fname+log_fname_add+'_log.txt')
     myLog = Logger(logfile)
     sys.stdout = myLog
-
-    if FLAGS.TPU and FLAGS.GPU:
-        print('Cannot use both TPU and GPU. Using GPU only ')
-        FLAGS.TPU=False
-        
-    if FLAGS.TPU:
-        try:
-            tpu_resolver = tf.distribute.cluster_resolver.TPUClusterResolver()  # Automatically detects the TPU
-            tf.config.experimental_connect_to_cluster(tpu_resolver)  # Connects to the TPU cluster
-            tf.tpu.experimental.initialize_tpu_system(tpu_resolver)  # Initializes the TPU system
-            strategy = tf.distribute.TPUStrategy(tpu_resolver)
-            tpu_device = tpu_resolver.master()  # Retrieves the TPU device URI
-            print("Running on TPU:", tpu_device)
-            cpu_strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
-
-        except:
-            raise Exception("TPU not found. Check if TPU is enabled in the notebook settings")
-    else:
-        strategy = None
-        cpu_strategy = None
     
     
     #with open(out_path+'/params.txt', 'w') as fpar:    
@@ -504,14 +446,14 @@ def main():
         #    fpar.write(' : '.join([str(key), str(value)])+'\n')
     
     
-    print('\n------------ CREATING DATA GENERATORS ------------')
+    print('\n------------ CREATING DATASETS ------------')
     if FLAGS.TPU:
         training_dataset, validation_dataset = create_datasets(FLAGS, strategy=strategy)
     else:
         training_dataset, validation_dataset = create_datasets(FLAGS)
     
     if FLAGS.fine_tune:
-        print('\n------------ CREATING ORIGINAL DATA GENERATORS FOR CHECK------------')
+        print('\n------------ CREATING ORIGINAL DATASETS FOR CHECK------------')
         if FLAGS.TPU:
             or_training_dataset, or_validation_dataset = create_datasets(FLAGS_ORIGINAL, strategy=strategy)
         else:
@@ -530,15 +472,29 @@ def main():
     
     print('------------ BUILDING MODEL ------------')
     if FLAGS.swap_axes:
-        input_shape = ( int(training_dataset.dim[0]), 
+        input_shape = (int(training_dataset.dim[0]), 
                    int(training_dataset.n_channels))
     else:
-        input_shape = ( int(training_dataset.dim[0]), 
+        input_shape = (int(training_dataset.dim[0]), 
                    int(training_dataset.dim[1]), 
                    int(training_dataset.n_channels))
     print('Input shape %s' %str(input_shape))
-
-    padding = FLAGS.padding
+    
+    if FLAGS.decay is not None:
+        if FLAGS.TPU:
+            with strategy.scope():
+                n_batches_eff = training_dataset.n_batches // strategy.num_replicas_in_sync
+                lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, n_batches_eff, FLAGS.decay)
+                optimizer = tf.keras.optimizers.legacy.Adam(lr_fn)
+        else:
+            lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, training_dataset.n_batches, FLAGS.decay)
+            optimizer = tf.keras.optimizers.legacy.Adam(lr_fn)
+    else:
+        if FLAGS.TPU:
+            with strategy.scope():
+                optimizer = tf.keras.optimizers.legacy.Adam(FLAGS.lr)
+        else:
+            optimizer = tf.keras.optimizers.legacy.Adam(FLAGS.lr)
     
     if FLAGS.test_mode:
         drop=0
@@ -553,17 +509,53 @@ def main():
                 print(' ####  FLAGS.BatchNorm not found! #### \n Probably loading an older model. Using BatchNorm=True')
                 BatchNorm=True
 
-        filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense= FLAGS_ORIGINAL.filters, FLAGS_ORIGINAL.kernel_sizes, FLAGS_ORIGINAL.strides, FLAGS_ORIGINAL.pool_sizes, FLAGS_ORIGINAL.strides_pooling, FLAGS_ORIGINAL.n_dense
+        filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense, padding= FLAGS_ORIGINAL.filters, FLAGS_ORIGINAL.kernel_sizes, FLAGS_ORIGINAL.strides, FLAGS_ORIGINAL.pool_sizes, FLAGS_ORIGINAL.strides_pooling, FLAGS_ORIGINAL.n_dense, FLAGS_ORIGINAL.padding
     else:
         try:
             BatchNorm=FLAGS.BatchNorm
         except AttributeError:
             print(' ####  FLAGS.BatchNorm not found! #### \n Probably loading an older model. Using BatchNorm=True')
             BatchNorm=True
-        filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense
+        filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense, padding = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense, FLAGS.padding
+    
+
+    def accuracy(y_true, y_pred):
+        probs = tf.nn.softmax(y_pred)
+        preds = tf.argmax(probs, axis=1)
+        y_true = tf.argmax(y_true, axis=1)
+        return tf.reduce_mean(tf.cast(tf.equal(y_true, preds), dtype=tf.float32))
+
+    acc_metric = accuracy
+        
+
     if FLAGS.TPU:
         with strategy.scope():
             model=make_model(     model_name=model_name,
+                        drop=drop, 
+                        n_labels=n_classes, 
+                        input_shape=input_shape, 
+                        padding=padding, 
+                        filters=filters,
+                        kernel_sizes=kernel_sizes,
+                        strides=strides,
+                        pool_sizes=pool_sizes,
+                        strides_pooling=strides_pooling,
+                        activation=tf.nn.leaky_relu,
+                        bayesian=bayesian, 
+                        n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
+                            )
+            if FLAGS.bayesian:
+                loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size, TPU=FLAGS.TPU)
+                loss.set_model(model)
+            else:
+                if FLAGS.TPU:
+                    loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+                else:
+                    loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+            model.build(input_shape = input_shape)
+            model.compile(optimizer=optimizer, loss=loss, metrics=[acc_metric])
+    else:
+        model=make_model(     model_name=model_name,
                          drop=drop, 
                           n_labels=n_classes, 
                           input_shape=input_shape, 
@@ -577,49 +569,32 @@ def main():
                           bayesian=bayesian, 
                           n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
                              )
-    else:
-        model=make_model(     model_name=model_name,
-                            drop=drop, 
-                            n_labels=n_classes, 
-                            input_shape=input_shape, 
-                            padding=padding, 
-                            filters=filters,
-                            kernel_sizes=kernel_sizes,
-                            strides=strides,
-                            pool_sizes=pool_sizes,
-                            strides_pooling=strides_pooling,
-                            activation=tf.nn.leaky_relu,
-                            bayesian=bayesian, 
-                            n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
-                                )
-    
-    
-    model.build(input_shape=input_shape)
-    for x, y in training_dataset.dataset.take(1):
-        model(x)
+        if FLAGS.bayesian:
+            loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
+            loss.set_model(model)
+        else:
+            if FLAGS.TPU:
+                loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+            else:
+                loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+        model.build(input_shape =input_shape)
+        model.compile(optimizer=optimizer, loss=loss, metrics=[acc_metric], jit_compile=True)
 
+    for X, _ in training_dataset.dataset.take(1):
+        model(X)
     print(model.summary())
     
     if FLAGS.fine_tune:
-        loss_0 = compute_loss(or_training_dataset, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU)
-        print('Loss before loading weights/ %s\n' %loss_0.numpy())
-    
-    if FLAGS.decay is not None:
         if FLAGS.TPU:
             with strategy.scope():
-                lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_dataset), FLAGS.decay)
-                optimizer = tf.keras.optimizers.Adam(lr_fn)
+                loss_0 = compute_loss(or_training_dataset, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
         else:
-            lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, len(training_dataset), FLAGS.decay)
-            optimizer = tf.keras.optimizers.Adam(lr_fn)
-    elif FLAGS.TPU:
-        with strategy.scope():
-            optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
-    else:
-        optimizer = tf.keras.optimizers.Adam(lr=FLAGS.lr)
+            loss_0 = compute_loss(or_training_dataset, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
+        print('Loss before loading weights/ %s\n' %loss_0.numpy())
+
     
     if FLAGS.restore and FLAGS.decay is not None:
-        decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / len(training_dataset))
+        decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / training_dataset.n_batches)
         
     #optimizer.iterations  # this access will invoke optimizer._iterations method and create optimizer.iter attribute
     #if FLAGS.decay is not None:
@@ -631,7 +606,6 @@ def main():
     else:
         ckpts_path=out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name_base_unfreezing+'/'
     ckpt_name = 'ckpt'
-    ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model) 
     
     if FLAGS.fine_tune:
         print('Loading ckpt from %s' %ckpts_path)
@@ -649,7 +623,12 @@ def main():
         ckpt.optimizer.learning_rate = FLAGS.lr
         print('Learning rate set to %s' %ckpt.optimizer.learning_rate)
         
-        loss_1 = compute_loss(or_training_dataset, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU)
+        if FLAGS.TPU:
+            with strategy.scope():
+                loss_1 = compute_loss(or_training_dataset, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
+        else:
+            loss_1 = compute_loss(or_training_dataset, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU, strategy=strategy)
+
         print('Loss after loading weights/ %s\n' %loss_1.numpy())
         if FLAGS.add_FT_dense:
             if not FLAGS.swap_axes:
@@ -658,7 +637,7 @@ def main():
                 dense_dim=filters[-1]
         else:
             dense_dim=0
-        
+
         if not FLAGS.unfreeze:
             if FLAGS.TPU:
                 with strategy.scope():
@@ -667,30 +646,53 @@ def main():
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        trainable=FLAGS.trainable, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
+                    if FLAGS.bayesian:
+                        loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
+                        loss.set_model(model)
+                    else:
+                        loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+                    model.build(input_shape = input_shape)
+                    model.compile(optimizer=optimizer, loss=loss, metrics=[acc_metric])
             else:
                 model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
-                                        n_out_labels=training_dataset.n_classes_out,
-                                        dense_dim= dense_dim, bayesian=bayesian, 
-                                        trainable=FLAGS.trainable, 
-                                        drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
-        elif FLAGS.TPU:
-            with strategy.scope():
+                                       n_out_labels=training_dataset.n_classes_out,
+                                       dense_dim= dense_dim, bayesian=bayesian, 
+                                       trainable=FLAGS.trainable, 
+                                       drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
+                if FLAGS.bayesian:
+                    loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
+                    loss.set_model(model)
+                else:
+                    loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+                model.build(input_shape = input_shape)
+                model.compile(optimizer=optimizer, loss=loss, metrics=[acc_metric], jit_compile=True)
+        else:
+            if FLAGS.TPU:
+                with strategy.scope():
+                    model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
+                                       n_out_labels=training_dataset.n_classes_out,
+                                       dense_dim= dense_dim, bayesian=bayesian, 
+                                       drop=drop,  BatchNorm=FLAGS.BatchNorm)
+                    if FLAGS.bayesian:
+                        loss=BayesianLoss(n_train_examples=training_dataset.n_batches*training_dataset.batch_size, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
+                        loss.set_model(model)
+                    else:
+                        loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+                    model.build(input_shape = input_shape)
+                    model.compile(optimizer=optimizer, loss=loss, metrics=[acc_metric])
+            else: 
                 model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
                                        n_out_labels=training_dataset.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        drop=drop,  BatchNorm=FLAGS.BatchNorm)
-        else:
-            model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
-                                       n_out_labels=training_dataset.n_classes_out,
-                                       dense_dim= dense_dim, bayesian=bayesian, 
-                                       drop=drop,  BatchNorm=FLAGS.BatchNorm)
-        
-        for x, y in training_dataset.dataset.take(1):
-            model(x)
-        model.build(input_shape=input_shape)
+                if FLAGS.bayesian:
+                    loss=BayesianLoss(n_train_examples=training_dataset.batch_size*training_dataset.n_batches, n_val_examples=validation_dataset.n_batches*validation_dataset.batch_size)
+                    loss.set_model(model)
+                else:
+                    loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+                model.build(input_shape = input_shape)
+                model.compile(optimizer=optimizer, loss=loss, metrics=[acc_metric], jit_compile=True)
         print(model.summary())
-    
-        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)     
     elif FLAGS.one_vs_all:
         if not FLAGS.test_mode:
             ckpts_path = out_path+'/tf_ckpts'+add_ckpt_name+'/'
@@ -698,21 +700,12 @@ def main():
             ckpts_path = out_path+'/tf_ckpts_test'+add_ckpt_name+'/'
         ckpt_name = ckpt_name+add_ckpt_name
         if FLAGS.test_mode:
-            ckpt_name+='_test'
+            ckpt_name+='_test' 
         
-        
+    ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
     manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
                                          max_to_keep=2, 
                                          checkpoint_name=ckpt_name)
-    
-    if FLAGS.TPU:
-        with strategy.scope():
-            train_acc_metric = tf.keras.metrics.Accuracy()
-            val_acc_metric = tf.keras.metrics.Accuracy()
-    else:
-        train_acc_metric = tf.keras.metrics.Accuracy()
-        val_acc_metric = tf.keras.metrics.Accuracy()
-    
     
     if FLAGS.GPU:
         device_name = tf.test.gpu_device_name()
@@ -723,23 +716,19 @@ def main():
     
     
     print('------------ TRAINING ------------\n')
-    if FLAGS.bayesian:
-        loss=ELBO
-    else:
-        loss=my_loss
-    
-    
+
     #print('Model n_classes : %s ' %n_classes)
-    print('Features shape: %s' %str(training_dataset[0][0].shape))
-    print('Labels shape: %s' %str(training_dataset[0][1].shape))   
-    model, history = my_train(model, optimizer, loss,
-             FLAGS.n_epochs, 
-             training_dataset, 
-             validation_dataset, manager, ckpt,
-             train_acc_metric, val_acc_metric,
-             patience=FLAGS.patience, restore=FLAGS.restore, 
-             bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None, TPU=FLAGS.TPU, strategy=strategy, cpu_strategy=cpu_strategy
-)
+    print('Features shape:', training_dataset.xshape)
+    print('Labels shape:', training_dataset.yshape)
+   
+    model, history = my_train(model, loss,
+                FLAGS.n_epochs, 
+                training_dataset, 
+                validation_dataset, ckpts_path, ckpt, manager, TPU=FLAGS.TPU,
+                strategy=strategy, cpu_strategy=cpu_strategy, patience=FLAGS.patience, restore=FLAGS.restore, shuffle=FLAGS.shuffle, 
+                save_ckpt=FLAGS.save_ckpt #not(FLAGS.test_mode)
+            )
+        
     hist_path =  out_path+'/hist.png'
     if FLAGS.fine_tune:
         if FLAGS.test_mode:
@@ -759,8 +748,6 @@ def main():
 
 
      
-        
 if __name__=='__main__':
     
     main()
-    
