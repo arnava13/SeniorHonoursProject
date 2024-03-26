@@ -516,10 +516,14 @@ class DataSet():
         del X_list, y_list
 
         def to_categorical_pyfunc(y):
-            y = tf.keras.utils.to_categorical(y.numpy(), num_classes=self.n_classes_out, dtype='float32')
+            def to_categorical(y):
+                y = tf.keras.utils.to_categorical(y.numpy(), num_classes=self.n_classes_out, dtype='float32')
+                return y
+            y = tf.py_function(func=to_categorical, inp=[y], Tout=tf.float32)
+            y.set_shape([None, self.n_classes_out])
             return y
         
-        dataset = dataset.map(lambda x, y: (x, tf.py_function(func=to_categorical_pyfunc, inp=[y], Tout=tf.float32)), num_parallel_calls=tf.data.AUTOTUNE)
+        dataset = dataset.map(lambda x, y: (x, to_categorical_pyfunc(y)), num_parallel_calls=tf.data.AUTOTUNE)
 
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
 
