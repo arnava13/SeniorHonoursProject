@@ -31,9 +31,9 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
             logits=x
             if bayesian:
                 kl = sum(model.losses)/n_train_example
-                loss_value = loss(y, logits, kl)
+                loss_value = loss(y, logits, kl, TPU=TPU)
             else:
-                loss_value = loss(y, logits)
+                loss_value = loss(y, logits, TPU=TPU)
             grads = tape.gradient(loss_value, model.trainable_weights)
             optimizer.apply_gradients(zip(grads, model.trainable_weights))
         return loss_value, logits
