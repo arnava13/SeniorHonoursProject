@@ -518,13 +518,13 @@ def main():
             BatchNorm=True
         filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense, padding = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense, FLAGS.padding
     
-    if FLAGS.TPU:
-        with strategy.scope():
-            acc_instance = tf.keras.metrics.Accuracy()
-            acc_metric = lambda y_true, y_pred: acc_instance(tf.argmax(y_true, axis=1), tf.argmax(tf.nn.softmax(y_pred), axis=1))
-    else:
+    
+    def accuracy(y_true, y_pred):
         acc_instance = tf.keras.metrics.Accuracy()
-        acc_metric = lambda y_true, y_pred: acc_instance(tf.argmax(y_true, axis=1), tf.argmax(tf.nn.softmax(y_pred), axis=1))
+        probs = tf.nn.softmax(y_pred)
+        preds = tf.argmax(probs, axis=1)
+        return acc_instance(y_true, preds)
+    acc_metric = accuracy
         
 
     if FLAGS.TPU:
