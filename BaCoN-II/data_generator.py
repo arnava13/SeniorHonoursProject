@@ -464,8 +464,6 @@ class DataSet():
     
     @tf.function
     def transformations(self, dataset):
-        dataset = dataset.map(self.noise_realisations, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        dataset = dataset.flat_map(lambda x,y: tf.data.Dataset.from_tensor_slices((x,y)))
         if self.shuffle:
             dataset = dataset.shuffle(buffer_size=self.batch_size*self.n_batches)
         if self.TPU:
@@ -513,10 +511,20 @@ class DataSet():
             self.group_lab_dict = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(keys, values), default_value=-1)
         self.labels_dict = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(list(self.labels_dict.keys()), list(self.labels_dict.values())), default_value=-1)
 
-        Original_Ps = []
-        Original_ks = []
-        
-        is_files = []
+
+        if self.add_sys:
+            self.therr_curves = []
+            for _ in range(len(fname_list)*self.n_noisy_samples):
+                curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1000, dtype=tf.int32)
+                curve_random_nr = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
+                curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
+                curve_loaded = np.loadtxt(curve_file)
+                self.therr_curves.append(curve_loaded)
+            self.therr_curves = tf.convert_to_tensor(self.therr_curves, dtype=tf.float32)
+
+
+        X_list = []
+        y_list = []
         for i, fname in enumerate(fname_list):
             if self.Verbose:
                     print('Loading file %s' %fname)
@@ -529,28 +537,13 @@ class DataSet():
             P_original, k = P_original[self.i_min:self.i_max], k[self.i_min:self.i_max]
             P_original = tf.convert_to_tensor(P_original, dtype=tf.float32)
             k = tf.convert_to_tensor(k, dtype=tf.float32)
-            Original_Ps.append(P_original)
-            Original_ks.append(k)
-            is_files.append(i)
-        tf.convert_to_tensor(Original_Ps, dtype=tf.float32)
-        tf.convert_to_tensor(Original_ks, dtype=tf.float32)
-        dataset = tf.data.Dataset.from_tensor_slices((fname_list, Original_Ps, Original_ks, is_files))
-
-        if self.add_sys:
-            self.therr_curves = []
-            for _ in range(len(fname_list)*self.n_noisy_samples):
-                curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1000, dtype=tf.int32)
-                curve_random_nr = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
-                curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
-                curve_loaded = np.loadtxt(curve_file)
-                for k_range in Original_ks:
-                    if self.sample_pace != 1:
-                        k_sys = curve_loaded[0::self.sample_pace,0]
-                    k_sys = k_sys[self.i_min:self.i_max]
-                    if k_sys.all() != k_range.numpy().all():
-                        print('ERROR: k-values of all spectra and theory-error curve files not identical')
-                self.therr_curves.append(curve_loaded)
-            self.therr_curves = tf.convert_to_tensor(self.therr_curves, dtype=tf.float32)
+            X_realisations, y_realisations = self.noise_realisations(fname, P_original, k, i)
+            X_list.extend(X_realisations)
+            y_list.extend(y_realisations)
+        X_list = tf.convert_to_tensor(X_list, dtype=tf.float32)
+        y_list = tf.convert_to_tensor(y_list, dtype=tf.int32)
+        dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
+        del X_list, y_list
 
         if self.TPU:
             with self.strategy.scope():
