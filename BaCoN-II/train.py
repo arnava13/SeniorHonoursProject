@@ -558,8 +558,6 @@ def main():
                 else:
                     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True)
             model.build(input_shape = input_shape)
-            for X, _ in training_dataset.dataset.take(1):
-                model(X)
             model.compile(optimizer=optimizer, loss=loss, metrics=[acc_metric])
     else:
         model=make_model(     model_name=model_name,
@@ -587,6 +585,8 @@ def main():
         model.build(input_shape =input_shape)
         model.compile(optimizer=optimizer, loss=loss, metrics=[acc_metric])
 
+    for X, _ in training_dataset.dataset.take(1):
+        model(X)
     print(model.summary())
     
     if FLAGS.fine_tune:
@@ -657,8 +657,6 @@ def main():
                     else:
                         loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
                     model.build(input_shape = input_shape)
-                    for X, _ in training_dataset.dataset.take(1):
-                        model(X)
                     model.compile(optimizer=optimizer, loss=loss, metrics=[acc_metric])
             else:
                 model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
@@ -686,8 +684,6 @@ def main():
                     else:
                         loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
                     model.build(input_shape = input_shape)
-                    for X, _ in training_dataset.dataset.take(1):
-                        model(X)
                     model.compile(optimizer=optimizer, loss=loss, metrics=[acc_metric])
             else: 
                 model = make_unfreeze_model(base_model=model, input_shape=input_shape, 
