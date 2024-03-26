@@ -136,8 +136,8 @@ def my_train(model, optimizer, loss,
   train_dataset.dataset = train_dataset.dataset.prefetch(tf.data.experimental.AUTOTUNE)
   val_dataset.dataset = val_dataset.dataset.prefetch(tf.data.experimental.AUTOTUNE)  
   if TPU:
-    train_dataset = strategy.experimental_distribute_dataset(train_dataset.dataset)
-    val_dataset = strategy.experimental_distribute_dataset(val_dataset.dataset)
+    train_dataset.dataset = strategy.experimental_distribute_dataset(train_dataset.dataset)
+    val_dataset.dataset = strategy.experimental_distribute_dataset(val_dataset.dataset)
   else:
       tf.config.optimizer.set_jit(True)
 
