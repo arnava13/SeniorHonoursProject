@@ -418,12 +418,11 @@ class DataSet():
         
         y = encoding
         X = tf.convert_to_tensor(X, dtype=tf.float32)
-        y = tf.convert_to_tensor(y, dtype=tf.int32)
 
         return X, y
     
     @tf.function
-    def normalize_and_onehot(self, X, y):
+    def normalize(self, X, y):
         if self.Verbose:
             tf.print("X shape into normalize: ", tf.shape(X))
         if self.normalization == 'batch':
@@ -449,8 +448,6 @@ class DataSet():
             X = X[:,:,0,:]
         if self.Verbose:
             tf.print("X shape after normalize slicing: ", tf.shape(X))
-        y = tf.cast(y, dtype=tf.int32)
-        y = tf.keras.utils.to_categorical(y, num_classes=self.n_classes)
         self.xshape_example = X.shape
         self.yshape_example = y.shape
         return X, y
@@ -465,7 +462,7 @@ class DataSet():
             batchsize = self.batch_size
         batchsize = tf.cast(batchsize, dtype=tf.int64)
         dataset = dataset.batch(batchsize, drop_remainder=True)
-        dataset = dataset.map(self.normalize_and_onehot, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.map(self.normalize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         del self.norm_data
         dataset = dataset.cache()
         dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
@@ -520,6 +517,12 @@ class DataSet():
         dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
         del X_list, y_list
 
+        def to_categorical_pyfunc(y):
+            y = tf.keras.utils.to_categorical(y.numpy(), num_classes=self.n_classes_out, dtype='float32')
+            return y
+        
+        dataset = dataset.map(lambda x, y: (x, tf.py_function(func=to_categorical_pyfunc, inp=[y], Tout=tf.int32)), num_parallel_calls=tf.data.AUTOTUNE)
+
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
 
         if self.TPU:
@@ -527,7 +530,7 @@ class DataSet():
                 dataset = self.transformations(dataset)
         else:
             dataset = self.transformations(dataset)
-    
+
         self.xshape = (self.batch_size,) + tuple(self.xshape_example[1:])
         self.yshape = (self.batch_size,) + tuple(self.yshape_example[1:])
  
