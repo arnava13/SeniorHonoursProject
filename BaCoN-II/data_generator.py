@@ -521,7 +521,7 @@ class DataSet():
             y = tf.keras.utils.to_categorical(y.numpy(), num_classes=self.n_classes_out, dtype='float32')
             return y
         
-        dataset = dataset.map(lambda x, y: (x, tf.py_function(func=to_categorical_pyfunc, inp=[y], Tout=tf.int32)), num_parallel_calls=tf.data.AUTOTUNE)
+        dataset = dataset.map(lambda x, y: (x, tf.py_function(func=to_categorical_pyfunc, inp=[y], Tout=tf.float32)), num_parallel_calls=tf.data.AUTOTUNE)
 
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
 
