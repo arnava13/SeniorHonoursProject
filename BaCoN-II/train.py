@@ -33,9 +33,9 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
             logits=x
             if bayesian:
                 kl = sum(model.losses)/n_train_example
-                loss_value = loss(y, logits, kl, TPU=TPU)
+                loss_value = loss(y, logits, kl, TPU=TPU, strategy=strategy)
             else:
-                loss_value = loss(y, logits, TPU=TPU)
+                loss_value = loss(y, logits, TPU=TPU, strategy=strategy)
             if TPU:
                 loss_value = tf.reduce_mean(loss_value)
             grads = tape.gradient(loss_value, model.trainable_weights)
@@ -55,11 +55,11 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
 def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10000, TPU=False, strategy=None):
     def step_fn(x, y):
         val_logits = model(x, training=False)
-        if bayesian:
+        if bayesian: 
             val_kl = sum(model.losses)/n_val_example
-            val_loss_value = loss(y, val_logits, val_kl, TPU)
+            val_loss_value = loss(y, val_logits, val_kl, TPU, strategy)
         else:
-            val_loss_value = loss(y, val_logits, TPU)
+            val_loss_value = loss(y, val_logits, TPU, strategy)
         if TPU:
             val_loss_value = tf.reduce_mean(val_loss_value)
         val_proba = tf.nn.softmax(val_logits)
@@ -75,17 +75,18 @@ def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10
 
 
 @tf.function
-def my_loss(y, logits, TPU=False):
+def my_loss(y, logits, TPU=False, strategy=None):
     if TPU:
-        loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+        with strategy.scope():
+            loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
     else:
         loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
     return loss_f(y, logits) 
 
 
 @tf.function
-def ELBO(y, logits, kl, TPU=False):
-    neg_log_likelihood = my_loss(y, logits, TPU)   
+def ELBO(y, logits, kl, TPU=False, strategy=None):
+    neg_log_likelihood = my_loss(y, logits, TPU, strategy=strategy)   
     return neg_log_likelihood + kl
 
 
@@ -159,28 +160,26 @@ def my_train(model, optimizer, loss,
             for batch in train_dataset.dataset:
                 x_batch_train, y_batch_train = batch
                 loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy)
-    else:    
-        n_val_example=val_dataset.batch_size*val_dataset.n_batches
-        n_train_example=train_dataset.batch_size*train_dataset.n_batches
-        for batch in train_dataset.dataset:
-            x_batch_train, y_batch_train = batch
-            loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy)
-           
-    # Run  validation loop
-    if TPU:
-        with strategy.scope():
             n_val_batches = float(val_dataset.n_batches)
             val_loss_value = 0.
             for val_batch in val_dataset.dataset:      
                 x_batch_val, y_batch_val = val_batch
                 lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)/ n_val_batches
                 val_loss_value += lv
-    else:
+    else:    
+        n_val_example=val_dataset.batch_size*val_dataset.n_batches
+        n_train_example=train_dataset.batch_size*train_dataset.n_batches
+        for batch in train_dataset.dataset:
+            x_batch_train, y_batch_train = batch
+            loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy)
+        n_val_batches = float(val_dataset.n_batches)
         val_loss_value = 0.
         for val_batch in val_dataset.dataset:      
             x_batch_val, y_batch_val = val_batch
-            lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)/ float(val_dataset.n_batches)
+            lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)/ n_val_batches
             val_loss_value += lv
+           
+
     
     if type(val_loss_value) is not float:
         val_loss_value = val_loss_value.numpy()
@@ -614,7 +613,7 @@ def main():
     if FLAGS.decay is not None:
         if FLAGS.TPU:
             with strategy.scope():
-                n_batches_eff = training_dataset.n_batches / strategy.num_replicas_in_sync
+                n_batches_eff = training_dataset.n_batches * strategy.num_replicas_in_sync
                 lr_fn = tf.optimizers.schedules.ExponentialDecay(FLAGS.lr, n_batches_eff, FLAGS.decay)
                 optimizer = tf.keras.optimizers.Adam(lr_fn)
         else:
@@ -628,7 +627,7 @@ def main():
     
     if FLAGS.restore and FLAGS.decay is not None:
         if FLAGS.TPU:
-            n_batches_eff = training_dataset.n_batches / strategy.num_replicas_in_sync
+            n_batches_eff = training_dataset.n_batches * strategy.num_replicas_in_sync
             decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / n_batches_eff)
         else:
             decayed_lr_value = lambda step: FLAGS.lr * FLAGS.decay**(step / training_dataset.n_batches)

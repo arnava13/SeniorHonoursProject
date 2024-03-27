@@ -453,11 +453,11 @@ class DataSet():
     @tf.function
     def transformations(self, dataset):
         if self.shuffle:
-            dataset = dataset.shuffle(buffer_size=self.batch_size*self.n_batches)
+            dataset = dataset.shuffle(buffer_size=self.batch_size_tensor*self.n_batches_tensor)
         if self.TPU:
-            batchsize = self.batch_size * self.strategy.num_replicas_in_sync
+            batchsize = self.batch_size_tensor * self.strategy.num_replicas_in_sync
         else:
-            batchsize = self.batch_size
+            batchsize = self.batch_size_tensor
         batchsize = tf.cast(batchsize, dtype=tf.int64)
         dataset = dataset.batch(batchsize, drop_remainder=True)
         dataset = dataset.map(self.normalize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
@@ -508,6 +508,8 @@ class DataSet():
 
         if self.TPU:
             with self.strategy.scope():
+                self.batch_size_tensor = tf.constant(self.batch_size, dtype=tf.int32)
+                self.n_batches_tensor = tf.constant(self.n_batches, dtype=tf.int32)
                 X_list = tf.convert_to_tensor(X_list, dtype=tf.float32)
                 y_list = tf.convert_to_tensor(y_list, dtype=tf.int32)
                 y_list = tf.keras.utils.to_categorical(y_list, num_classes=self.n_classes_out)
@@ -515,6 +517,8 @@ class DataSet():
                 self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
                 dataset = self.transformations(dataset)
         else:
+            self.batch_size_tensor = tf.constant(self.batch_size, dtype=tf.int32)
+            self.n_batches_tensor = tf.constant(self.n_batches, dtype=tf.int32)
             X_list = tf.convert_to_tensor(X_list, dtype=tf.float32)
             y_list = tf.convert_to_tensor(y_list, dtype=tf.int32)
             y_list = tf.keras.utils.to_categorical(y_list, num_classes=self.n_classes_out)
