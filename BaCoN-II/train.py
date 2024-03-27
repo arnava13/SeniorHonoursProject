@@ -153,25 +153,29 @@ def my_train(model, optimizer, loss,
     start_time = time.time()
 
     # Run train loop
-    for batch in train_dataset.dataset:
-        x_batch_train, y_batch_train = batch
-        if TPU:
-            with strategy.scope():
+    if TPU:
+        with strategy.scope():
+            for batch in train_dataset.dataset:
+                x_batch_train, y_batch_train = batch
                 loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy)
-        else:
+    else:
+        for batch in train_dataset.dataset:
+            x_batch_train, y_batch_train = batch
             loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy)
- 
-    
+           
     # Run  validation loop
     val_loss_value = 0.
-    for val_batch in val_dataset.dataset:      
-        x_batch_val, y_batch_val = val_batch
-        if TPU:
-            with strategy.scope():
+    if TPU:
+        with strategy.scope():
+            for val_batch in val_dataset.dataset:      
+                x_batch_val, y_batch_val = val_batch
                 lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)/ float(val_dataset.n_batches)
-        else:
+                val_loss_value += lv
+    else:
+        for val_batch in val_dataset.dataset:      
+            x_batch_val, y_batch_val = val_batch
             lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)/ float(val_dataset.n_batches)
-        val_loss_value += lv
+            val_loss_value += lv
     
     if type(val_loss_value) is not float:
         val_loss_value = val_loss_value.numpy()
@@ -295,7 +299,6 @@ def main():
     parser.add_argument("--DIR", default='data/train_data/', type=str, required=False)
     parser.add_argument("--TEST_DIR", default='data/test_data/', type=str, required=False)  
     parser.add_argument("--models_dir", default='models/', type=str, required=False)
-    parser.add_argument("--model_weights_path", default='models/model_weights.h5', type=str, required=False)
     parser.add_argument("--save_ckpt", default=True, type=str2bool, required=False)
     parser.add_argument("--out_path_overwrite", default=False, type=str2bool, required=False)
     parser.add_argument("--curves_folder", default=None, type=str, required=False)
@@ -455,7 +458,7 @@ def main():
     
         
     if not FLAGS.save_ckpt or FLAGS.TPU:
-        model_weights_path = FLAGS.model_weights_path
+        model_weights_path = os.path.join(out_path, 'model_weights.h5')
     else:
         model_weights_path = None
     
