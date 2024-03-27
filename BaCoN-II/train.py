@@ -134,10 +134,12 @@ def my_train(model, optimizer, loss,
       #  print('Learning rate set to %s' %ckpt.optimizer.learning_rate)
       #else:
       #    print('Re-starting from this value for the learing rate')  
-  train_dataset.dataset = train_dataset.dataset.cache()
-  val_dataset.dataset = val_dataset.dataset.cache()
-  train_dataset.dataset = train_dataset.dataset.prefetch(tf.data.experimental.AUTOTUNE)
-  val_dataset.dataset = val_dataset.dataset.prefetch(tf.data.experimental.AUTOTUNE)  
+
+
+  train_dataset.dataset = train_dataset.dataset.cache().shuffle(train_dataset.n_batches*train_dataset.batch_size)\
+  .repeat().batch(train_dataset.batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+  val_dataset.dataset = val_dataset.dataset.cache().shuffle(val_dataset.n_batches*val_dataset.batch_size)\
+  .repeat().batch(val_dataset.batch_size).prefetch(tf.data.experimental.AUTOTUNE)
   if TPU:
     with strategy.scope():
         train_dataset.dataset = strategy.experimental_distribute_dataset(train_dataset.dataset)
