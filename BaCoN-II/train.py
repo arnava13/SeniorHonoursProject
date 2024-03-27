@@ -57,9 +57,9 @@ def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10
         val_logits = model(x, training=False)
         if bayesian: 
             val_kl = sum(model.losses)/n_val_example
-            val_loss_value = loss(y, val_logits, val_kl, TPU, strategy)
+            val_loss_value = loss(y, val_logits, val_kl, TPU=TPU, strategy=strategy)
         else:
-            val_loss_value = loss(y, val_logits, TPU, strategy)
+            val_loss_value = loss(y, val_logits, TPU=TPU, strategy=strategy)
         if TPU:
             val_loss_value = tf.reduce_mean(val_loss_value)
         val_proba = tf.nn.softmax(val_logits)
