@@ -450,18 +450,6 @@ class DataSet():
             tf.print("X shape after normalize slicing: ", tf.shape(X))
         return X, y
     
-    @tf.function
-    def transformations(self, dataset):
-        if self.shuffle:
-            dataset = dataset.shuffle(buffer_size=self.batch_size_tensor*self.n_batches_tensor)
-        if self.TPU:
-            batchsize = self.batch_size_tensor * self.strategy.num_replicas_in_sync
-        else:
-            batchsize = self.batch_size_tensor
-        dataset = dataset.batch(batchsize, drop_remainder=True)
-        dataset = dataset.map(self.normalize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        return dataset
-
     def create_dataset(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
         if not self.fine_tune and not self.one_vs_all:
@@ -514,7 +502,8 @@ class DataSet():
                 y_list = tf.keras.utils.to_categorical(y_list, num_classes=self.n_classes_out)
                 dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
                 self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
-                dataset = self.transformations(dataset)
+                dataset = dataset.map(self.normalize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                dataset = dataset.repeat()
         else:
             self.batch_size_tensor = tf.constant(self.batch_size, dtype=tf.int64)
             self.n_batches_tensor = tf.constant(self.n_batches, dtype=tf.int64)
@@ -523,7 +512,7 @@ class DataSet():
             y_list = tf.keras.utils.to_categorical(y_list, num_classes=self.n_classes_out)
             dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
             self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
-            dataset = self.transformations(dataset)
+            dataset = dataset.map(self.normalize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         del X_list, y_list
 
