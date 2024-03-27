@@ -69,6 +69,7 @@ def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10
     if TPU:
         val_loss_value = strategy.run(step_fn, args=(x, y))
         val_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_loss_value, axis=None) #Reduce across replicas.
+    else:
         val_loss_value = step_fn(x, y)
     return val_loss_value
 
