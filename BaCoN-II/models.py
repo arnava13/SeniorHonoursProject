@@ -4,8 +4,6 @@
 Created on Wed Jun 17 13:20:20 2020
 
 @author: Michi
-@ediot: Arnav 26/03/2024: If a seed is passed, which is generated randomly in train.py, make random operations use that seed
-                          to ensure reproducibility in a replicated context.
 """
 import tensorflow.compat.v2 as tf
 import tensorflow_probability as tfp
@@ -39,13 +37,10 @@ def make_custom_model(    drop=0.5,
                           strides_pooling=(2, 1, 0),
                           activation=tf.nn.leaky_relu,
                           bayesian=True, 
-                          n_dense=1, swap_axes=True, BatchNorm=True, seed = None
+                          n_dense=1, swap_axes=True, BatchNorm=True
                           ):
     
     n_conv=len(kernel_sizes)
-
-    if seed is not None:
-        tf.random.set_seed(seed)
         
     if swap_axes:
         tf.print('using 1D layers and %s channels' %input_shape[-1])
@@ -163,11 +158,8 @@ def make_custom_model(    drop=0.5,
 
 
 def make_fine_tuning_model(base_model, input_shape, n_out_labels, dense_dim=0, 
-                           bayesian=True, trainable=True, drop=0.5, BatchNorm=True, include_last=False, seed = None):
+                           bayesian=True, trainable=True, drop=0.5, BatchNorm=True, include_last=False):
     
-    if seed is not None:
-        tf.random.set_seed(seed)
-
     inputs = tf.keras.Input(shape=input_shape)
     first_layer=True
     
@@ -236,12 +228,9 @@ def make_model_dummy(drop=0.,
                           padding='valid', 
                           k_1=96, k_2 = 256, k_3  =384,
                           activation=tf.nn.leaky_relu,
-                          bayesian=False, seed = None
+                          bayesian=False
                           ):
   
-  if seed is not None:
-    tf.random.set_seed(seed)  
-
   # (3) Create a sequential model
   model = tf.keras.models.Sequential() 
                                       

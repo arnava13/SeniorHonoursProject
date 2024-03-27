@@ -560,6 +560,7 @@ def main():
         filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense
     if FLAGS.TPU:
         seed = np.random.randint(0, 2**31 - 1)
+        tf.random.set_seed(seed)
         with strategy.scope():
             model=make_model(     model_name=model_name,
                          drop=drop, 
@@ -573,7 +574,7 @@ def main():
                           strides_pooling=strides_pooling,
                           activation=tf.nn.leaky_relu,
                           bayesian=bayesian, 
-                          n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm, seed = seed
+                          n_dense=n_dense, swap_axes=FLAGS.swap_axes, BatchNorm=BatchNorm
                              )
     else:
         model=make_model(     model_name=model_name,
@@ -669,12 +670,13 @@ def main():
         if not FLAGS.unfreeze:
             if FLAGS.TPU:
                 seed = np.random.randint(0, 2**31 - 1)
+                tf.random.set_seed(seed)
                 with strategy.scope():
                     model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
                                        n_out_labels=training_dataset.n_classes_out,
                                        dense_dim= dense_dim, bayesian=bayesian, 
                                        trainable=FLAGS.trainable, 
-                                       drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last, seed=seed)
+                                       drop=drop,  BatchNorm=FLAGS.BatchNorm, include_last=FLAGS.include_last)
             else:
                 model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
                                         n_out_labels=training_dataset.n_classes_out,
