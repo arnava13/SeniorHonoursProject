@@ -240,11 +240,12 @@ def my_train(model, optimizer, loss,
   
   if not save_ckpt:
     buffer = io.BytesIO()
-    model.save_weights(buffer, format='h5')
-    with open(model_weights_path, 'wb') as f:
-        buffer.seek(0)  # Rewind the buffer
-        f.write(buffer.read())
+    with h5py.File(buffer, 'w') as h5file:
+        tf.keras.models.save_model(model, h5file)
 
+    buffer.seek(0)
+    with open(model_weights_path, 'wb') as f:
+        f.write(buffer.read())
 
   return model, history
 
@@ -294,7 +295,7 @@ def main():
     parser.add_argument("--DIR", default='data/train_data/', type=str, required=False)
     parser.add_argument("--TEST_DIR", default='data/test_data/', type=str, required=False)  
     parser.add_argument("--models_dir", default='models/', type=str, required=False)
-    parser.add_argument("--model_weights_path", default='models/model_weights', type=str, required=False)
+    parser.add_argument("--model_weights_path", default='models/model_weights.h5', type=str, required=False)
     parser.add_argument("--save_ckpt", default=True, type=str2bool, required=False)
     parser.add_argument("--out_path_overwrite", default=False, type=str2bool, required=False)
     parser.add_argument("--curves_folder", default=None, type=str, required=False)
