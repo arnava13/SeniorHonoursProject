@@ -22,7 +22,7 @@ import time
 
 
 def load_model_for_test(FLAGS, input_shape, n_classes=5,
-                        dataset=None, FLAGS_ORIGINAL=None, new_fname=None):
+                        dataset=None, FLAGS_ORIGINAL=None, new_fname=None, TPU=False, model_save_path=None):
          
 
     
@@ -99,34 +99,37 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5,
         loss_0 = compute_loss(dataset, model, bayesian=FLAGS.bayesian)
         print('Loss before loading weights/ %s\n' %loss_0.numpy())
             
-    
-    print('------------ RESTORING CHECKPOINT ------------\n')
-    if new_fname is None:
-        out_path = FLAGS.models_dir+FLAGS.fname
-    else:
-        out_path = FLAGS.models_dir+new_fname
-    optimizer = tf.keras.optimizers.legacy.Adam(FLAGS.lr)
-    ckpts_path = out_path
-    ckpts_path+='/tf_ckpts'
-    if FLAGS.fine_tune:
-        ckpts_path += '_fine_tuning'+ft_ckpt_name
-    ckpts_path+='/'
-    print('Looking for ckpt in ' + ckpts_path)
-    ckpt = tf.train.Checkpoint(optimizer=optimizer, net=model)
-    
-    
-    latest = tf.train.latest_checkpoint(ckpts_path)
-    if latest:
-          print("Restoring checkpoint from {}".format(latest))
-    else:
-        raise ValueError('Checkpoint not found')
-        #print('Checkpoint not found')
-    ckpt.restore(latest)
-    
+    if TPU:
+        print('------------ LOADING MODEL ------------\n')
+        model = tf.keras.models.load_model(model_save_path)
+    else:    
+        print('------------ RESTORING CHECKPOINT ------------\n')
+        if new_fname is None:
+            out_path = FLAGS.models_dir+FLAGS.fname
+        else:
+            out_path = FLAGS.models_dir+new_fname
+        optimizer = tf.keras.optimizers.legacy.Adam(FLAGS.lr)
+        ckpts_path = out_path
+        ckpts_path+='/tf_ckpts'
+        if FLAGS.fine_tune:
+            ckpts_path += '_fine_tuning'+ft_ckpt_name
+        ckpts_path+='/'
+        print('Looking for ckpt in ' + ckpts_path)
+        ckpt = tf.train.Checkpoint(optimizer=optimizer, net=model)
+        
+        
+        latest = tf.train.latest_checkpoint(ckpts_path)
+        if latest:
+            print("Restoring checkpoint from {}".format(latest))
+        else:
+            raise ValueError('Checkpoint not found')
+            #print('Checkpoint not found')
+        ckpt.restore(latest)
+        
     if dataset is not None:
         loss_1 = compute_loss(dataset, model, bayesian=FLAGS.bayesian)
         print('Loss after loading weights/ %s\n' %loss_1.numpy())   
-    
+        
     return model
 
 
@@ -440,7 +443,9 @@ def main():
         pass
         
     print('------------ DONE ------------\n')
-        
+    
+    TPU = FLAGS.TPU
+    model_save_path = FLAGS.model_save_path
     
     if FLAGS.swap_axes:
         input_shape = ( int(test_dataset.dim[0]), 
@@ -453,7 +458,7 @@ def main():
     
              
     model_loaded =  load_model_for_test(FLAGS, input_shape, n_classes=test_dataset.n_classes_out,
-                                        dataset=test_dataset)
+                                        dataset=test_dataset, TPU=TPU, model_save_path=model_save_path)
     
     
     names=[ test_dataset.inv_labels_dict[i] for i in range(len(test_dataset.inv_labels_dict.keys()))]

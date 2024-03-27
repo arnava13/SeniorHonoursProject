@@ -92,7 +92,7 @@ def my_train(model, optimizer, loss,
              val_dataset, manager, ckpt,            
              train_acc_metric, val_acc_metric,
              restore=False, patience=100,
-             bayesian=False, save_ckpt=False, decayed_lr_value=None, TPU=False, strategy=None
+             bayesian=False, save_ckpt=False, decayed_lr_value=None, TPU=False, strategy=None, model_save_path=None
               ):
   fname_hist = manager.directory+'/hist'
   fname_idxs_train = manager.directory+'/idxs_train.txt'
@@ -177,7 +177,7 @@ def my_train(model, optimizer, loss,
         loss_value = loss_value.numpy()
 
     if val_loss_value<best_loss: #int(ckpt.step) % 10 == 0:
-        with tf.device('/CPU:0'):
+        if not TPU:
             if save_ckpt:
                 save_path = manager.save()
                 print("Validation loss decreased. Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
@@ -235,7 +235,11 @@ def my_train(model, optimizer, loss,
     #                      train_accuracy = train_acc.numpy(), val_accuracy=val_acc.numpy())
     #print("Time taken: %.2fs" % (time.time() - start_time))
     print("Time:  %.2fs, ---- Loss: %.4f, Acc.: %.4f, Val. Loss: %.4f, Val. Acc.: %.4f\n" % (time.time() - start_time, train_loss, train_acc, val_loss, val_acc))
-
+  
+  if TPU:
+    with tf.device('/CPU:0'):
+        model.save(model_save_path)
+        
   return model, history
 
 
@@ -284,6 +288,7 @@ def main():
     parser.add_argument("--DIR", default='data/train_data/', type=str, required=False)
     parser.add_argument("--TEST_DIR", default='data/test_data/', type=str, required=False)  
     parser.add_argument("--models_dir", default='models/', type=str, required=False)
+    parser.add_argument("--model_save_path", default='models/TPU_models', type=str, required=False)
     parser.add_argument("--save_ckpt", default=True, type=str2bool, required=False)
     parser.add_argument("--out_path_overwrite", default=False, type=str2bool, required=False)
     parser.add_argument("--curves_folder", default=None, type=str, required=False)
@@ -441,10 +446,9 @@ def main():
         out_path=out_path+'_test'
         
     
-    ###
-    # Uncomment the parts below to redirect output to file. 
-    # Does not work on Google Colab
-    ###
+        
+    if FLAGS.TPU:
+        model_save_path = FLAGS.model_save_path
     
     if not os.path.exists(out_path):
         print('Creating directory %s' %out_path)
@@ -474,6 +478,9 @@ def main():
             raise Exception("TPU not found. Check if TPU is enabled in the notebook settings")
     else:
         strategy = None
+
+    if FLAGS.TPU and FLAGS.save_ckpt:
+        print('Cannot save checkpoints in TPU training. Saving model using tensorflow model.save()')
     
     
     #with open(out_path+'/params.txt', 'w') as fpar:    
@@ -618,8 +625,7 @@ def main():
     else:
         ckpts_path=out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name_base_unfreezing+'/'
     ckpt_name = 'ckpt'
-    with tf.device('/CPU:0'):
-        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
+    ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
     
     if FLAGS.fine_tune:
         print('Loading ckpt from %s' %ckpts_path)
@@ -680,8 +686,7 @@ def main():
         model.build(input_shape=input_shape)
         print(model.summary())
 
-        with tf.device('/CPU:0'):
-            ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)     
+        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)     
     elif FLAGS.one_vs_all:
         if not FLAGS.test_mode:
             ckpts_path = out_path+'/tf_ckpts'+add_ckpt_name+'/'
@@ -691,10 +696,9 @@ def main():
         if FLAGS.test_mode:
             ckpt_name+='_test'
     
-    with tf.device('/CPU:0'):
-        manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
-                                                max_to_keep=2, 
-                                            checkpoint_name=ckpt_name)
+    manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
+                                            max_to_keep=2, 
+                                        checkpoint_name=ckpt_name)
     
     if FLAGS.TPU:
         with strategy.scope():
@@ -729,8 +733,9 @@ def main():
              validation_dataset, manager, ckpt,
              train_acc_metric, val_acc_metric,
              patience=FLAGS.patience, restore=FLAGS.restore, 
-             bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None, TPU=FLAGS.TPU, strategy=strategy
-)
+             bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None, TPU=FLAGS.TPU, strategy=strategy,
+             model_save_path = model_save_path
+    )       
     hist_path =  out_path+'/hist.png'
     if FLAGS.fine_tune:
         if FLAGS.test_mode:
