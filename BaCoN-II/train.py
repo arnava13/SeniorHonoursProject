@@ -141,12 +141,13 @@ def my_train(model, optimizer, loss,
         val_dataset.dataset = val_dataset.dataset.cache().repeat().prefetch(tf.data.experimental.AUTOTUNE)
         train_dataset.dataset = strategy.experimental_distribute_dataset(train_dataset.dataset)
         val_dataset.dataset = strategy.experimental_distribute_dataset(val_dataset.dataset)
-    if cache_dir:
-         train_dataset.dataset = train_dataset.dataset.cache(cache_dir).repeat().prefetch(tf.data.experimental.AUTOTUNE)
-         val_dataset.dataset = val_dataset.dataset.cache(cache_dir).repeat().prefetch(tf.data.experimental.AUTOTUNE)
-    else:
-        train_dataset.dataset = train_dataset.dataset.cache().repeat().prefetch(tf.data.experimental.AUTOTUNE)
-        val_dataset.dataset = val_dataset.dataset.cache().repeat().prefetch(tf.data.experimental.AUTOTUNE)
+  elif cache_dir:
+    train_dataset.dataset = train_dataset.dataset.cache(cache_dir).repeat().prefetch(tf.data.experimental.AUTOTUNE)
+    val_dataset.dataset = val_dataset.dataset.cache(cache_dir).repeat().prefetch(tf.data.experimental.AUTOTUNE)
+    tf.config.optimizer.set_jit(True)
+  else:
+    train_dataset.dataset = train_dataset.dataset.cache().repeat().prefetch(tf.data.experimental.AUTOTUNE)
+    val_dataset.dataset = val_dataset.dataset.cache().repeat().prefetch(tf.data.experimental.AUTOTUNE)
     tf.config.optimizer.set_jit(True)
 
   count = 0
