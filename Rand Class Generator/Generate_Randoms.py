@@ -63,6 +63,7 @@ def main():
                 line = line.split()
                 line = np.array(line, dtype = float)
                 spectra_array[j, k] = line
+        classnames = ['lcdm']
 
     filter_files = glob.glob(os.path.join(filters_source_dir, '*'))
 
