@@ -447,8 +447,10 @@ def main():
         
     
         
-    if not FLAGS.save_ckpt:
+    if not FLAGS.save_ckpt or FLAGS.TPU:
         model_weights_path = FLAGS.model_weights_path
+    else:
+        model_weights_path = None
     
     if not os.path.exists(out_path):
         print('Creating directory %s' %out_path)
@@ -480,7 +482,8 @@ def main():
         strategy = None
 
     if FLAGS.TPU and FLAGS.save_ckpt:
-        print('Cannot save checkpoints in TPU training. Saving model using tensorflow model.save()')
+        print('Cannot save checkpoints in TPU training. Saving model weights instead.')
+        FLAGS.save_ckpt=False
     
     
     #with open(out_path+'/params.txt', 'w') as fpar:    
