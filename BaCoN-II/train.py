@@ -95,7 +95,7 @@ def my_train(model, optimizer, loss,
              val_dataset, manager, ckpt,            
              train_acc_metric, val_acc_metric,
              restore=False, patience=100,
-             bayesian=False, save_ckpt=False, decayed_lr_value=None, TPU=False, strategy=None, model_weights_path=None
+             bayesian=False, save_ckpt=False, decayed_lr_value=None, TPU=False, strategy=None, model_weights_path=None, cache_dir=cache_dir,
               ):
   fname_hist = manager.directory+'/hist'
   fname_idxs_train = manager.directory+'/idxs_train.txt'
@@ -135,17 +135,18 @@ def my_train(model, optimizer, loss,
       #else:
       #    print('Re-starting from this value for the learing rate')  
 
-
-  train_dataset.dataset = train_dataset.dataset.cache().shuffle(train_dataset.n_batches*train_dataset.batch_size)\
-  .repeat().batch(train_dataset.batch_size).prefetch(tf.data.experimental.AUTOTUNE)
-  val_dataset.dataset = val_dataset.dataset.cache().shuffle(val_dataset.n_batches*val_dataset.batch_size)\
-  .repeat().batch(val_dataset.batch_size).prefetch(tf.data.experimental.AUTOTUNE)
   if TPU:
     with strategy.scope():
-        train_dataset.dataset = strategy.experimental_distribute_dataset(train_dataset.dataset)
-        val_dataset.dataset = strategy.experimental_distribute_dataset(val_dataset.dataset)
+        train_dataset.dataset = train_dataset.dataset.cache().repeat().prefetch().experimental_distribute_dataset(train_dataset.dataset)
+        val_dataset.dataset = val_dataset.dataset.cache().repeat().prefetch().experimental_distribute_dataset(val_dataset.dataset)
   else:
-      tf.config.optimizer.set_jit(True)
+    if cache_dir:
+         train_dataset.dataset = train_dataset.dataset.cache(cache_dir).repeat().prefetch()
+         val_dataset.dataset = val_dataset.dataset.cache(cache_dir).repeat().prefetch()
+    else:
+        train_dataset.dataset = train_dataset.dataset.cache().repeat().prefetch()
+        val_dataset.dataset = val_dataset.dataset.cache().repeat().prefetch()
+    tf.config.optimizer.set_jit(True)
 
   count = 0
   for epoch in range(epochs):
@@ -306,7 +307,8 @@ def main():
     parser.add_argument("--save_ckpt", default=True, type=str2bool, required=False)
     parser.add_argument("--out_path_overwrite", default=False, type=str2bool, required=False)
     parser.add_argument("--curves_folder", default=None, type=str, required=False)
-    parser.add_argument("--save_processed_spectra", default=False, type=str2bool, required=False)    
+    parser.add_argument("--save_processed_spectra", default=False, type=str2bool, required=False)  
+    parser.add_argument("--cache_dir", default='cache/', type=str, required=False)  
 
     
     # INPUT DATA DIMENSION
@@ -477,6 +479,8 @@ def main():
     myLog = Logger(logfile)
     sys.stdout = myLog
 
+    cache_dir = FLAGS.cache_dir
+
     if FLAGS.TPU and FLAGS.GPU:
         print('Cannot use both TPU and GPU. Using GPU only ')
         FLAGS.TPU=False
@@ -501,6 +505,9 @@ def main():
         print('Cannot save checkpoints in TPU training. Saving model weights instead.')
         FLAGS.save_ckpt=False
     
+    if FLAGS.TPU and FLAGS.cache_dir:
+        print('Cannot cache on disk in TPU training. Caching on memory')
+        cache_dir=None
     
     #with open(out_path+'/params.txt', 'w') as fpar:    
     #    print('Opened params file %s. Writing params' %(out_path+'/params.txt'))
@@ -770,8 +777,7 @@ def main():
              train_acc_metric, val_acc_metric,
              patience=FLAGS.patience, restore=FLAGS.restore, 
              bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None, TPU=FLAGS.TPU, strategy=strategy,
-             model_weights_path = model_weights_path
-    )       
+             model_weights_path = model_weights_path, cache_dir = cache_dir)
     hist_path =  out_path+'/hist.png'
     if FLAGS.fine_tune:
         if FLAGS.test_mode:
