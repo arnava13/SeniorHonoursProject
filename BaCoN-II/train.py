@@ -482,6 +482,8 @@ def main():
             strategy = tf.distribute.TPUStrategy(tpu_resolver)
             tpu_device = tpu_resolver.master()  # Retrieves the TPU device URI
             print("Running on TPU:", tpu_device)
+            seed = np.random.randint(0, 2**31 - 1)
+            tf.random.set_seed(seed)
 
         except:
             raise Exception("TPU not found. Check if TPU is enabled in the notebook settings")
@@ -559,8 +561,6 @@ def main():
             BatchNorm=True
         filters, kernel_sizes, strides, pool_sizes, strides_pooling, n_dense = FLAGS.filters, FLAGS.kernel_sizes, FLAGS.strides, FLAGS.pool_sizes, FLAGS.strides_pooling, FLAGS.n_dense
     if FLAGS.TPU:
-        seed = np.random.randint(0, 2**31 - 1)
-        tf.random.set_seed(seed)
         with strategy.scope():
             model=make_model(     model_name=model_name,
                          drop=drop, 
@@ -665,8 +665,6 @@ def main():
         
         if not FLAGS.unfreeze:
             if FLAGS.TPU:
-                seed = np.random.randint(0, 2**31 - 1)
-                tf.random.set_seed(seed)
                 with strategy.scope():
                     model = make_fine_tuning_model(base_model=model, input_shape=input_shape, 
                                        n_out_labels=training_dataset.n_classes_out,
