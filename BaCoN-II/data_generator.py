@@ -511,10 +511,9 @@ class DataSet():
         dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
         del X_list, y_list
 
-        self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
-
         if self.TPU:
             with self.strategy.scope():
+                self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
                 dataset = self.transformations(dataset)
         else:
             dataset = self.transformations(dataset)
