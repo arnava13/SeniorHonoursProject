@@ -95,7 +95,7 @@ def my_train(model, optimizer, loss,
              val_dataset, manager, ckpt,            
              train_acc_metric, val_acc_metric,
              restore=False, patience=100,
-             bayesian=False, save_ckpt=False, decayed_lr_value=None, TPU=False, strategy=None, model_weights_path=None, cache_dir=cache_dir,
+             bayesian=False, save_ckpt=False, decayed_lr_value=None, TPU=False, strategy=None, model_weights_path=None, cache_dir='/cache',
               ):
   fname_hist = manager.directory+'/hist'
   fname_idxs_train = manager.directory+'/idxs_train.txt'
