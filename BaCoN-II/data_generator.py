@@ -505,17 +505,21 @@ class DataSet():
                 X, y = self.noise_realisations(fname, P_original, k, i_noise)
                 X_list.append(X)
                 y_list.append(y)
-        X_list = np.array(X_list, dtype=np.float32)
-        y_list = np.array(y_list, dtype=np.int32)
-        y_list = tf.keras.utils.to_categorical(y_list, num_classes=self.n_classes_out)
-        dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
         del X_list, y_list
 
         if self.TPU:
             with self.strategy.scope():
+                X_list = tf.convert_to_tensor(X_list, dtype=tf.float32)
+                y_list = tf.convert_to_tensor(y_list, dtype=tf.int32)
+                y_list = tf.keras.utils.to_categorical(y_list, num_classes=self.n_classes_out)
+                dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
                 self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
                 dataset = self.transformations(dataset)
         else:
+            X_list = tf.convert_to_tensor(X_list, dtype=tf.float32)
+            y_list = tf.convert_to_tensor(y_list, dtype=tf.int32)
+            y_list = tf.keras.utils.to_categorical(y_list, num_classes=self.n_classes_out)
+            dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
             self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
             dataset = self.transformations(dataset)
 

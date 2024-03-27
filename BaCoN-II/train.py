@@ -60,6 +60,8 @@ def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10
             val_loss_value = loss(y, val_logits, val_kl, TPU)
         else:
             val_loss_value = loss(y, val_logits, TPU)
+        if TPU:
+            val_loss_value = tf.reduce_mean(val_loss_value)
         val_proba = tf.nn.softmax(val_logits)
         val_prediction = tf.argmax(val_proba, axis=1)
         val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
@@ -167,7 +169,7 @@ def my_train(model, optimizer, loss,
     # Run  validation loop
     if TPU:
         with strategy.scope():
-            n_val_batches = tf.constant(val_dataset.n_batches, dtype=tf.float32)
+            n_val_batches = float(val_dataset.n_batches)
             val_loss_value = 0.
             for val_batch in val_dataset.dataset:      
                 x_batch_val, y_batch_val = val_batch
