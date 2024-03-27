@@ -22,7 +22,7 @@ import time
 
 
 def load_model_for_test(FLAGS, input_shape, n_classes=5,
-                        dataset=None, FLAGS_ORIGINAL=None, new_fname=None, TPU=False, model_weights_path=None):
+                        dataset=None, FLAGS_ORIGINAL=None, new_fname=None, model_weights_path=None):
          
 
     
@@ -99,7 +99,7 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5,
         loss_0 = compute_loss(dataset, model, bayesian=FLAGS.bayesian)
         print('Loss before loading weights/ %s\n' %loss_0.numpy())
             
-    if TPU:
+    if not FLAGS.save_ckpt and model_weights_path is not None:
         print('------------ LOADING MODEL WEIGHTS ------------\n')
         model.load_weights(model_weights_path)
     else:    
@@ -444,8 +444,8 @@ def main():
         
     print('------------ DONE ------------\n')
     
-    TPU = FLAGS.TPU
-    model_weights_path = FLAGS.model_weights_path
+    if not FLAGS.save_ckpt:
+        model_weights_path = FLAGS.model_weights_path
     
     if FLAGS.swap_axes:
         input_shape = ( int(test_dataset.dim[0]), 
@@ -458,7 +458,7 @@ def main():
     
              
     model_loaded =  load_model_for_test(FLAGS, input_shape, n_classes=test_dataset.n_classes_out,
-                                        dataset=test_dataset, TPU=TPU, model_weights_path=model_weights_path)
+                                        dataset=test_dataset, model_weights_path=model_weights_path)
     
     
     names=[ test_dataset.inv_labels_dict[i] for i in range(len(test_dataset.inv_labels_dict.keys()))]

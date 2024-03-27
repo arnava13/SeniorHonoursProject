@@ -236,7 +236,7 @@ def my_train(model, optimizer, loss,
     #print("Time taken: %.2fs" % (time.time() - start_time))
     print("Time:  %.2fs, ---- Loss: %.4f, Acc.: %.4f, Val. Loss: %.4f, Val. Acc.: %.4f\n" % (time.time() - start_time, train_loss, train_acc, val_loss, val_acc))
   
-  if TPU:
+  if not save_ckpt:
     with tf.device('/CPU:0'):
         model.save_weights(model_weights_path)
 
@@ -288,7 +288,7 @@ def main():
     parser.add_argument("--DIR", default='data/train_data/', type=str, required=False)
     parser.add_argument("--TEST_DIR", default='data/test_data/', type=str, required=False)  
     parser.add_argument("--models_dir", default='models/', type=str, required=False)
-    parser.add_argument("--model_weights_path", default='models/TPU_models', type=str, required=False)
+    parser.add_argument("--model_weights_path", default='models/model_weights', type=str, required=False)
     parser.add_argument("--save_ckpt", default=True, type=str2bool, required=False)
     parser.add_argument("--out_path_overwrite", default=False, type=str2bool, required=False)
     parser.add_argument("--curves_folder", default=None, type=str, required=False)
@@ -447,7 +447,7 @@ def main():
         
     
         
-    if FLAGS.TPU:
+    if not FLAGS.save_ckpt:
         model_weights_path = FLAGS.model_weights_path
     
     if not os.path.exists(out_path):
