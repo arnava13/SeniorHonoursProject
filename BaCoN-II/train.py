@@ -92,7 +92,7 @@ def my_train(model, optimizer, loss,
              val_dataset, manager, ckpt,            
              train_acc_metric, val_acc_metric,
              restore=False, patience=100,
-             bayesian=False, save_ckpt=False, decayed_lr_value=None, TPU=False, strategy=None, model_save_path=None
+             bayesian=False, save_ckpt=False, decayed_lr_value=None, TPU=False, strategy=None, model_weights_path=None
               ):
   fname_hist = manager.directory+'/hist'
   fname_idxs_train = manager.directory+'/idxs_train.txt'
@@ -238,8 +238,8 @@ def my_train(model, optimizer, loss,
   
   if TPU:
     with tf.device('/CPU:0'):
-        model.save(model_save_path)
-        
+        model.save_weights(model_weights_path)
+
   return model, history
 
 
@@ -288,7 +288,7 @@ def main():
     parser.add_argument("--DIR", default='data/train_data/', type=str, required=False)
     parser.add_argument("--TEST_DIR", default='data/test_data/', type=str, required=False)  
     parser.add_argument("--models_dir", default='models/', type=str, required=False)
-    parser.add_argument("--model_save_path", default='models/TPU_models', type=str, required=False)
+    parser.add_argument("--model_weights_path", default='models/TPU_models', type=str, required=False)
     parser.add_argument("--save_ckpt", default=True, type=str2bool, required=False)
     parser.add_argument("--out_path_overwrite", default=False, type=str2bool, required=False)
     parser.add_argument("--curves_folder", default=None, type=str, required=False)
@@ -448,7 +448,7 @@ def main():
     
         
     if FLAGS.TPU:
-        model_save_path = FLAGS.model_save_path
+        model_weights_path = FLAGS.model_weights_path
     
     if not os.path.exists(out_path):
         print('Creating directory %s' %out_path)
@@ -734,7 +734,7 @@ def main():
              train_acc_metric, val_acc_metric,
              patience=FLAGS.patience, restore=FLAGS.restore, 
              bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None, TPU=FLAGS.TPU, strategy=strategy,
-             model_save_path = model_save_path
+             model_weights_path = model_weights_path
     )       
     hist_path =  out_path+'/hist.png'
     if FLAGS.fine_tune:
