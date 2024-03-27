@@ -164,14 +164,15 @@ def my_train(model, optimizer, loss,
             loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy)
            
     # Run  validation loop
-    val_loss_value = 0.
     if TPU:
         with strategy.scope():
+            val_loss_value = 0.
             for val_batch in val_dataset.dataset:      
                 x_batch_val, y_batch_val = val_batch
                 lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)/ float(val_dataset.n_batches)
                 val_loss_value += lv
     else:
+        val_loss_value = 0.
         for val_batch in val_dataset.dataset:      
             x_batch_val, y_batch_val = val_batch
             lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)/ float(val_dataset.n_batches)
