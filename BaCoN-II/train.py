@@ -92,7 +92,7 @@ def my_train(model, optimizer, loss,
              val_dataset, manager, ckpt,            
              train_acc_metric, val_acc_metric,
              restore=False, patience=100,
-             bayesian=False, save_ckpt=False, decayed_lr_value=None, TPU=False, strategy=None, cpu_strategy=None
+             bayesian=False, save_ckpt=False, decayed_lr_value=None, TPU=False, strategy=None
               ):
   fname_hist = manager.directory+'/hist'
   fname_idxs_train = manager.directory+'/idxs_train.txt'
@@ -177,19 +177,11 @@ def my_train(model, optimizer, loss,
         loss_value = loss_value.numpy()
 
     if val_loss_value<best_loss: #int(ckpt.step) % 10 == 0:
-        if save_ckpt and not TPU:
-            save_path = manager.save()
-            print("Validation loss decreased. Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
-        elif save_ckpt and TPU:
-            with cpu_strategy.scope():
+        with tf.device('/CPU:0'):
+            if save_ckpt:
                 save_path = manager.save()
                 print("Validation loss decreased. Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
-        elif not TPU:
-            #print('Creating directory %s' %manager.directory)
-            tf.io.gfile.makedirs(manager.directory)
-        else:
-            with cpu_strategy.scope():
-                #print('Creating directory %s' %manager.directory)
+            else:
                 tf.io.gfile.makedirs(manager.directory)
 
         best_loss = val_loss_value
@@ -203,17 +195,10 @@ def my_train(model, optimizer, loss,
             break
 
     ckpt.step.assign_add(1)
-    if TPU:
-        with cpu_strategy.scope():
-            train_acc = train_acc_metric.result().numpy()
-            train_loss = loss_value
-            val_acc = val_acc_metric.result().numpy()
-            val_loss = val_loss_value
-    else:
-        train_acc = train_acc_metric.result().numpy()
-        train_loss = loss_value
-        val_acc = val_acc_metric.result().numpy()
-        val_loss = val_loss_value
+    train_acc = train_acc_metric.result().numpy()
+    train_loss = loss_value
+    val_acc = val_acc_metric.result().numpy()
+    val_loss = val_loss_value
     history['loss'].append(train_loss)
     history['accuracy'].append(train_acc)
     train_acc_metric.reset_states()
@@ -484,13 +469,11 @@ def main():
             strategy = tf.distribute.TPUStrategy(tpu_resolver)
             tpu_device = tpu_resolver.master()  # Retrieves the TPU device URI
             print("Running on TPU:", tpu_device)
-            cpu_strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
 
         except:
             raise Exception("TPU not found. Check if TPU is enabled in the notebook settings")
     else:
         strategy = None
-        cpu_strategy = None
     
     
     #with open(out_path+'/params.txt', 'w') as fpar:    
@@ -635,10 +618,7 @@ def main():
     else:
         ckpts_path=out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name_base_unfreezing+'/'
     ckpt_name = 'ckpt'
-    if FLAGS.TPU:
-        with cpu_strategy.scope():
-            ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
-    else:
+    with tf.device('/CPU:0'):
         ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
     
     if FLAGS.fine_tune:
@@ -700,10 +680,7 @@ def main():
         model.build(input_shape=input_shape)
         print(model.summary())
 
-        if FLAGS.TPU:
-            with cpu_strategy.scope():
-                ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
-        else:
+        with tf.device('/CPU:0'):
             ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)     
     elif FLAGS.one_vs_all:
         if not FLAGS.test_mode:
@@ -713,16 +690,11 @@ def main():
         ckpt_name = ckpt_name+add_ckpt_name
         if FLAGS.test_mode:
             ckpt_name+='_test'
-        
-    if FLAGS.TPU:
-        with cpu_strategy.scope():
-            manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
-                                         max_to_keep=2, 
-                                         checkpoint_name=ckpt_name)
-    else:
+    
+    with tf.device('/CPU:0'):
         manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
-                                            max_to_keep=2, 
-                                         checkpoint_name=ckpt_name)
+                                                max_to_keep=2, 
+                                            checkpoint_name=ckpt_name)
     
     if FLAGS.TPU:
         with strategy.scope():
@@ -757,7 +729,7 @@ def main():
              validation_dataset, manager, ckpt,
              train_acc_metric, val_acc_metric,
              patience=FLAGS.patience, restore=FLAGS.restore, 
-             bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None, TPU=FLAGS.TPU, strategy=strategy, cpu_strategy=cpu_strategy
+             bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None, TPU=FLAGS.TPU, strategy=strategy
 )
     hist_path =  out_path+'/hist.png'
     if FLAGS.fine_tune:
