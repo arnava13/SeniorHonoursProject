@@ -18,6 +18,8 @@ from models import *
 from utils import DummyHist, plot_hist, str2bool, Logger, get_flags
 import sys
 import time
+import io
+import h5py
 
 
 
@@ -237,8 +239,12 @@ def my_train(model, optimizer, loss,
     print("Time:  %.2fs, ---- Loss: %.4f, Acc.: %.4f, Val. Loss: %.4f, Val. Acc.: %.4f\n" % (time.time() - start_time, train_loss, train_acc, val_loss, val_acc))
   
   if not save_ckpt:
-    with tf.device('/CPU:0'):
-        model.save_weights(model_weights_path)
+    buffer = io.BytesIO()
+    model.save_weights(buffer, format='h5')
+    with open(model_weights_path, 'wb') as f:
+        buffer.seek(0)  # Rewind the buffer
+        f.write(buffer.read())
+
 
   return model, history
 
