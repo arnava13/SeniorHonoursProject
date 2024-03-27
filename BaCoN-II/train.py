@@ -132,11 +132,7 @@ def my_train(model, optimizer, loss,
       #  ckpt.optimizer.learning_rate = decayed_lr_value(hist_start) #FLAGS.lr
       #  print('Learning rate set to %s' %ckpt.optimizer.learning_rate)
       #else:
-      #    print('Re-starting from this value for the learing rate')
-
-  n_val_example=val_dataset.batch_size*val_dataset.n_batches
-  n_train_example=train_dataset.batch_size*train_dataset.n_batches
-  
+      #    print('Re-starting from this value for the learing rate')  
   train_dataset.dataset = train_dataset.dataset.cache()
   val_dataset.dataset = val_dataset.dataset.cache()
   train_dataset.dataset = train_dataset.dataset.prefetch(tf.data.experimental.AUTOTUNE)
@@ -156,10 +152,14 @@ def my_train(model, optimizer, loss,
     # Run train loop
     if TPU:
         with strategy.scope():
+            n_val_example=val_dataset.batch_size*val_dataset.n_batches
+            n_train_example=train_dataset.batch_size*train_dataset.n_batches
             for batch in train_dataset.dataset:
                 x_batch_train, y_batch_train = batch
                 loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy)
-    else:
+    else:    
+        n_val_example=val_dataset.batch_size*val_dataset.n_batches
+        n_train_example=train_dataset.batch_size*train_dataset.n_batches
         for batch in train_dataset.dataset:
             x_batch_train, y_batch_train = batch
             loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy)
@@ -167,10 +167,11 @@ def my_train(model, optimizer, loss,
     # Run  validation loop
     if TPU:
         with strategy.scope():
+            n_val_batches = tf.constant(val_dataset.n_batches, dtype=tf.float32)
             val_loss_value = 0.
             for val_batch in val_dataset.dataset:      
                 x_batch_val, y_batch_val = val_batch
-                lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)/ float(val_dataset.n_batches)
+                lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)/ n_val_batches
                 val_loss_value += lv
     else:
         val_loss_value = 0.

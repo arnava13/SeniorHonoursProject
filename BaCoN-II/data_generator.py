@@ -516,6 +516,7 @@ class DataSet():
                 self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
                 dataset = self.transformations(dataset)
         else:
+            self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
             dataset = self.transformations(dataset)
 
         for x, y in dataset.take(1):
