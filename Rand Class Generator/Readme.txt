@@ -6,10 +6,11 @@ This script is used to generate random spectra using an equal number of spectra 
 
 python Generate_Randoms.py <spectra_source_dir> <filters_source_dir> <outdir> <n> <start_spectrum_number> <start_filter_number>
 
-1. `spectra_source_dir`: Directory containing the spectra in class subfolders.
-2. `filters_source_dir`: Directory contain
+1. `mode`: 'LCDM' or 'equal' - are we using LCDM as base spectra or equal examples from each class?
+1. `spectra_source_dir`: Directory containing the spectra in class subfolders/LCDM class folder.
+2. `filters_source_dir`: Directory containing random filters
 3. `outdir`: The output directory where the generated files will be stored.
-4. `n`: The number of examples to use from each class of spectra (total number of random spectra will be n * the number of non-random classes)
+4. `n`: The number of examples to use (from each class in 'equal' mode) of spectra (total number of random spectra will be n * the number of non-random classes in equal mode, n in LCDM mode.)
 5. `start_spectrum_number`: The starting index for the spectra files (1-based indexing).
 6. `start_filter_number`: The starting index for the filter files (1-based indexing).
 
