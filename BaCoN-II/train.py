@@ -37,7 +37,7 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
             else:
                 loss_value = loss(y, logits, TPU=TPU, strategy=strategy)
             if TPU:
-                loss_value = tf.reduce_mean(loss_value)
+                loss_value = tf.reduce_mean(loss_value) #Reduce across batches as no longer done by loss function.
             grads = tape.gradient(loss_value, model.trainable_weights)
             optimizer.apply_gradients(zip(grads, model.trainable_weights))
         proba = tf.nn.softmax(logits)
@@ -46,7 +46,7 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
         return loss_value
     if TPU:
         loss_value = strategy.run(step_fn, args=(x, y))
-        loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_value, axis=None)
+        loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_value, axis=None) #Reduce across replicas.
     else:
         loss_value = step_fn(x, y)
     return loss_value
@@ -61,15 +61,14 @@ def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10
         else:
             val_loss_value = loss(y, val_logits, TPU=TPU, strategy=strategy)
         if TPU:
-            val_loss_value = tf.reduce_mean(val_loss_value)
+            val_loss_value = tf.reduce_mean(val_loss_value) #Reduce across batches as no longer done by loss function.
         val_proba = tf.nn.softmax(val_logits)
         val_prediction = tf.argmax(val_proba, axis=1)
         val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
         return val_loss_value
     if TPU:
         val_loss_value = strategy.run(step_fn, args=(x, y))
-        val_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_loss_value, axis=None)
-    else:
+        val_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_loss_value, axis=None) #Reduce across replicas.
         val_loss_value = step_fn(x, y)
     return val_loss_value
 
@@ -77,8 +76,7 @@ def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10
 @tf.function
 def my_loss(y, logits, TPU=False, strategy=None):
     if TPU:
-        with strategy.scope():
-            loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+        loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
     else:
         loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
     return loss_f(y, logits) 

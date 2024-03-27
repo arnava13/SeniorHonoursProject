@@ -454,6 +454,7 @@ class DataSet():
     def transformations(self, dataset):
         if self.shuffle:
             dataset = dataset.shuffle(buffer_size=self.batch_size_tensor*self.n_batches_tensor)
+        dataset = dataset.repeat()
         if self.TPU:
             batchsize = self.batch_size_tensor * self.strategy.num_replicas_in_sync
         else:
