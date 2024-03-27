@@ -461,7 +461,6 @@ class DataSet():
         batchsize = tf.cast(batchsize, dtype=tf.int64)
         dataset = dataset.batch(batchsize, drop_remainder=True)
         dataset = dataset.map(self.normalize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        del self.norm_data
         return dataset
 
     def create_dataset(self, list_IDs, list_IDs_dict):

@@ -635,7 +635,11 @@ def main():
     else:
         ckpts_path=out_path+'/tf_ckpts_fine_tuning'+ft_ckpt_name_base_unfreezing+'/'
     ckpt_name = 'ckpt'
-    ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
+    if FLAGS.TPU:
+        with strategy.scope():
+            ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
+    else:
+        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
     
     if FLAGS.fine_tune:
         print('Loading ckpt from %s' %ckpts_path)
@@ -694,7 +698,11 @@ def main():
         model.build(input_shape=input_shape)
         print(model.summary())
 
-        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)     
+        if FLAGS.TPU:
+            with strategy.scope():
+                ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
+        else:
+            ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)     
     elif FLAGS.one_vs_all:
         if not FLAGS.test_mode:
             ckpts_path = out_path+'/tf_ckpts'+add_ckpt_name+'/'
@@ -704,9 +712,15 @@ def main():
         if FLAGS.test_mode:
             ckpt_name+='_test'
     
-    manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
+    if FLAGS.TPU:
+        with strategy.scope():
+            manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
                                             max_to_keep=2, 
-                                        checkpoint_name=ckpt_name)
+                                            checkpoint_name=ckpt_name)
+    else:
+        manager = tf.train.CheckpointManager(ckpt, ckpts_path, 
+                                                max_to_keep=2, 
+                                            checkpoint_name=ckpt_name)
     
     if FLAGS.TPU:
         with strategy.scope():
@@ -726,10 +740,17 @@ def main():
     
     
     print('------------ TRAINING ------------\n')
-    if FLAGS.bayesian:
-        loss=ELBO
+    if FLAGS.TPU:
+        with strategy.scope():
+            if FLAGS.bayesian:
+                loss=ELBO
+            else:
+                loss=my_loss
     else:
-        loss=my_loss
+        if FLAGS.bayesian:
+            loss=ELBO
+        else:
+            loss=my_loss
     
     
     #print('Model n_classes : %s ' %n_classes)
