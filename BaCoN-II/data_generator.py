@@ -505,7 +505,6 @@ class DataSet():
                 X, y = self.noise_realisations(fname, P_original, k, i_noise)
                 X_list.append(X)
                 y_list.append(y)
-        del X_list, y_list
 
         if self.TPU:
             with self.strategy.scope():
@@ -522,6 +521,8 @@ class DataSet():
             dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
             self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
             dataset = self.transformations(dataset)
+
+        del X_list, y_list
 
         for x, y in dataset.take(1):
             self.xshape = x.shape
