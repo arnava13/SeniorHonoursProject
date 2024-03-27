@@ -34,6 +34,8 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
                 loss_value = loss(y, logits, kl, TPU=TPU)
             else:
                 loss_value = loss(y, logits, TPU=TPU)
+            if TPU:
+                loss_value = tf.reduce_mean(loss_value)
             grads = tape.gradient(loss_value, model.trainable_weights)
             optimizer.apply_gradients(zip(grads, model.trainable_weights))
         proba = tf.nn.softmax(logits)
@@ -42,6 +44,7 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
         return loss_value
     if TPU:
         loss_value = strategy.run(step_fn, args=(x, y))
+        loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_value, axis=None)
     else:
         loss_value = step_fn(x, y)
     return loss_value
@@ -61,6 +64,7 @@ def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10
         return val_loss_value
     if TPU:
         val_loss_value = strategy.run(step_fn, args=(x, y))
+        val_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_loss_value, axis=None)
     else:
         val_loss_value = step_fn(x, y)
     return val_loss_value
