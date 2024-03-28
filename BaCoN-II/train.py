@@ -81,7 +81,24 @@ def ELBO(y, logits, kl, TPU=False):
     neg_log_likelihood = my_loss(y, logits, TPU)
     return neg_log_likelihood + kl
 
+def TPU_loss(bayesian, strategy):
+    with strategy.scope():
+        loss_object = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
 
+        @tf.function
+        def bayesian_loss(y_true, y_pred, kl):
+            per_example_loss = loss_object(y_true, y_pred)
+            loss = tf.nn.compute_average_loss(per_example_loss)
+            loss += tf.nn.scale_regularization_loss(kl)
+            return loss
+        
+        @tf.function
+        def non_bayesian_loss(y_true, y_pred):
+            per_example_loss = loss_object(y_true, y_pred)
+            loss = tf.nn.compute_average_loss(per_example_loss)
+            return loss
+        
+    return bayesian_loss if bayesian else non_bayesian_loss
 
 def my_train(model, optimizer, loss,
              epochs, 
@@ -252,7 +269,6 @@ def my_train(model, optimizer, loss,
 
   return model, history
 
-
 def compute_loss(dataset, model, bayesian=False, TPU=False):
     x_batch_train, y_batch_train = dataset.dataset.take(0).as_numpy_iterator().next()
     logits = model(x_batch_train, training=False)
@@ -265,6 +281,8 @@ def compute_loss(dataset, model, bayesian=False, TPU=False):
     else:
             loss_0 = my_loss(y_batch_train, logits)
     return loss_0
+
+
 
 
 
@@ -753,20 +771,7 @@ def main():
     print('------------ TRAINING ------------\n')
     if FLAGS.TPU:
         with strategy.scope():
-              loss_object = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
-              if FLAGS.bayesian:
-                  def TPU_loss(y_true, y_pred, kl=None):
-                      per_example_loss = loss_object(y_true, y_pred)
-                      loss = tf.nn.compute_average_loss(per_example_loss)
-                      loss += tf.nn.scale_regularization_loss(kl)
-                      return loss
-                  loss = TPU_loss
-              else:
-                def TPU_loss(y_true, y_pred, kl=None):
-                    per_example_loss = loss_object(y_true, y_pred)
-                    loss = tf.nn.compute_average_loss(per_example_loss)
-                    return loss
-              loss = TPU_loss
+              loss = TPU_loss(bayesian = FLAGS.bayesian, strategy=strategy)
     else:
         if FLAGS.bayesian:
             loss=ELBO
