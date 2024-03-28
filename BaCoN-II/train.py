@@ -33,11 +33,9 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
             logits=x
             if bayesian:
                 kl = sum(model.losses)/n_train_example
-                loss_value = loss(y, logits, kl, TPU=TPU, strategy=strategy)
+                loss_value = loss(y, logits, kl)
             else:
-                loss_value = loss(y, logits, TPU=TPU, strategy=strategy)
-            if TPU:
-                loss_value = tf.reduce_mean(loss_value) #Reduce across batches as no longer done by loss function.
+                loss_value = loss(y, logits)
             grads = tape.gradient(loss_value, model.trainable_weights)
             optimizer.apply_gradients(zip(grads, model.trainable_weights))
         proba = tf.nn.softmax(logits)
@@ -46,7 +44,7 @@ def train_on_batch(x, y, model, optimizer, loss, train_acc_metric, bayesian=Fals
         return loss_value
     if TPU:
         loss_value = strategy.run(step_fn, args=(x, y))
-        loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_value, axis=None) #Reduce across replicas.
+        loss_value = strategy.reduce(tf.distribute.ReduceOp.SUM, loss_value, axis=None) #Reduce across replicas.
     else:
         loss_value = step_fn(x, y)
     return loss_value
@@ -57,35 +55,30 @@ def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10
         val_logits = model(x, training=False)
         if bayesian: 
             val_kl = sum(model.losses)/n_val_example
-            val_loss_value = loss(y, val_logits, val_kl, TPU=TPU, strategy=strategy)
+            val_loss_value = loss(y, val_logits, val_kl)
         else:
-            val_loss_value = loss(y, val_logits, TPU=TPU, strategy=strategy)
-        if TPU:
-            val_loss_value = tf.reduce_mean(val_loss_value) #Reduce across batches as no longer done by loss function.
+            val_loss_value = loss(y, val_logits)
         val_proba = tf.nn.softmax(val_logits)
         val_prediction = tf.argmax(val_proba, axis=1)
         val_acc_metric.update_state(tf.argmax(y, axis=1), val_prediction)
         return val_loss_value
     if TPU:
         val_loss_value = strategy.run(step_fn, args=(x, y))
-        val_loss_value = strategy.reduce(tf.distribute.ReduceOp.MEAN, val_loss_value, axis=None) #Reduce across replicas.
+        val_loss_value = strategy.reduce(tf.distribute.ReduceOp.SUM, val_loss_value, axis=None) #Reduce across replicas.
     else:
         val_loss_value = step_fn(x, y)
     return val_loss_value
 
 
 @tf.function
-def my_loss(y, logits, TPU=False, strategy=None):
-    if TPU:
-        loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
-    else:
-        loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
+def my_loss(y, logits, TPU=False):
+    loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
     return loss_f(y, logits) 
 
 
 @tf.function
-def ELBO(y, logits, kl, TPU=False, strategy=None):
-    neg_log_likelihood = my_loss(y, logits, TPU, strategy=strategy)   
+def ELBO(y, logits, kl, TPU=False):
+    neg_log_likelihood = my_loss(y, logits, TPU)
     return neg_log_likelihood + kl
 
 
@@ -138,17 +131,17 @@ def my_train(model, optimizer, loss,
 
   if TPU:
     with strategy.scope():
-        train_dataset.dataset = train_dataset.dataset.cache().repeat().prefetch(tf.data.experimental.AUTOTUNE)
-        val_dataset.dataset = val_dataset.dataset.cache().repeat().prefetch(tf.data.experimental.AUTOTUNE)
+        train_dataset.dataset = train_dataset.dataset.cache().prefetch(tf.data.experimental.AUTOTUNE)
+        val_dataset.dataset = val_dataset.dataset.cache().prefetch(tf.data.experimental.AUTOTUNE)
         train_dataset.dataset = strategy.experimental_distribute_dataset(train_dataset.dataset)
         val_dataset.dataset = strategy.experimental_distribute_dataset(val_dataset.dataset)
   elif cache_dir:
-    train_dataset.dataset = train_dataset.dataset.cache(cache_dir).repeat().prefetch(tf.data.experimental.AUTOTUNE)
-    val_dataset.dataset = val_dataset.dataset.cache(cache_dir).repeat().prefetch(tf.data.experimental.AUTOTUNE)
+    train_dataset.dataset = train_dataset.dataset.cache(cache_dir).prefetch(tf.data.experimental.AUTOTUNE)
+    val_dataset.dataset = val_dataset.dataset.cache(cache_dir).prefetch(tf.data.experimental.AUTOTUNE)
     tf.config.optimizer.set_jit(True)
   else:
-    train_dataset.dataset = train_dataset.dataset.cache().repeat().prefetch(tf.data.experimental.AUTOTUNE)
-    val_dataset.dataset = val_dataset.dataset.cache().repeat().prefetch(tf.data.experimental.AUTOTUNE)
+    train_dataset.dataset = train_dataset.dataset.cache().prefetch(tf.data.experimental.AUTOTUNE)
+    val_dataset.dataset = val_dataset.dataset.cache().prefetch(tf.data.experimental.AUTOTUNE)
     tf.config.optimizer.set_jit(True)
 
   count = 0
@@ -267,9 +260,12 @@ def compute_loss(dataset, model, bayesian=False, TPU=False):
     logits = model(x_batch_train, training=False)
     if bayesian:
             kl = sum(model.losses)/dataset.batch_size/dataset.n_batches
-            loss_0 = ELBO(y_batch_train, logits, kl, TPU)
+            if TPU:
+                loss_0 = TPU_loss(y_batch_train, logits, kl)
+            else:
+                loss_0 = ELBO(y_batch_train, logits, kl)
     else:
-            loss_0 = my_loss(y_batch_train, logits, TPU)
+            loss_0 = my_loss(y_batch_train, logits)
     return loss_0
 
 
@@ -759,10 +755,20 @@ def main():
     print('------------ TRAINING ------------\n')
     if FLAGS.TPU:
         with strategy.scope():
-            if FLAGS.bayesian:
-                loss=ELBO
-            else:
-                loss=my_loss
+              loss_object = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+              if FLAGS.bayesian:
+                  def TPU_loss(y_true, y_pred, kl=None):
+                      per_example_loss = loss_object(y_true, y_pred)
+                      loss = tf.nn.compute_average_loss(per_example_loss)
+                      loss += tf.nn.scale_regularization_loss(kl)
+                      return loss
+                  loss = TPU_loss
+              else:
+                def TPU_loss(y_true, y_pred, kl=None):
+                    per_example_loss = loss_object(y_true, y_pred)
+                    loss = tf.nn.compute_average_loss(per_example_loss)
+                    return loss
+              loss = TPU_loss
     else:
         if FLAGS.bayesian:
             loss=ELBO
