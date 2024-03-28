@@ -10,28 +10,58 @@ My training file
 # Training options:
 import subprocess
 import argparse
+import threading
+
+def handle_output(stream, log_file):
+    for line in iter(stream.readline, b''):  # This iterates over the output line by line
+        my_bytes = line.strip()
+        if my_bytes:
+            output = f"{my_bytes.decode('utf-8')}"
+            print(output)
+            log_file.write(output + "\n")
 
 def main():
 
-   # -------------------- always check these parameters --------------------
+   # Training options:
 
-   # path to training data 
-   DIR='data/ee2/train-4classes'; train_fname = 'EE2_4class_train20k'
+# ------------------ change the training directory and model name here ------------------
 
-   # path to normalisation file
-   norm_data_name = '/planck_ee2.txt'; planck_fname = 'ee2' # norm name for model name
+   # training data directory path
+   DIR='data/fivelabel_train'
+   ## (batch size, is a multiple of #classes * noise realisations, e.g. 5 classes, 10 noise --> must be multiple of 50)
+   batch_size='10000'
 
-   # path to folder with theory error curves
-   curves_folder = 'data/theory_error/filters_earliest_onset'; sigma_curves_default = '0.05'
-   # change rescale distribution of theory error curves, uniform recommended 
-   rescale_curves = 'uniform' # or gaussian or None
+   # training the network
+   GPU='False' # Use GPUs in training?
+   TPU='True' # Train with TPUs?
+   # which kind of model
+   bayesian='True' # Bayesian NN or traditional NN (weights single valued or distributions?)
+   n_epochs='50' # How many epochs to train for?
+
+
+   # ------------------ other parameters ------------------
+
+   # Directories
+   mypath=None # Parent directory
+
+   # Edit this with base model directory
+   mdir='models/'
+
+   # normalisation file
+   norm_data_name = '/planck_ee2.txt'
 
    # scale cut and resolution
-   k_max='2.5' # which k-modes to include?
-   sample_pace='4'
+   k_max='2.5' # max of k-modes to include?
+   k_min='0.0' # min of k-modes to include?
+   sample_pace='2'
 
    # should the processed curves be saved in an extra file (False recommended, only efficient for n_epochs = 1)
-   save_processed_spectra='False' 
+   save_processed_spectra='False'
+
+   # fine-tune = only 'LCDM' and 'non-LCDM'
+   fine_tune='False' # Model trained to distinguish between 'LCDM' and 'non-LCDM' classes or between all clases. i.e. binary or multi-classifier
+
+   # -------------------- noise model --------------------
 
    # noise model - Cosmic variance and shot noise are Euclid-like
    n_noisy_samples='10' # How many noise examples to train on?
@@ -40,32 +70,47 @@ def main():
    add_sys='True'# Add systematic error term?
    add_cosvar='True'# Add cosmic variance term?
 
-   # batch size is a multiple of number of classes * noise realisations, e.g. 4 classes, 10 noise --> must be multiple of 40
-   batch_size='8000' # 4 models, 10 noise samples for 20k-data
+   # path to folder with theory error curves
+   curves_folder = 'data/curve_files_sys/theory_error'; sigma_curves_default = '0.05'
+   # change rescale distribution of theory error curves, uniform recommended
+   rescale_curves = 'uniform' # or gaussian or None
 
-   # final part of the model name, to quickly find model in folder
-   fname_extra = 'EARLIEST-uniform'
+   # sys error curves - relative scale of curve-amplitude
+   sigma_curves='0.05'
 
+   # ----------------- Model Name Generation -------------
 
-   # -------------------- following parameters can be changed --------------------
-   # ----------------- but we recommend to keep the values as set ----------------
+   #Two or Six label?
+   """
+   if fine_tune != 'True':
+   two_or_six = 'sixlabel'
+   else:
+   two_or_six = 'twolabel'
+   """
 
-   # sys error curves - relative scale of curve-amplitude 
-   sigma_curves='0.01'
+   two_or_six = 'fivelabel'
 
-   # read sigma_curves as a parameter from the command line
-   parser = argparse.ArgumentParser()
-   parser.add_argument("--sigma_curves", default=None, type=str, required=False)
-   args = parser.parse_args()
-   if args.sigma_curves is not None:
-      sigma_curves = args.sigma_curves
+   #Examples Per Class?
+   examples_per_class = 10000
+
+   #Generation code?
+   gen_code = "EE2"
+
+   #LCDM * Filter or Equal Examples from each class * Filter for randoms?
+   #randstype = "equalexamples-randoms"
+   randstype = "LCDM-randoms"
+
+   #Additional Notes?
+   fname_notes = ""
+
+   #Assemble fname
+   fname = f"{two_or_six}_{examples_per_class}_{gen_code}_{randstype}_kmin-{k_min}_kmax-{k_max}_{fname_notes}"
+
+   # -------------------- additional training settings --------------------
+
 
    # Type of model
-   bayesian='True' # Bayesian NN or traditional NN (weights single valued or distributions?)
    model_name='custom' # Custom or dummy - dummy has presets as given in models.py
-
-   # fine-tune = only 'LCDM' and 'non-LCDM' 
-   fine_tune='False' # Model trained to distinguish between 'LCDM' and 'non-LCDM' classes or between all clases. i.e. binary or multi-classifier
 
    #Test mode?
    test_mode='False' # Network trained on 1 batch of minimal size or not?
@@ -74,62 +119,18 @@ def main():
    restore='False' # Restore training from a checkpoint?
    save_ckpt='True' # Save checkpoints?
 
-   # Directories
-   mypath=None # Parent directory
-   # Edit this with base model directory
-   mdir='models/'
 
-   GPU='False' # Use GPUs?
    val_size='0.15' # Validation set % of data set
 
    add_FT_dense='False' #if True, adds an additional dense layer before the final 2D one
-   n_epochs='50' # How many epochs to train for?
-   patience='50' # terminate training after 'patience' epochs if no decrease in loss function
+
+   patience='20' # terminate training after 'patience' epochs if no decrease in loss function
    lr='0.01' # learning rate
-   decay='0.95' #decay rate: If None : Adam(lr), 
+   decay='0.90' #decay rate: If None : Adam(lr),
 
-
-
-   # ---------------- model name configured automatically -----------------
-
-   fname = 'filters_' + train_fname + '_samplePace' + sample_pace + '_kmax' + k_max + '_planck-' + planck_fname + '_epoch' + n_epochs + '_batchsize' + batch_size
-
-   if add_noise=='True':
-      fname = fname + '_noiseSamples' + n_noisy_samples
-      if add_cosvar=='True':
-         fname = fname + '_wCV'
-      else:
-         fname = fname + '_noCV'
-      if add_shot=='True':
-         fname = fname + '_wShot'
-      else:
-         fname = fname + '_noShot'
-      if add_sys=='True':
-         fname = fname + '_wSys' 
-         fname = fname + '_rescale' + rescale_curves
-      else:
-         fname = fname + '_noSys'
-   else:
-      fname = fname + '_noNoise'
-
-   if GPU=='True':
-      fname = fname + '_GPU'
-
-   if add_noise=='True':
-      if add_sys=='True':
-         fname = fname + '_scaledNorm' + sigma_curves
-      
-   fname = fname + '_' + fname_extra
-
-
-   fname = fname.replace('.', 'o')
-
-   # overwrite automatic name and set model name manually
-   # fname = 'my_model_name' 
-
+   padding='valid'
 
    # -------------------- BNN parameters -----------------
-   # ------------------- no change needed ----------------
 
    # Example image details
    im_depth='500' # Number in z direction (e.g. 500 wave modes for P(k) examples)
@@ -147,11 +148,11 @@ def main():
    k1='10'
    k2='5'
    k3='2'
-    # The dimensionality of the output space (i.e. the number of filters in the convolution)
+   # The dimensionality of the output space (i.e. the number of filters in the convolution)
    f1='8'
    f2='16'
    f3='32'
-    # Stride of each layer's kernel
+   # Stride of each layer's kernel
    s1='2'
    s2='2'
    s3='1'
@@ -170,65 +171,65 @@ def main():
    #c0_label = 'lcdm'
    #c1_label = 'fR dgp wcdm'
 
-   log_path = mdir+fname+'_log'
-   if fine_tune:
-     log_path_original= log_path
-     log_path += '_FT'
-     log_path_original += '.txt'
-   else:
-      log_path_original=''
+   log_path = mdir + fname + '_log'
+
+   if fine_tune == "True":
+      log_path += '_FT'
 
    log_path += '.txt'
 
    # -------------- adapt c_0 and c_1 =  'fR', 'dgp', 'ds', 'wcdm', 'rand' <<<<<<<<<<<<<<<
 
+   # -------------- training loads parameters entered above  --------------
    proc = subprocess.Popen(["python3", "train.py", "--test_mode" , test_mode, "--seed", seed, \
-                     "--bayesian", bayesian, "--model_name", model_name, \
-                     "--fine_tune", fine_tune, "--log_path", log_path_original,\
-                     "--restore", restore, \
-                     "--models_dir", mdir, \
-                     "--fname", fname, \
-                     "--DIR", DIR, \
-                     '--norm_data_name', norm_data_name, \
-                     '--curves_folder', curves_folder,\
-                     "--c_0", 'lcdm', \
-                     "--c_1", 'fR', 'dgp', 'wcdm', \
-                     "--save_ckpt", save_ckpt, \
-                     "--im_depth", im_depth, "--im_width", im_width, "--im_channels", im_channels, \
-                     "--swap_axes", swap_axes, \
-                     "--sort_labels", sort_labels, \
-                     "--add_noise", add_noise, "--add_shot", add_shot, "--add_sys", add_sys,"--add_cosvar", add_cosvar, \
-                     "--sigma_curves", sigma_curves, \
-                     "--sigma_curves_default", sigma_curves_default, \
-                     "--save_processed_spectra", save_processed_spectra, \
-                     "--sample_pace", sample_pace,\
-                     "--n_noisy_samples", n_noisy_samples, \
-                     "--rescale_curves", rescale_curves, \
-                     "--val_size", val_size, \
-                     "--z_bins", z1,z2,z3,z4, \
-                     "--filters", f1,f2,f3, "--kernel_sizes", k1,k2,k3, "--strides", s1,s2,s3, "--pool_sizes", p1,p2,p3, "--strides_pooling", sp1,sp2,sp3, \
-                     "--k_max", k_max,\
-                     "--k_min", k_min, \
-                     "--n_dense", n_dense,\
-                     "--add_FT_dense", add_FT_dense, \
-                     "--n_epochs", n_epochs, "--patience", patience, "--batch_size", batch_size, "--lr", lr, \
-                     "--decay", decay, \
-                     "--GPU", GPU],\
-                     stdout=subprocess.PIPE, \
-                     stderr=subprocess.PIPE)
+                        "--bayesian", bayesian, "--model_name", model_name, \
+                        "--fine_tune", fine_tune, "--log_path", log_path,\
+                        "--restore", restore, \
+                        "--models_dir", mdir, \
+                        "--fname", fname, \
+                        "--DIR", DIR, \
+                        '--norm_data_name', norm_data_name, \
+                        '--curves_folder', curves_folder,\
+                        "--c_0", 'lcdm', \
+                        "--c_1", 'fR', 'dgp', 'wcdm', 'ds', 'rand'\
+                        "--save_ckpt", save_ckpt, \
+                        "--im_depth", im_depth, "--im_width", im_width, "--im_channels", im_channels, \
+                        "--swap_axes", swap_axes, \
+                        "--sort_labels", sort_labels, \
+                        "--add_noise", add_noise, "--add_shot", add_shot, "--add_sys", add_sys,"--add_cosvar", add_cosvar, \
+                        "--sigma_curves", sigma_curves, \
+                        "--sigma_curves_default", sigma_curves_default, \
+                        "--save_processed_spectra", save_processed_spectra, \
+                        "--sample_pace", sample_pace,\
+                        "--n_noisy_samples", n_noisy_samples, \
+                        "--rescale_curves", rescale_curves, \
+                        "--val_size", val_size, \
+                        "--z_bins", z1,z2,z3,z4, \
+                        "--filters", f1,f2,f3, "--kernel_sizes", k1,k2,k3, "--strides", s1,s2,s3, "--pool_sizes", p1,p2,p3, "--strides_pooling", sp1,sp2,sp3, \
+                        "--k_max", k_max,\
+                        "--k_min", k_min,\
+                        "--n_dense", n_dense,\
+                        "--add_FT_dense", add_FT_dense, \
+                        "--n_epochs", n_epochs, "--patience", patience, "--batch_size", batch_size, "--lr", lr, \
+                        "--decay", decay, \
+                        "--GPU", GPU, \
+                        "--TPU", TPU, \
+                        "--padding", padding],\
+                        stdout=subprocess.PIPE, \
+                        stderr=subprocess.PIPE)
 
    with open(log_path, "w") as log_file:
-     while proc.poll() is None:
-        line = proc.stderr.readline()
-        if line:
-           my_bytes=line.strip()
-           print ("err: " + my_bytes.decode('utf-8'))
-           log_file.write(line.decode('utf-8'))
-        line = proc.stdout.readline()
-        if line:
-           my_bytes=line.strip()
-           print ("out: " + my_bytes.decode('utf-8'))
-           log_file.write(line.decode('utf-8'))
+
+      stdout_thread = threading.Thread(target=handle_output, args=(proc.stdout, log_file))
+      stderr_thread = threading.Thread(target=handle_output, args=(proc.stderr, log_file))
+
+      stdout_thread.start()
+      stderr_thread.start()
+
+      stdout_thread.join()
+      stderr_thread.join()
+
+      proc.wait()
 
 
 if __name__=='__main__':
