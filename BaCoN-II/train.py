@@ -108,9 +108,9 @@ def my_train(model, optimizer, loss,
              restore=False, patience=100,
              bayesian=False, save_ckpt=False, decayed_lr_value=None, TPU=False, strategy=None, model_weights_path=None, cache_dir='/cache',
               ):
-  fname_hist = manager.directory+'/hist'
-  fname_idxs_train = manager.directory+'/idxs_train.txt'
-  fname_idxs_val = manager.directory+'/idxs_val.txt'
+  fname_hist = os.path.join(manager.directory, 'history')
+  fname_idxs_train = os.path.join(manager.directory, 'idxs_train.txt')
+  fname_idxs_val = os.path.join(manager.directory, 'idxs_val.txt')
   if not restore:
       history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy':[] }
       best_loss=np.infty
@@ -121,13 +121,15 @@ def my_train(model, optimizer, loss,
       print('ckpt step: %s' %ckpt.step)
       hist_start=int(ckpt.step)
       print('Starting from history at step %s' %hist_start)
-      history = {'loss': np.loadtxt(fname_hist+'_loss.txt').tolist()[0:hist_start], 
-                 'val_loss': np.loadtxt(fname_hist+'_val_loss.txt').tolist()[0:hist_start], 
-                 'accuracy': np.loadtxt(fname_hist+'_accuracy.txt').tolist()[0:hist_start], 
-                 'val_accuracy':np.loadtxt(fname_hist+'_val_accuracy.txt').tolist()[0:hist_start] }
+      history = {
+        'loss': np.loadtxt(os.path.join(fname_hist, '_loss.txt')).tolist()[0:hist_start],
+        'val_loss': np.loadtxt(os.path.join(fname_hist, '_val_loss.txt')).tolist()[0:hist_start],
+        'accuracy': np.loadtxt(os.path.join(fname_hist, '_accuracy.txt')).tolist()[0:hist_start],
+        'val_accuracy': np.loadtxt(os.path.join(fname_hist, '_val_accuracy.txt')).tolist()[0:hist_start]
+      }
       for key in history.keys():
-        fname = fname_hist+'_'+key+'.txt'
-        fname_new = fname_hist+'_'+key+'_original.txt'
+        fname = os.path.join(fname_hist, key + '.txt')
+        fname_new = os.path.join(fname_hist, key + '_original.txt')
         os.rename(fname, fname_new)
       print('Saved copy of original histories.')
       if manager.latest_checkpoint:
