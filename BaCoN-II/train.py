@@ -71,14 +71,14 @@ def val_step(x, y, model, loss, val_acc_metric, bayesian=False, n_val_example=10
 
 
 @tf.function
-def my_loss(y, logits, TPU=False):
+def my_loss(y, logits):
     loss_f = tf.keras.losses.CategoricalCrossentropy(from_logits=True) #tf.nn.softmax_cross_entropy_with_logits(y, logits)
     return loss_f(y, logits) 
 
 
 @tf.function
-def ELBO(y, logits, kl, TPU=False):
-    neg_log_likelihood = my_loss(y, logits, TPU)
+def ELBO(y, logits, kl):
+    neg_log_likelihood = my_loss(y, logits)
     return neg_log_likelihood + kl
 
 def TPU_loss(bayesian, strategy):
@@ -269,15 +269,12 @@ def my_train(model, optimizer, loss,
 
   return model, history
 
-def compute_loss(dataset, model, bayesian=False, TPU=False):
-    x_batch_train, y_batch_train = dataset.dataset.take(0).as_numpy_iterator().next()
+def compute_loss(dataset, model, bayesian=False):
+    x_batch_train, y_batch_train = dataset.dataset.take(1).as_numpy_iterator().next()
     logits = model(x_batch_train, training=False)
     if bayesian:
             kl = sum(model.losses)/dataset.batch_size/dataset.n_batches
-            if TPU:
-                loss_0 = TPU_loss(y_batch_train, logits, kl)
-            else:
-                loss_0 = ELBO(y_batch_train, logits, kl)
+            loss_0 = ELBO(y_batch_train, logits, kl)
     else:
             loss_0 = my_loss(y_batch_train, logits)
     return loss_0
@@ -497,8 +494,7 @@ def main():
     cache_dir = FLAGS.cache_dir
 
     if FLAGS.TPU and FLAGS.GPU:
-        print('Cannot use both TPU and GPU. Using GPU only ')
-        FLAGS.TPU=False
+        raise ValueError('TPU and GPU cannot be both enabled')
         
     if FLAGS.TPU:
         try:
@@ -629,7 +625,12 @@ def main():
     print(model.summary())
     
     if FLAGS.fine_tune:
-        loss_0 = compute_loss(or_training_dataset, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU)
+        if FLAGS.TPU:
+            x_batch_train, y_batch_train = or_training_dataset.dataset.take(1).as_numpy_iterator().next()
+            logits = model(x_batch_train, training=False)
+            loss_0 = loss(y_batch_train, logits, sum(model.losses))
+        else:
+            loss_0 = compute_loss(or_training_dataset, model, bayesian=FLAGS.bayesian)
         print('Loss before loading weights/ %s\n' %loss_0.numpy())
     
     if FLAGS.decay is not None:
@@ -686,7 +687,12 @@ def main():
         ckpt.optimizer.learning_rate = FLAGS.lr
         print('Learning rate set to %s' %ckpt.optimizer.learning_rate)
         
-        loss_1 = compute_loss(or_training_dataset, model, bayesian=FLAGS.bayesian, TPU=FLAGS.TPU)
+        if FLAGS.TPU:
+            x_batch_train, y_batch_train = or_training_dataset.dataset.take(1).as_numpy_iterator().next()
+            logits = model(x_batch_train, training=False)
+            loss_1 = loss(y_batch_train, logits, sum(model.losses))
+        else:
+            loss_1 = compute_loss(or_training_dataset, model, bayesian=FLAGS.bayesian)
         print('Loss after loading weights/ %s\n' %loss_1.numpy())
         if FLAGS.add_FT_dense:
             if not FLAGS.swap_axes:
