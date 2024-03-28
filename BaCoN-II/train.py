@@ -135,13 +135,22 @@ def my_train(model, optimizer, loss,
         val_dataset.dataset = val_dataset.dataset.cache().prefetch(tf.data.experimental.AUTOTUNE)
         train_dataset.dataset = strategy.experimental_distribute_dataset(train_dataset.dataset)
         val_dataset.dataset = strategy.experimental_distribute_dataset(val_dataset.dataset)
+        n_val_example=val_dataset.batch_size*val_dataset.n_batches
+        n_train_example=train_dataset.batch_size*train_dataset.n_batches
+        n_val_batches = float(val_dataset.n_batches)
   elif cache_dir:
     train_dataset.dataset = train_dataset.dataset.cache(cache_dir).prefetch(tf.data.experimental.AUTOTUNE)
     val_dataset.dataset = val_dataset.dataset.cache(cache_dir).prefetch(tf.data.experimental.AUTOTUNE)
+    n_val_example=val_dataset.batch_size*val_dataset.n_batches
+    n_train_example=train_dataset.batch_size*train_dataset.n_batches
+    n_val_batches = float(val_dataset.n_batches)
     tf.config.optimizer.set_jit(True)
   else:
     train_dataset.dataset = train_dataset.dataset.cache().prefetch(tf.data.experimental.AUTOTUNE)
     val_dataset.dataset = val_dataset.dataset.cache().prefetch(tf.data.experimental.AUTOTUNE)
+    n_val_example=val_dataset.batch_size*val_dataset.n_batches
+    n_train_example=train_dataset.batch_size*train_dataset.n_batches
+    n_val_batches = float(val_dataset.n_batches)
     tf.config.optimizer.set_jit(True)
 
   count = 0
@@ -150,34 +159,23 @@ def my_train(model, optimizer, loss,
     start_time = time.time()
 
     # Run train loop
+    for batch in train_dataset.dataset:
+        x_batch_train, y_batch_train = batch
+        loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy)
+    
+    # Initialise val loss value in TPU strategy if needed.
     if TPU:
         with strategy.scope():
-            n_val_example=val_dataset.batch_size*val_dataset.n_batches
-            n_train_example=train_dataset.batch_size*train_dataset.n_batches
-            for batch in train_dataset.dataset:
-                x_batch_train, y_batch_train = batch
-                loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy)
-            n_val_batches = float(val_dataset.n_batches)
             val_loss_value = 0.
-            for val_batch in val_dataset.dataset:      
-                x_batch_val, y_batch_val = val_batch
-                lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)/ n_val_batches
-                val_loss_value += lv
-    else:    
-        n_val_example=val_dataset.batch_size*val_dataset.n_batches
-        n_train_example=train_dataset.batch_size*train_dataset.n_batches
-        for batch in train_dataset.dataset:
-            x_batch_train, y_batch_train = batch
-            loss_value = train_on_batch(x_batch_train, y_batch_train, model, optimizer, loss, train_acc_metric, bayesian=bayesian, n_train_example=n_train_example, TPU=TPU, strategy=strategy)
-        n_val_batches = float(val_dataset.n_batches)
+    else:
         val_loss_value = 0.
-        for val_batch in val_dataset.dataset:      
-            x_batch_val, y_batch_val = val_batch
-            lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)/ n_val_batches
-            val_loss_value += lv
-           
 
-    
+    for val_batch in val_dataset.dataset:      
+        x_batch_val, y_batch_val = val_batch
+        lv = val_step(x_batch_val, y_batch_val, model, loss, val_acc_metric, bayesian=bayesian, n_val_example=n_val_example, TPU=TPU, strategy=strategy)
+        val_loss_value += lv
+    val_loss_value /= n_val_batches
+           
     if type(val_loss_value) is not float:
         val_loss_value = val_loss_value.numpy()
     if type(loss_value) is not float:
