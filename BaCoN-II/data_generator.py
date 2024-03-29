@@ -368,7 +368,7 @@ class DataSet():
                     # rescale noise_sys curves according to error (10% default from production curves), 
                     # rescale by Gaussian with sigma = 1
                     # multiply with normalisation spectrum
-                    noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * self.norm_data[:,self.z_bins]
+                    noise_sys = (noise_sys-1) * self.sigma_curves/self.sigma_curves_default  * self.P_noise
                     if self.rescale_curves == 'uniform':
                         noise_sys = noise_sys * self.rng.uniform(shape = (), minval=0, maxval=1)
                     if self.rescale_curves == 'gaussian':
