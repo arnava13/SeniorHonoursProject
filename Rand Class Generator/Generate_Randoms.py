@@ -34,6 +34,8 @@ def main():
     # Get n filter files starting from the start file
     filters = filter_files[start_filter_number - 1 : start_filter_number + n - 1]  # Adjust for 1-based indexing
 
+    spectra_per_class = int(n/len(classnames))
+
     if mode == 'equal':
         # Loop through each directory
         for i, directory in enumerate(classnames):
@@ -41,7 +43,7 @@ def main():
             spectrum_files = glob.glob(os.path.join(directory, '*'))
             spectrum_files.sort()
             # Get n spectrum files starting from the start file
-            spectra = spectrum_files[start_spectrum_number - 1 : start_spectrum_number + n - 1]  # Adjust for 1-based indexing
+            spectra = spectrum_files[start_spectrum_number - 1 : start_spectrum_number + spectra_per_class - 1]  # Adjust for 1-based indexing
             for j, spectrum in enumerate(spectra):
                 with open(spectrum, 'r') as f:
                     spectrum_lines = f.readlines()
@@ -49,7 +51,7 @@ def main():
                 for k, line in enumerate(spectrum_lines):
                     line = line.split()
                     line = np.array(line, dtype = float)
-                    spectra_array[i*n+j, k] = line
+                    spectra_array[i*spectra_per_class+j, k] = line
     
     if mode == 'lcdm':
         spectrum_files = glob.glob(os.path.join(spectra_source_dir, '*'))
@@ -74,8 +76,8 @@ def main():
     print(m)
     filters_array = np.zeros([m * n, 500, 5])
     for i in range(m):
-        for j in range(n):
-            filter = filters[i*n + j]
+        for j in range(spectra_per_class):
+            filter = filters[i*spectra_per_class + j]
             with open(filter, 'r') as f:
                 filter_lines = f.readlines()
                 filter_lines = [line.strip() for line in filter_lines]
@@ -86,7 +88,7 @@ def main():
                     if mode == 'lcdm':
                         filters_array[j, k] = line
                     if mode == 'equal':
-                        filters_array[i*n+j, k] = line
+                        filters_array[i*spectra_per_class+j, k] = line
 
     # Apply filters and save filtered spectra
     for i, classname in enumerate(classnames):
