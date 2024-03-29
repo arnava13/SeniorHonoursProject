@@ -393,7 +393,7 @@ class DataSet():
                 expanded = tf.transpose(expanded, perm=[0, 2, 1])
                 if self.Verbose:
                     tf.print('New dimension of data: %s' %str(expanded.shape))
-                expanded = tf.gather(expanded, self.z_bins, axis=1)
+                expanded = tf.gather(expanded, self.z_bins, axis=2)
                 if self.Verbose:
                     tf.print('Dimension of data before normalising: %s' %str(expanded.shape))
                     tf.print('expanded first 10:') 
