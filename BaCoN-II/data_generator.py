@@ -341,11 +341,11 @@ class DataSet():
 
     @tf.function
     def noise_realisations(self, fname, P_original, k, i_file):
-        self.X_realisations = tf.TensorArray(dtype=tf.float32, size=self.n_noisy_samples)
-        self.y_realisations = tf.TensorArray(dtype=tf.int32, size=self.n_noisy_samples)
-        def cond(i_noise):
+        X_realisations = tf.TensorArray(dtype=tf.float32, size=self.n_noisy_samples)
+        y_realisations = tf.TensorArray(dtype=tf.int32, size=self.n_noisy_samples)
+        def cond(i_noise, X_realisations, y_realisations):
             return i_noise < self.n_noisy_samples
-        def body(i_noise):
+        def body(i_noise, X_realisations, y_realisations):
             if self.add_noise:
                 P_noisy = P_original
                 if self.Verbose:
@@ -420,13 +420,13 @@ class DataSet():
                 tf.print('Encoding: %s' % encoding)
             y = encoding
             X = tf.convert_to_tensor(X, dtype=tf.float32)
-            self.X_realisations = self.X_realisations.write(i_noise, X)
-            self.y_realisations = self.y_realisations.write(i_noise, y)
-            return i_noise + 1
+            X_realisations = X_realisations.write(i_noise, X)
+            y_realisations = y_realisations.write(i_noise, y)
+            return i_noise + 1, X_realisations, y_realisations
         i_noise = tf.constant(0)
-        i_noise = tf.while_loop(cond, body, [i_noise])
-        X_realisations = self.X_realisations.stack()
-        y_realisations = self.y_realisations.stack()
+        i_noise, X_realisations, y_realisations = tf.while_loop(cond, body, [i_noise, X_realisations, y_realisations])
+        X_realisations = X_realisations.stack()
+        y_realisations = y_realisations.stack()
         return X_realisations, y_realisations
     
     @tf.function
