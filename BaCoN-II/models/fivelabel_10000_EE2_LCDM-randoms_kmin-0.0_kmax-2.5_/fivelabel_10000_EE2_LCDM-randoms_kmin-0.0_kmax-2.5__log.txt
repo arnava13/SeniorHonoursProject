@@ -1150,3 +1150,43 @@ _________________________________________________________________
  conv1d_flipout_1 (Conv1DFl  (None, 22, 16)            1296      
  ipout)                                                          
                                                                  
+ max_pooling1d_1 (MaxPoolin  (None, 21, 16)            0         
+ g1D)                                                            
+                                                                 
+ batch_normalization_1 (Bat  (None, 21, 16)            64        
+ chNormalization)                                                
+                                                                 
+ conv1d_flipout_2 (Conv1DFl  (None, 20, 32)            2080      
+ ipout)                                                          
+                                                                 
+ batch_normalization_2 (Bat  (None, 20, 32)            128       
+ chNormalization)                                                
+                                                                 
+ global_average_pooling1d (  (None, 32)                0         
+ GlobalAveragePooling1D)                                         
+                                                                 
+ dense_flipout (DenseFlipou  (None, 32)                2080      
+ t)                                                              
+                                                                 
+ batch_normalization_3 (Bat  (None, 32)                128       
+ chNormalization)                                                
+                                                                 
+ dense_flipout_1 (DenseFlip  (None, 5)                 325       
+ out)                                                            
+                                                                 
+=================================================================
+Total params: 6781 (26.49 KB)
+Trainable params: 6605 (25.80 KB)
+Non-trainable params: 176 (704.00 Byte)
+_________________________________________________________________
+None
+Computing loss for randomly initialized model...
+Loss before loading weights/ nan
+
+------------ RESTORING CHECKPOINT ------------
+
+Looking for ckpt in models/fivelabel_10000_EE2_LCDM-randoms_kmin-0.0_kmax-2.5_/tf_ckpts/
+Restoring checkpoint from models/fivelabel_10000_EE2_LCDM-randoms_kmin-0.0_kmax-2.5_/tf_ckpts/ckpt-32
+Loss after loading weights/ nan
+
+Threshold probability for classification: 0.5 
