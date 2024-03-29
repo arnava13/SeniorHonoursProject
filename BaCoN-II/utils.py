@@ -10,33 +10,38 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import argparse
-import tensorflow.compat.v2 as tf
 
 
 
-@tf.function
+
 def get_fname_list(c_0, c_1, list_IDs_temp, data_root, list_IDs_temp_dict, dataset_balanced=True):
+    
+    # np.array([self.data_root + '/'+l+ '/'+ str(ID) + '.txt' for ID in list_IDs_temp for l in self.labels])
     if dataset_balanced:
-        fnames_c0 = tf.strings.join([data_root, '/', c_0[0], '/', tf.strings.as_string(list_IDs_temp), '.txt'], separator='')
-
+        fnames_c0 = np.array([ data_root+'/'+c_0[0]+'/'+str(ID)+'.txt' for ID in list_IDs_temp ])
+    
         fnames_c1 = []
-        n_loops = len(list_IDs_temp) // len(c_1)
+        n_loops=len(list_IDs_temp)//len(c_1)
+        #print('get_fname_list len(list_IDs_temp): %s' %len(list_IDs_temp))
+        #print('get_fname_list n_loops: %s' %n_loops)
         for k in range(n_loops):
-            p = tf.random.shuffle(list_IDs_temp[k*len(c_1):(k+1)*len(c_1)])
+            p  = np.random.permutation(list_IDs_temp[k*len(c_1):(k+1)*len(c_1)])
             for i, l in enumerate(c_1):
-                fname = tf.strings.join([data_root, '/', l, '/', tf.strings.as_string(p[i]), '.txt'], separator='')
+                fname = data_root+'/'+l+'/'+str(p[i])+'.txt'
+                #print(fname)
                 fnames_c1.append(fname)
-        fnames_c1 = tf.stack(fnames_c1)
-        fname_list = tf.concat([fnames_c0, fnames_c1], axis=0)
+        fnames_c1 = np.array(fnames_c1)
+        fname_list = np.concatenate([fnames_c0,fnames_c1])
     else:
-        fname_list = []
-        all_labels = c_0 + c_1
+        #print('get_fname_list non balanced case')
+        fname_list=[]
+        all_labels=c_0+c_1
         for l in all_labels:
-            for ID in list_IDs_temp:
-                t_st = tf.strings.join([data_root, '/', l, '/', tf.strings.as_string(ID), '.txt'], separator='')
+            for ID in list_IDs_temp: #list_IDs_temp_dict[l]:
+                t_st =  data_root + '/'+l+ '/'+ str(ID) + '.txt' 
                 fname_list.append(t_st)
-        fname_list = tf.stack(fname_list)
-
+        fname_list = np.array(fname_list)
+    
     return fname_list
 
 
@@ -426,6 +431,7 @@ def get_all_indexes(FLAGS, Test=False):
         dir_name=data_dir+'/'+l #+'_test'
     all_index = np.array([int(str.split(name, sep='.')[0]) for name in os.listdir(dir_name) if (os.path.isfile(os.path.join(dir_name, name)) and 'DS_Store' not in name)])
     assert all_index.shape[0]==n_samples
+    print('\nN. of data files: %s' %all_index.shape)
     if FLAGS.test_mode: #and not Test:
         print('Choice with seed %s ' %FLAGS.seed)
         np.random.seed(FLAGS.seed)
@@ -448,13 +454,13 @@ def get_all_indexes(FLAGS, Test=False):
         
     print('get_all_indexes labels dict: %s' %str(labels_dict)) 
     return all_index, n_samples, val_size, n_labels, labels, labels_dict, all_labels
-    
+
+
 
 def find_nearest(array, value):
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return idx, array[idx]
-
 
 
 
