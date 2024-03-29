@@ -749,6 +749,8 @@ def main():
         if FLAGS.test_mode:
             ckpt_name+='_test'
     
+    os.makedirs(ckpts_path, exist_ok=True)
+
     if FLAGS.TPU:
         with strategy.scope():
             manager = tf.train.CheckpointManager(ckpt, ckpts_path, 

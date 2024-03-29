@@ -1,3 +1,5 @@
+"""Plots cosmic variance and a random theory error curve, as well as the total noise."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
