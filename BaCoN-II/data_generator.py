@@ -530,9 +530,6 @@ class DataSet():
             
 
         #Convert these to tensors for map operations
-        self.n_noisy_samples = tf.constant(self.n_noisy_samples, dtype=tf.int64)
-        self.batch_size_tensor = tf.constant(self.batch_size, dtype=tf.int64)
-        self.n_batches_tensor = tf.constant(self.n_batches, dtype=tf.int64)
         self.P_noise = tf.convert_to_tensor(self.norm_data[:, self.z_bins])
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
         P_originals = tf.convert_to_tensor(P_originals, dtype=tf.float32)
