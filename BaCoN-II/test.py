@@ -446,6 +446,8 @@ def main():
     
     if not FLAGS.save_ckpt:
         model_weights_path = FLAGS.model_weights_path
+    else:
+        model_weights_path = None
     
     if FLAGS.swap_axes:
         input_shape = ( int(test_dataset.dim[0]), 
