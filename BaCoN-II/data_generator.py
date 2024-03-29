@@ -454,20 +454,6 @@ class DataSet():
             tf.print("X shape after normalize slicing: ", tf.shape(X))
         return X, y
     
-    @tf.function
-    def transformations(self, dataset):
-        self.batch_size_tensor = tf.constant(self.batch_size, dtype=tf.int64)
-        self.n_batches_tensor = tf.constant(self.n_batches, dtype=tf.int64)
-        X_list = tf.convert_to_tensor(X_list, dtype=tf.float32)
-        y_list = tf.convert_to_tensor(y_list, dtype=tf.int32)
-        y_list = tf.keras.utils.to_categorical(y_list, num_classes=self.n_classes_out)
-        dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
-        dataset = dataset.shuffle(buffer_size=self.batch_size*self.n_batches)
-        dataset = dataset.batch(self.batch_size, drop_remainder=True)
-        self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
-        dataset = dataset.map(self.normalize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        return dataset
-    
     def create_dataset(self, list_IDs, list_IDs_dict):
         'Generates a batched DataSet'
         if not self.fine_tune and not self.one_vs_all:
@@ -513,10 +499,28 @@ class DataSet():
             
         if self.TPU:
             with self.strategy.scope():
-                self.transformations(dataset)
+                self.batch_size_tensor = tf.constant(self.batch_size, dtype=tf.int64)
+                self.n_batches_tensor = tf.constant(self.n_batches, dtype=tf.int64)
+                X_list = tf.convert_to_tensor(X_list, dtype=tf.float32)
+                y_list = tf.convert_to_tensor(y_list, dtype=tf.int32)
+                y_list = tf.keras.utils.to_categorical(y_list, num_classes=self.n_classes_out)
+                dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
+                dataset = dataset.shuffle(buffer_size=self.batch_size*self.n_batches)
+                dataset = dataset.batch(self.batch_size, drop_remainder=True)
+                self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
+                dataset = dataset.map(self.normalize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
                 
         else:
-            dataset = self.transformations(dataset)
+            self.batch_size_tensor = tf.constant(self.batch_size, dtype=tf.int64)
+            self.n_batches_tensor = tf.constant(self.n_batches, dtype=tf.int64)
+            X_list = tf.convert_to_tensor(X_list, dtype=tf.float32)
+            y_list = tf.convert_to_tensor(y_list, dtype=tf.int32)
+            y_list = tf.keras.utils.to_categorical(y_list, num_classes=self.n_classes_out)
+            dataset = tf.data.Dataset.from_tensor_slices((X_list, y_list))
+            dataset = dataset.shuffle(buffer_size=self.batch_size*self.n_batches)
+            dataset = dataset.batch(self.batch_size, drop_remainder=True)
+            self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
+            dataset = dataset.map(self.normalize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
             
         for x, y in dataset.take(1):
             self.xshape = x.shape
