@@ -156,17 +156,17 @@ def print_cm(cm, names, out_path, cm_name_custom,tot_acc,tot_acc_no_uncl, FLAGS)
     
     for i, name in enumerate(names):
         if name == 'dgp':
-            names[i] = 'DGP'
+            names[i] = r'DGP'
         if name == 'ds':
-            names[i] = 'DS'
+            names[i] = r'DS'
         if name == 'fr':
-            names[i] = '$f(R)$'
+            names[i] = r'$f(R)$'
         if name == 'lcdm':
-            names[i] = '$\Lambda$CDM'
+            names[i] = r'$\Lambda$CDM'
         if name == 'rand':
-            names[i] = 'Random'
+            names[i] = 'rRandom'
         if name == 'wcdm':
-            names[i] = '$w$CDM'
+            names[i] = r'$w$CDM'
 
     matrix_proportions = np.zeros((len(names),len(names)))
     for i in range(0,len(names)):
