@@ -95,7 +95,7 @@ class DataSet():
         self.sys_max=sys_max
         self.group_lab_dict=group_lab_dict
         if self.group_lab_dict is not None:
-            self.group_lab_lookup = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(list(self.group_lab_dict.keys()), list(self.group_lab_dict.values())), default_value=-1)
+            self.group_lab_lookup = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(tf.constant(list(self.group_lab_dict.keys()), dtype=tf.string), tf.constant(list(self.group_lab_dict.values()), dtype=tf.int32)), default_value=-1)
         self.fine_tune=fine_tune
         self.c_0=c_0
         self.c_1=c_1
@@ -203,7 +203,7 @@ class DataSet():
         self.labels = labels
         #print(self.labels)
         self.labels_dict = labels_dict
-        self.labels_lookup = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(list(self.labels_dict.keys()), list(self.labels_dict.values())), default_value=-1)
+        self.labels_lookup = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(tf.constant(list(self.labels_dict.keys()), dtype=tf.string), tf.constant(list(self.labels_dict.values()), dtype=tf.int32)), default_value=-1)
         self.inv_labels_dict={value:key for key,value in zip(self.labels_dict.keys(), self.labels_dict.values())}
         #print(self.inv_labels_dict)
         self.list_IDs = list_IDs
@@ -404,7 +404,7 @@ class DataSet():
                 tf.print('dimension of X: %s' %str(X.shape))
                 tf.print('X first 10:') 
                 tf.print(X[:10])
-            label = fname.split('/')[-2]
+            label = tf.strings.split(fname, '/')[-2]
                 
             if not self.base_case_dataset:
                 label = self.group_lab_lookup.lookup(label)
@@ -533,6 +533,7 @@ class DataSet():
         self.P_noise = tf.convert_to_tensor(self.norm_data[:, self.z_bins], dtype=tf.float32)
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
         self.all_curves = tf.convert_to_tensor(self.all_curves, dtype=tf.float32)
+        fname_list = tf.convert_to_tensor(fname_list, dtype=tf.string)
         P_originals = tf.convert_to_tensor(P_originals, dtype=tf.float32)
         k_originals = tf.convert_to_tensor(k_originals, dtype=tf.float32)
         i_file_list = tf.convert_to_tensor(i_file_list, dtype=tf.int32)
