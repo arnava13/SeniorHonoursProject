@@ -522,7 +522,7 @@ class DataSet():
             self.all_curves[i] = np.loadtxt(curve_path)
 
         k_test = k_originals[0]
-        k_sys_test = all_curves[0][:, 0]
+        k_sys_test = self.all_curves[0][:, 0]
         k_sys_test = k_sys_test[0::self.sample_pace]
         k_sys_test = k_sys_test[self.i_min:self.i_max]
         if (k_test.all() != k_sys_test.all()):
