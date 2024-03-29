@@ -124,7 +124,7 @@ def load_model_for_test(FLAGS, input_shape, n_classes=5,
         else:
             raise ValueError('Checkpoint not found')
             #print('Checkpoint not found')
-        ckpt.restore(latest)
+        ckpt.restore(latest).expect_partial()
         
     if dataset is not None:
         loss_1 = compute_loss(dataset, model, bayesian=FLAGS.bayesian)
