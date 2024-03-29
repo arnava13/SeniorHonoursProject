@@ -801,8 +801,9 @@ def create_test_dataset(FLAGS):
     else:
         batch_size=FLAGS.batch_size
     print('batch_size: %s' %batch_size)
-        
-    test_index_1  = cut_sample(all_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=True, len_c1=len_c1)
+    """    
+    test_index_1  = cut_sample(all_index, batch_size, n_labels=n_labels_eff, n_noise=n_noisy_samples, Verbose=True, len_c1=len_c1)"""
+    test_index_1 = all_index
     n_test = test_index_1.shape[0]
 
     #assert test_index_1.shape[0]%(batch_size//(n_labels_eff*n_noisy_samples))==0
