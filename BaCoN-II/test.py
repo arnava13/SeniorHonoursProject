@@ -164,7 +164,7 @@ def print_cm(cm, names, out_path, cm_name_custom,tot_acc,tot_acc_no_uncl, FLAGS)
         if name == 'lcdm':
             names[i] = r'$\Lambda$CDM'
         if name == 'rand':
-            names[i] = 'rRandom'
+            names[i] = r'Random'
         if name == 'wcdm':
             names[i] = r'$w$CDM'
 
