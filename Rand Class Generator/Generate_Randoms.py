@@ -40,17 +40,16 @@ def main():
             # Get all files in the directory
             spectrum_files = glob.glob(os.path.join(directory, '*'))
             spectrum_files.sort()
-
-        # Get n spectrum files starting from the start file
-        spectra = spectrum_files[start_spectrum_number - 1 : start_spectrum_number + n - 1]  # Adjust for 1-based indexing
-        for j, spectrum in enumerate(spectra):
-            with open(spectrum, 'r') as f:
-                spectrum_lines = f.readlines()
-                spectrum_lines = [line.strip() for line in spectrum_lines]
-            for k, line in enumerate(spectrum_lines):
-                line = line.split()
-                line = np.array(line, dtype = float)
-                spectra_array[i*n+j, k] = line
+            # Get n spectrum files starting from the start file
+            spectra = spectrum_files[start_spectrum_number - 1 : start_spectrum_number + n - 1]  # Adjust for 1-based indexing
+            for j, spectrum in enumerate(spectra):
+                with open(spectrum, 'r') as f:
+                    spectrum_lines = f.readlines()
+                    spectrum_lines = [line.strip() for line in spectrum_lines]
+                for k, line in enumerate(spectrum_lines):
+                    line = line.split()
+                    line = np.array(line, dtype = float)
+                    spectra_array[i*n+j, k] = line
     
     if mode == 'lcdm':
         spectrum_files = glob.glob(os.path.join(spectra_source_dir, '*'))
