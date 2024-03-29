@@ -646,9 +646,9 @@ def create_datasets(FLAGS, strategy=None):
     print('Check for no duplicates in val: (0=ok):')
     print(np.array([np.isin(el, train_index) for el in val_index]).sum())
 
-    print('N of files in training set: %s' %n_labels_eff*train_index.shape[0])
-    print('N of files in validation set: %s' %n_labels_eff*val_index.shape[0])
-    print('N of files in test set: %s' %n_labels_eff*test_index.shape[0])
+    print('N of indexes in training set: %s' %train_index.shape[0])
+    print('N of indexes in validation set: %s' %val_index.shape[0])
+    print('N of indexes in test set: %s' %test_index.shape[0])
 
     print('Check - total per class: %s' %(val_index.shape[0]+test_index.shape[0]+train_index.shape[0]))
     
