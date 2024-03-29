@@ -341,8 +341,8 @@ class DataSet():
 
     @tf.function
     def noise_realisations(self, fname, P_original, k, i_file):
-        X_realisations = tf.TensorArray(tf.float32, size=self.n_noisy_samples)
-        y_realisations = tf.TensorArray(tf.int32, size=self.n_noisy_samples)
+        X_realisations = tf.TensorArray(dtype=tf.float32, size=self.n_noisy_samples)
+        y_realisations = tf.TensorArray(dtype=tf.int32, size=self.n_noisy_samples)
         def cond(i_noise):
             return i_noise < self.n_noisy_samples
         def body(i_noise):
