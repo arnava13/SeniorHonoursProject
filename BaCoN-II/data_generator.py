@@ -514,12 +514,12 @@ class DataSet():
             i_file_list.append(i)
     
         #Load all theory error curves
-        all_curves = np.zeros((self.n_noisy_samples*self.n_batches*self.batch_size, self.original_k_length, self.n_channels + 1), dtype=np.float32)
+        self.all_curves = np.zeros((self.n_noisy_samples*self.n_batches*self.batch_size, self.original_k_length, self.n_channels + 1), dtype=np.float32)
         for i in range(self.n_noisy_samples*self.n_batches*self.batch_size):
             curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1000, dtype=tf.int32)
             curve_random_nr = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
             curve_path = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
-            all_curves[i] = np.loadtxt(curve_path)
+            self.all_curves[i] = np.loadtxt(curve_path)
 
         k_test = k_originals[0]
         k_sys_test = all_curves[0][:, 0]
