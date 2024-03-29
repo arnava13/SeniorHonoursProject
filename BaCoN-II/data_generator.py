@@ -94,7 +94,8 @@ class DataSet():
         self.sys_factor=sys_factor
         self.sys_max=sys_max
         self.group_lab_dict=group_lab_dict
-        self.group_lab_lookup = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(list(self.group_lab_dict.keys()), list(self.group_lab_dict.values())), default_value=-1)
+        if self.group_lab_dict is not None:
+            self.group_lab_lookup = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(list(self.group_lab_dict.keys()), list(self.group_lab_dict.values())), default_value=-1)
         self.fine_tune=fine_tune
         self.c_0=c_0
         self.c_1=c_1
