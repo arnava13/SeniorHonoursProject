@@ -322,7 +322,7 @@ def main():
     parser.add_argument("--out_path_overwrite", default=False, type=str2bool, required=False)
     parser.add_argument("--curves_folder", default=None, type=str, required=False)
     parser.add_argument("--save_processed_spectra", default=False, type=str2bool, required=False)  
-    parser.add_argument("--cache_dir", default=None, type=str, required=False)  
+    parser.add_argument("--cache_dir", default=False, type=str2bool, required=False)  
 
     
     # INPUT DATA DIMENSION
