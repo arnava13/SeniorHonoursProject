@@ -532,6 +532,7 @@ class DataSet():
         #Convert these to tensors for map operations
         self.P_noise = tf.convert_to_tensor(self.norm_data[:, self.z_bins], dtype=tf.float32)
         self.norm_data = tf.convert_to_tensor(self.norm_data, dtype=tf.float32)
+        self.all_curves = tf.convert_to_tensor(self.all_curves, dtype=tf.float32)
         P_originals = tf.convert_to_tensor(P_originals, dtype=tf.float32)
         k_originals = tf.convert_to_tensor(k_originals, dtype=tf.float32)
         i_file_list = tf.convert_to_tensor(i_file_list, dtype=tf.int32)
