@@ -463,7 +463,7 @@ class DataSet():
         dataset = dataset.shuffle(buffer_size=self.batch_size*self.n_batches)
         dataset = dataset.map(self.noise_realisations, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         dataset = dataset.flat_map(lambda X, y: tf.data.Dataset.from_tensor_slices((X, y)))
-        dataset = dataset.map(lambda X, y: (X, tf.keras.utils.to_categorical(y, num_classes=self.n_classes_out)))
+        dataset = dataset.map(lambda X, y: (X, tf.one_hot(y, depth=self.n_classes_out)))
         dataset = dataset.batch(self.batch_size, drop_remainder=True)
         dataset = dataset.map(self.normalize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         return dataset
