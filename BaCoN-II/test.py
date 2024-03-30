@@ -432,7 +432,7 @@ def main():
         print('Overwriting noise flags. Using n_noisy_samples=%s, add_shot=%s, add_sys=%s,add_cosvar=%s, sigma_curves=%s' %(FLAGS.n_noisy_samples, str(FLAGS.add_shot),str(FLAGS.add_sys),str(FLAGS.add_cosvar), FLAGS.sigma_curves))
         
     FLAGS.n_classes = len([name for name in os.listdir(FLAGS.TEST_DIR) if os.path.isdir(os.path.join(FLAGS.TEST_DIR, name))])
-    FLAGS.batch_size = (FLAGS.n_classes * FLAGS.n_noisy_samples if FLAGS.add_noise else FLAGS.n_classes) * 100
+    FLAGS.batch_size = (FLAGS.n_classes * FLAGS.n_noisy_samples if FLAGS.add_noise else FLAGS.n_classes) * 10
 
     print('\n -------- Parameters:')
     for key,value in vars(FLAGS).items():
