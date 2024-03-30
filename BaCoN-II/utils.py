@@ -335,7 +335,9 @@ def get_flags(log_path):
                     key, value = line.split()[0], line.split()[1] 
                 FLAGS[key]=value
     
-    FLAGS.pop('--------')
+    if '--------' in FLAGS:
+        FLAGS.pop('--------')
+    print('\n -------- Loaded parameters:')
     FLAGS = parse_flags(FLAGS)
     if 'c_1' in FLAGS.keys():
         if len(FLAGS['c_1'])>1:

@@ -387,7 +387,7 @@ def main():
     parser.add_argument("--decay", default=0.95, type=float, required=False)
     parser.add_argument("--BatchNorm", default=True, type=str2bool, required=False)
     parser.add_argument("--padding", default='valid', type=str, required=False)
-    parser.add_argument("--shuffle", default='False', type=str2bool, required=False)
+    parser.add_argument("--shuffle", default='True', type=str2bool, required=False)
     
 
     FLAGS = parser.parse_args()
