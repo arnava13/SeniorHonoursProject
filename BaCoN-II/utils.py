@@ -224,28 +224,28 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
   
 
 
-class Logger(object):
-    
-    def __init__(self, fname):
-        print('Logger creating log file: %s' %fname)
-        self.terminal = sys.__stdout__
-        self.log = open(fname, "w+")
-        #self.log.write('--------- LOG FILE ---------\n')   
-        #self.write('Prova Logger')
-       
+class Logger:
+    def __init__(self, filename):
+        self.terminal = sys.stdout
+        self.log = open(filename, "a")
+
     def write(self, message):
-        self.terminal.write(message)
-        self.log.write(message)
+        # Temporarily restore original stdout
+        sys.stdout = self.terminal
+        try:
+            self.terminal.write(message)
+            self.log.write(message)
+        finally:
+            # Ensure sys.stdout is always reverted back
+            sys.stdout = self
 
     def flush(self):
-        #this flush method is needed for python 3 compatibility.
-        #this handles the flush command by doing nothing.
-        #you might want to specify some extra behavior here.
-        pass    
+        # This flush method is needed for python 3 compatibility.
+        # This will be called by any print statement but does nothing.
+        pass
 
     def close(self):
-        self.log.close
-        sys.stdout = sys.__stdout__
+        self.log.close()
  
 def str2bool(v):
     if isinstance(v, bool):
