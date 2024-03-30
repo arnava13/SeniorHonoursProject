@@ -45,21 +45,18 @@ def main():
     plt.title("Theory Error", fontsize = 16)
     plt.xlabel("k", fontsize = 13)
     plt.ylabel("Fractional Error", fontsize = 13)
-    plt.legend()
     plt.xscale('log')
 
     fig_cosmic_variance = plt.figure(2)
     plt.title("Cosmic Variance", fontsize = 16)
     plt.xlabel("k", fontsize = 13)
     plt.ylabel("Fractional Error", fontsize = 13)
-    plt.legend()
     plt.xscale('log')
 
     fig_total_noise = plt.figure(3)
     plt.title("Total Noise", fontsize = 16)
     plt.xlabel("k", fontsize = 13)
     plt.ylabel("Fractional Error", fontsize = 13)
-    plt.legend()
     plt.xscale('log')
 
 
@@ -92,7 +89,7 @@ def main():
             single_therr_path = os.path.join(theoryerr_dir, str(random_curve_num) + ".txt")
             theoryerr_file = np.loadtxt(single_therr_path)[:,1:]
             therr = (1 - theoryerr_file[:,i]) * sigma_curves/sigma_curves_default
-            if j == 1:
+            if j == 8:
                 plt.plot(k_values, therr, color=colors(j/10), label="Theory Error")
             else:
                 plt.plot(k_values, therr, color=colors(j/10), label="_nolegend_")
@@ -101,11 +98,14 @@ def main():
 
     for i, z in enumerate([1.5, 0.783, 0.478, 0.1]):
         plt.figure(fig_theory_error.number)
-        plt.plot(k_values, theory_errors[i], label="z = " + str(z), color='red')
+        plt.plot(k_values, theory_errors[i], label="z = " + str(z))
+        plt.legend()
         plt.figure(fig_cosmic_variance.number)
-        plt.plot(k_values, cosmic_variances[i], label="z = " + str(z), color='red')
+        plt.plot(k_values, cosmic_variances[i], label="z = " + str(z))
+        plt.legend()
         plt.figure(fig_total_noise.number)
-        plt.plot(k_values, total_noises[i], label="z = " + str(z), color='red')
+        plt.plot(k_values, total_noises[i], label="z = " + str(z))
+        plt.legend()
    
     plt.show()
         
