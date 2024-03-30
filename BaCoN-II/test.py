@@ -431,7 +431,7 @@ def main():
     if n_flag_ow:
         print('Overwriting noise flags. Using n_noisy_samples=%s, add_shot=%s, add_sys=%s,add_cosvar=%s, sigma_curves=%s' %(FLAGS.n_noisy_samples, str(FLAGS.add_shot),str(FLAGS.add_sys),str(FLAGS.add_cosvar), FLAGS.sigma_curves))
         
-    FLAGS.n_classes = 5 if not FLAGS.fine_tune else 2
+    FLAGS.n_classes = len(c_0) + len(c_1)
     FLAGS.batch_size = (FLAGS.n_classes * FLAGS.n_noisy_samples if FLAGS.add_noise else FLAGS.n_classes) * 100
 
     print('\n -------- Parameters:')
