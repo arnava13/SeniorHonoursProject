@@ -351,12 +351,11 @@ class DataSet():
                 noise_scale = generate_noise(k, self.norm_data[:, self.z_bins], sys_scaled=self.sys_scaled,
                                                 sys_factor=self.sys_factor,sys_max=self.sys_max,
                                                 add_cosvar=True, add_sys=False, add_shot=False, sigma_sys=self.sigma_sys)
-                noise_cosvar = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
+                noise_cosvar = np.random.normal(loc=0, scale=noise_scale)
                 P_noisy = P_noisy + noise_cosvar
             if self.add_sys:
                 if self.add_sys:
-                    curve_random_nr = self.rng.uniform(shape=[], minval=1, maxval=1001, dtype=tf.int32)
-                    curve_random_nr = tf.strings.as_string(curve_random_nr).numpy().decode('utf-8')
+                    curve_random_nr = np.random.randint(0, 1000)
                     curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
                     curve_loaded = np.loadtxt(curve_file)
                     noise_sys, k_sys = curve_loaded[:, 1:], curve_loaded[:, 0]
@@ -377,8 +376,8 @@ class DataSet():
                     noise_sys = noise_sys * np.random.normal(loc=0, scale = 1)
                 P_noisy = P_noisy + noise_sys
             if self.add_shot:
-                noise_scale = generate_noise(k,self.norm_data[: , self.z_bins], sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
-                noise_shot = self.rng.normal(shape=noise_scale.shape, mean=0, stddev=noise_scale)
+                shot_scale = generate_noise(k,self.norm_data[: , self.z_bins], sys_scaled=self.sys_scaled,sys_factor=self.sys_factor,sys_max=self.sys_max, add_cosvar=False, add_sys=False, add_shot=True,sigma_sys=self.sigma_sys)
+                noise_shot = np.random.normal(loc=0, scale=shot_scale)
                 P_noisy = P_noisy + noise_shot
             expanded = np.expand_dims(P_noisy, axis=2)
         else:

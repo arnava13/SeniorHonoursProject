@@ -215,6 +215,7 @@ def cut_sample(indexes, bs, n_labels=2, n_noise=1, Verbose=False, len_c1=1, nRec
     nRec+=1
     if nRec>10:
       Verbose=False
+      pass
     return(cut_sample(np.random.choice(indexes, int(a-1), replace=False), bs, n_labels=n_labels, n_noise=n_noise, Verbose=Verbose, len_c1=len_c1, nRec= nRec))
   if len(np.unique(idxs_new))==0:
     #if Verbose:
@@ -293,7 +294,7 @@ def parse_flags(FLAGS):
   return FLAGS          
  
 def not_start(line): 
-  if ' -------- Parameters:' in line and not 'Skipping' in line:
+  if ' -------- Parameters:' in line:
     return False
   else:
     return True
