@@ -355,7 +355,7 @@ class DataSet():
                 P_noisy = P_noisy + noise_cosvar
             if self.add_sys:
                 if self.add_sys:
-                    curve_random_nr = np.random.randint(0, 1000)
+                    curve_random_nr = np.random.randint(1, 1000)
                     curve_file = os.path.join(self.curves_folder, '{}.txt'.format(curve_random_nr))
                     curve_loaded = np.loadtxt(curve_file)
                     noise_sys, k_sys = curve_loaded[:, 1:], curve_loaded[:, 0]
