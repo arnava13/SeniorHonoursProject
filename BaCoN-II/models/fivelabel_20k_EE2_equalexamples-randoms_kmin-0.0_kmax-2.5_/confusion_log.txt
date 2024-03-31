@@ -1,0 +1,409 @@
+
+ -------- Parameters:
+bayesian True
+test_mode False
+n_test_idx 2
+seed 1312
+fine_tune False
+one_vs_all False
+c_0 ['lcdm']
+c_1 ['True', 'dgp', 'ds', 'fR', 'rand--save_ckpt', 'wcdm']
+dataset_balanced False
+include_last False
+log_path 
+restore False
+fname fivelabel_20k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_
+model_name custom
+my_path None
+DIR data/train
+TEST_DIR data/test
+models_dir models/
+save_ckpt True
+out_path_overwrite False
+curves_folder data/curve_files_sys/theory_error
+save_processed_spectra False
+cache_dir False
+im_depth 500
+im_width 1
+im_channels 4
+swap_axes True
+sort_labels True
+norm_data_name /planck_ee2.txt
+normalization stdcosmo
+sample_pace 4
+k_max 2.5
+k_min 0.0
+i_max None
+i_min None
+add_noise True
+n_noisy_samples 10
+add_shot False
+add_sys True
+add_cosvar True
+sigma_sys None
+sys_scaled None
+sys_factor None
+sys_max None
+sigma_curves 0.05
+sigma_curves_default 0.05
+rescale_curves uniform
+z_bins [0, 1, 2, 3]
+n_dense 1
+filters [8, 16, 32]
+kernel_sizes [10, 5, 2]
+strides [2, 2, 1]
+pool_sizes [2, 2, 0]
+strides_pooling [2, 1, 0]
+add_FT_dense False
+trainable False
+unfreeze False
+lr 0.05
+drop 0.5
+n_epochs 50
+val_size 0.15
+test_size 0.0
+batch_size 500
+patience 20
+GPU True
+TPU False
+decay 0.9
+BatchNorm True
+padding valid
+shuffle True
+group_lab_dict {'True': 'non_lcdm', 'dgp': 'non_lcdm', 'ds': 'non_lcdm', 'fR': 'non_lcdm', 'rand--save_ckpt': 'non_lcdm', 'wcdm': 'non_lcdm', 'lcdm': 'lcdm'}
+save_indexes False
+n_classes 5
+------------ CREATING DATASETS ------------
+
+labels : ['dgp', 'fr', 'lcdm', 'rand', 'wcdm']
+Labels encoding: 
+{'dgp': 0, 'fr': 1, 'lcdm': 2, 'rand': 3, 'wcdm': 4}
+n_labels : 5
+dgp - 1000 training examples
+fr - 1000 training examples
+lcdm - 1000 training examples
+rand - 1000 training examples
+wcdm - 1000 training examples
+
+N. of data files: 1000
+get_all_indexes labels dict: {'dgp': 0, 'fr': 1, 'lcdm': 2, 'rand': 3, 'wcdm': 4}
+create_generators n_labels_eff: 5
+create_generators len_c1: 1
+--Train
+batch_size: 500
+- Cut sample
+bs: 500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+Indexes length: 1000
+n_keep: 1000
+Not sampling
+New length: 1000
+N batches: 100.0
+ len_C1: 1
+N indexes: 10.0
+Ok.
+N. of test files used: 1000
+DataSet Initialization
+Using z bins [0, 1, 2, 3]
+Normalisation file is /planck_ee2.txt
+Specified k_max is 2.5
+Corresponding i_max is 100
+Closest k to k_max is 2.539859
+Specified k_min is 0.0
+Corresponding i_min is 0
+Closest k to k_min is 0.01
+New data dim: (100, 1)
+Final i_max used is 100
+Final i_min used is 0
+one_vs_all: False
+dataset_balanced: False
+base_case_dataset: True
+N. classes: 5
+N. n_classes in output: 5
+LABELS: ['dgp', 'fr', 'lcdm', 'rand', 'wcdm']
+list_IDs length: 1000
+n_indexes (n of file IDs read for each batch): 10
+batch size: 500
+n_batches : 100
+For each batch we read 10 file IDs
+For each file ID we have 5 labels
+For each ID, label we have 10 realizations of noise
+In total, for each batch we have 500 training examples
+Input batch size: 500
+N of batches to cover all file IDs: 100
+len(fname_list), batch_size, n_noisy_samples, n_batches: 5000, 500, 10, 100
+------------ DONE ------------
+
+Input shape (100, 4)
+------------ BUILDING MODEL ------------
+
+Model n_classes : 5 
+Features shape: (100, 4)
+Labels shape: (5,)
+Model: "model"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ input_1 (InputLayer)        [(None, 100, 4)]          0         
+                                                                 
+ conv1d_flipout (Conv1DFlip  (None, 46, 8)             648       
+ out)                                                            
+                                                                 
+ max_pooling1d (MaxPooling1  (None, 23, 8)             0         
+ D)                                                              
+                                                                 
+ batch_normalization (Batch  (None, 23, 8)             32        
+ Normalization)                                                  
+                                                                 
+ conv1d_flipout_1 (Conv1DFl  (None, 10, 16)            1296      
+ ipout)                                                          
+                                                                 
+ max_pooling1d_1 (MaxPoolin  (None, 9, 16)             0         
+ g1D)                                                            
+                                                                 
+ batch_normalization_1 (Bat  (None, 9, 16)             64        
+ chNormalization)                                                
+                                                                 
+ conv1d_flipout_2 (Conv1DFl  (None, 8, 32)             2080      
+ ipout)                                                          
+                                                                 
+ batch_normalization_2 (Bat  (None, 8, 32)             128       
+ chNormalization)                                                
+                                                                 
+ global_average_pooling1d (  (None, 32)                0         
+ GlobalAveragePooling1D)                                         
+                                                                 
+ dense_flipout (DenseFlipou  (None, 32)                2080      
+ t)                                                              
+                                                                 
+ batch_normalization_3 (Bat  (None, 32)                128       
+ chNormalization)                                                
+                                                                 
+ dense_flipout_1 (DenseFlip  (None, 5)                 325       
+ out)                                                            
+                                                                 
+=================================================================
+Total params: 6781 (26.49 KB)
+Trainable params: 6605 (25.80 KB)
+Non-trainable params: 176 (704.00 Byte)
+_________________________________________________________________
+None
+Computing loss for randomly initialized model...
+Loss before loading weights/ 1.7712169
+
+------------ RESTORING CHECKPOINT ------------
+
+Looking for ckpt in models/fivelabel_20k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_/tf_ckpts/
+Restoring checkpoint from models/fivelabel_20k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_/tf_ckpts/ckpt-30
+Loss after loading weights/ 0.43641412
+
+Threshold probability for classification: 0.5 
+Accuracy on 0 batch using median of sampled probabilities: 0.894 %
+Accuracy on 0 batch using median of sampled probabilities, not considering unclassified examples: 0.9159836 %
+Accuracy on 1 batch using median of sampled probabilities: 0.882 %
+Accuracy on 1 batch using median of sampled probabilities, not considering unclassified examples: 0.92066807 %
+Accuracy on 2 batch using median of sampled probabilities: 0.872 %
+Accuracy on 2 batch using median of sampled probabilities, not considering unclassified examples: 0.9026915 %
+Accuracy on 3 batch using median of sampled probabilities: 0.898 %
+Accuracy on 3 batch using median of sampled probabilities, not considering unclassified examples: 0.91820043 %
+Accuracy on 4 batch using median of sampled probabilities: 0.906 %
+Accuracy on 4 batch using median of sampled probabilities, not considering unclassified examples: 0.9282787 %
+Accuracy on 5 batch using median of sampled probabilities: 0.88 %
+Accuracy on 5 batch using median of sampled probabilities, not considering unclassified examples: 0.90909094 %
+Accuracy on 6 batch using median of sampled probabilities: 0.92 %
+Accuracy on 6 batch using median of sampled probabilities, not considering unclassified examples: 0.93686354 %
+Accuracy on 7 batch using median of sampled probabilities: 0.9 %
+Accuracy on 7 batch using median of sampled probabilities, not considering unclassified examples: 0.9183673 %
+Accuracy on 8 batch using median of sampled probabilities: 0.886 %
+Accuracy on 8 batch using median of sampled probabilities, not considering unclassified examples: 0.9209979 %
+Accuracy on 9 batch using median of sampled probabilities: 0.906 %
+Accuracy on 9 batch using median of sampled probabilities, not considering unclassified examples: 0.9359504 %
+Accuracy on 10 batch using median of sampled probabilities: 0.876 %
+Accuracy on 10 batch using median of sampled probabilities, not considering unclassified examples: 0.90123457 %
+Accuracy on 11 batch using median of sampled probabilities: 0.916 %
+Accuracy on 11 batch using median of sampled probabilities, not considering unclassified examples: 0.946281 %
+Accuracy on 12 batch using median of sampled probabilities: 0.9 %
+Accuracy on 12 batch using median of sampled probabilities, not considering unclassified examples: 0.9202454 %
+Accuracy on 13 batch using median of sampled probabilities: 0.908 %
+Accuracy on 13 batch using median of sampled probabilities, not considering unclassified examples: 0.9303279 %
+Accuracy on 14 batch using median of sampled probabilities: 0.87 %
+Accuracy on 14 batch using median of sampled probabilities, not considering unclassified examples: 0.9006211 %
+Accuracy on 15 batch using median of sampled probabilities: 0.894 %
+Accuracy on 15 batch using median of sampled probabilities, not considering unclassified examples: 0.92931396 %
+Accuracy on 16 batch using median of sampled probabilities: 0.868 %
+Accuracy on 16 batch using median of sampled probabilities, not considering unclassified examples: 0.9136842 %
+Accuracy on 17 batch using median of sampled probabilities: 0.902 %
+Accuracy on 17 batch using median of sampled probabilities, not considering unclassified examples: 0.926078 %
+Accuracy on 18 batch using median of sampled probabilities: 0.888 %
+Accuracy on 18 batch using median of sampled probabilities, not considering unclassified examples: 0.925 %
+Accuracy on 19 batch using median of sampled probabilities: 0.898 %
+Accuracy on 19 batch using median of sampled probabilities, not considering unclassified examples: 0.9257732 %
+Accuracy on 20 batch using median of sampled probabilities: 0.87 %
+Accuracy on 20 batch using median of sampled probabilities, not considering unclassified examples: 0.8932238 %
+Accuracy on 21 batch using median of sampled probabilities: 0.898 %
+Accuracy on 21 batch using median of sampled probabilities, not considering unclassified examples: 0.91820043 %
+Accuracy on 22 batch using median of sampled probabilities: 0.89 %
+Accuracy on 22 batch using median of sampled probabilities, not considering unclassified examples: 0.9137577 %
+Accuracy on 23 batch using median of sampled probabilities: 0.876 %
+Accuracy on 23 batch using median of sampled probabilities, not considering unclassified examples: 0.918239 %
+Accuracy on 24 batch using median of sampled probabilities: 0.912 %
+Accuracy on 24 batch using median of sampled probabilities, not considering unclassified examples: 0.936345 %
+Accuracy on 25 batch using median of sampled probabilities: 0.9 %
+Accuracy on 25 batch using median of sampled probabilities, not considering unclassified examples: 0.92975205 %
+Accuracy on 26 batch using median of sampled probabilities: 0.888 %
+Accuracy on 26 batch using median of sampled probabilities, not considering unclassified examples: 0.9117043 %
+Accuracy on 27 batch using median of sampled probabilities: 0.892 %
+Accuracy on 27 batch using median of sampled probabilities, not considering unclassified examples: 0.91020405 %
+Accuracy on 28 batch using median of sampled probabilities: 0.884 %
+Accuracy on 28 batch using median of sampled probabilities, not considering unclassified examples: 0.9227557 %
+Accuracy on 29 batch using median of sampled probabilities: 0.896 %
+Accuracy on 29 batch using median of sampled probabilities, not considering unclassified examples: 0.9199179 %
+Accuracy on 30 batch using median of sampled probabilities: 0.898 %
+Accuracy on 30 batch using median of sampled probabilities, not considering unclassified examples: 0.9257732 %
+Accuracy on 31 batch using median of sampled probabilities: 0.882 %
+Accuracy on 31 batch using median of sampled probabilities, not considering unclassified examples: 0.90927833 %
+Accuracy on 32 batch using median of sampled probabilities: 0.88 %
+Accuracy on 32 batch using median of sampled probabilities, not considering unclassified examples: 0.9109731 %
+Accuracy on 33 batch using median of sampled probabilities: 0.908 %
+Accuracy on 33 batch using median of sampled probabilities, not considering unclassified examples: 0.9303279 %
+Accuracy on 34 batch using median of sampled probabilities: 0.906 %
+Accuracy on 34 batch using median of sampled probabilities, not considering unclassified examples: 0.9301848 %
+Accuracy on 35 batch using median of sampled probabilities: 0.898 %
+Accuracy on 35 batch using median of sampled probabilities, not considering unclassified examples: 0.9238683 %
+Accuracy on 36 batch using median of sampled probabilities: 0.904 %
+Accuracy on 36 batch using median of sampled probabilities, not considering unclassified examples: 0.9281314 %
+Accuracy on 37 batch using median of sampled probabilities: 0.9 %
+Accuracy on 37 batch using median of sampled probabilities, not considering unclassified examples: 0.9221311 %
+Accuracy on 38 batch using median of sampled probabilities: 0.9 %
+Accuracy on 38 batch using median of sampled probabilities, not considering unclassified examples: 0.9202454 %
+Accuracy on 39 batch using median of sampled probabilities: 0.914 %
+Accuracy on 39 batch using median of sampled probabilities, not considering unclassified examples: 0.942268 %
+Accuracy on 40 batch using median of sampled probabilities: 0.912 %
+Accuracy on 40 batch using median of sampled probabilities, not considering unclassified examples: 0.94020617 %
+Accuracy on 41 batch using median of sampled probabilities: 0.894 %
+Accuracy on 41 batch using median of sampled probabilities, not considering unclassified examples: 0.9085366 %
+Accuracy on 42 batch using median of sampled probabilities: 0.898 %
+Accuracy on 42 batch using median of sampled probabilities, not considering unclassified examples: 0.92197126 %
+Accuracy on 43 batch using median of sampled probabilities: 0.878 %
+Accuracy on 43 batch using median of sampled probabilities, not considering unclassified examples: 0.91268194 %
+Accuracy on 44 batch using median of sampled probabilities: 0.908 %
+Accuracy on 44 batch using median of sampled probabilities, not considering unclassified examples: 0.93415636 %
+Accuracy on 45 batch using median of sampled probabilities: 0.908 %
+Accuracy on 45 batch using median of sampled probabilities, not considering unclassified examples: 0.9303279 %
+Accuracy on 46 batch using median of sampled probabilities: 0.906 %
+Accuracy on 46 batch using median of sampled probabilities, not considering unclassified examples: 0.939834 %
+Accuracy on 47 batch using median of sampled probabilities: 0.904 %
+Accuracy on 47 batch using median of sampled probabilities, not considering unclassified examples: 0.91129035 %
+Accuracy on 48 batch using median of sampled probabilities: 0.898 %
+Accuracy on 48 batch using median of sampled probabilities, not considering unclassified examples: 0.9238683 %
+Accuracy on 49 batch using median of sampled probabilities: 0.926 %
+Accuracy on 49 batch using median of sampled probabilities, not considering unclassified examples: 0.9526749 %
+Accuracy on 50 batch using median of sampled probabilities: 0.908 %
+Accuracy on 50 batch using median of sampled probabilities, not considering unclassified examples: 0.9322382 %
+Accuracy on 51 batch using median of sampled probabilities: 0.896 %
+Accuracy on 51 batch using median of sampled probabilities, not considering unclassified examples: 0.9313929 %
+Accuracy on 52 batch using median of sampled probabilities: 0.884 %
+Accuracy on 52 batch using median of sampled probabilities, not considering unclassified examples: 0.9113402 %
+Accuracy on 53 batch using median of sampled probabilities: 0.906 %
+Accuracy on 53 batch using median of sampled probabilities, not considering unclassified examples: 0.9359504 %
+Accuracy on 54 batch using median of sampled probabilities: 0.918 %
+Accuracy on 54 batch using median of sampled probabilities, not considering unclassified examples: 0.9444444 %
+Accuracy on 55 batch using median of sampled probabilities: 0.884 %
+Accuracy on 55 batch using median of sampled probabilities, not considering unclassified examples: 0.9246862 %
+Accuracy on 56 batch using median of sampled probabilities: 0.93 %
+Accuracy on 56 batch using median of sampled probabilities, not considering unclassified examples: 0.95679015 %
+Accuracy on 57 batch using median of sampled probabilities: 0.894 %
+Accuracy on 57 batch using median of sampled probabilities, not considering unclassified examples: 0.92164946 %
+Accuracy on 58 batch using median of sampled probabilities: 0.898 %
+Accuracy on 58 batch using median of sampled probabilities, not considering unclassified examples: 0.9238683 %
+Accuracy on 59 batch using median of sampled probabilities: 0.912 %
+Accuracy on 59 batch using median of sampled probabilities, not considering unclassified examples: 0.93442625 %
+Accuracy on 60 batch using median of sampled probabilities: 0.89 %
+Accuracy on 60 batch using median of sampled probabilities, not considering unclassified examples: 0.91752577 %
+Accuracy on 61 batch using median of sampled probabilities: 0.908 %
+Accuracy on 61 batch using median of sampled probabilities, not considering unclassified examples: 0.9265306 %
+Accuracy on 62 batch using median of sampled probabilities: 0.906 %
+Accuracy on 62 batch using median of sampled probabilities, not considering unclassified examples: 0.93209875 %
+Accuracy on 63 batch using median of sampled probabilities: 0.902 %
+Accuracy on 63 batch using median of sampled probabilities, not considering unclassified examples: 0.9279835 %
+Accuracy on 64 batch using median of sampled probabilities: 0.892 %
+Accuracy on 64 batch using median of sampled probabilities, not considering unclassified examples: 0.9083503 %
+Accuracy on 65 batch using median of sampled probabilities: 0.874 %
+Accuracy on 65 batch using median of sampled probabilities, not considering unclassified examples: 0.9010309 %
+Accuracy on 66 batch using median of sampled probabilities: 0.878 %
+Accuracy on 66 batch using median of sampled probabilities, not considering unclassified examples: 0.9164927 %
+Accuracy on 67 batch using median of sampled probabilities: 0.914 %
+Accuracy on 67 batch using median of sampled probabilities, not considering unclassified examples: 0.942268 %
+Accuracy on 68 batch using median of sampled probabilities: 0.864 %
+Accuracy on 68 batch using median of sampled probabilities, not considering unclassified examples: 0.89440995 %
+Accuracy on 69 batch using median of sampled probabilities: 0.906 %
+Accuracy on 69 batch using median of sampled probabilities, not considering unclassified examples: 0.9263804 %
+Accuracy on 70 batch using median of sampled probabilities: 0.904 %
+Accuracy on 70 batch using median of sampled probabilities, not considering unclassified examples: 0.9168357 %
+Accuracy on 71 batch using median of sampled probabilities: 0.9 %
+Accuracy on 71 batch using median of sampled probabilities, not considering unclassified examples: 0.9259259 %
+Accuracy on 72 batch using median of sampled probabilities: 0.882 %
+Accuracy on 72 batch using median of sampled probabilities, not considering unclassified examples: 0.9074074 %
+Accuracy on 73 batch using median of sampled probabilities: 0.904 %
+Accuracy on 73 batch using median of sampled probabilities, not considering unclassified examples: 0.9168357 %
+Accuracy on 74 batch using median of sampled probabilities: 0.89 %
+Accuracy on 74 batch using median of sampled probabilities, not considering unclassified examples: 0.9194215 %
+Accuracy on 75 batch using median of sampled probabilities: 0.93 %
+Accuracy on 75 batch using median of sampled probabilities, not considering unclassified examples: 0.95482546 %
+Accuracy on 76 batch using median of sampled probabilities: 0.9 %
+Accuracy on 76 batch using median of sampled probabilities, not considering unclassified examples: 0.9221311 %
+Accuracy on 77 batch using median of sampled probabilities: 0.874 %
+Accuracy on 77 batch using median of sampled probabilities, not considering unclassified examples: 0.9047619 %
+Accuracy on 78 batch using median of sampled probabilities: 0.922 %
+Accuracy on 78 batch using median of sampled probabilities, not considering unclassified examples: 0.93890023 %
+Accuracy on 79 batch using median of sampled probabilities: 0.902 %
+Accuracy on 79 batch using median of sampled probabilities, not considering unclassified examples: 0.926078 %
+Accuracy on 80 batch using median of sampled probabilities: 0.912 %
+Accuracy on 80 batch using median of sampled probabilities, not considering unclassified examples: 0.9325153 %
+Accuracy on 81 batch using median of sampled probabilities: 0.896 %
+Accuracy on 81 batch using median of sampled probabilities, not considering unclassified examples: 0.92561984 %
+Accuracy on 82 batch using median of sampled probabilities: 0.892 %
+Accuracy on 82 batch using median of sampled probabilities, not considering unclassified examples: 0.91769546 %
+Accuracy on 83 batch using median of sampled probabilities: 0.912 %
+Accuracy on 83 batch using median of sampled probabilities, not considering unclassified examples: 0.93061227 %
+Accuracy on 84 batch using median of sampled probabilities: 0.91 %
+Accuracy on 84 batch using median of sampled probabilities, not considering unclassified examples: 0.9342916 %
+Accuracy on 85 batch using median of sampled probabilities: 0.91 %
+Accuracy on 85 batch using median of sampled probabilities, not considering unclassified examples: 0.93237704 %
+Accuracy on 86 batch using median of sampled probabilities: 0.888 %
+Accuracy on 86 batch using median of sampled probabilities, not considering unclassified examples: 0.90797544 %
+Accuracy on 87 batch using median of sampled probabilities: 0.904 %
+Accuracy on 87 batch using median of sampled probabilities, not considering unclassified examples: 0.92622954 %
+Accuracy on 88 batch using median of sampled probabilities: 0.89 %
+Accuracy on 88 batch using median of sampled probabilities, not considering unclassified examples: 0.921325 %
+Accuracy on 89 batch using median of sampled probabilities: 0.92 %
+Accuracy on 89 batch using median of sampled probabilities, not considering unclassified examples: 0.93686354 %
+Accuracy on 90 batch using median of sampled probabilities: 0.886 %
+Accuracy on 90 batch using median of sampled probabilities, not considering unclassified examples: 0.9209979 %
+Accuracy on 91 batch using median of sampled probabilities: 0.894 %
+Accuracy on 91 batch using median of sampled probabilities, not considering unclassified examples: 0.92164946 %
+Accuracy on 92 batch using median of sampled probabilities: 0.88 %
+Accuracy on 92 batch using median of sampled probabilities, not considering unclassified examples: 0.90163934 %
+Accuracy on 93 batch using median of sampled probabilities: 0.886 %
+Accuracy on 93 batch using median of sampled probabilities, not considering unclassified examples: 0.9077869 %
+Accuracy on 94 batch using median of sampled probabilities: 0.908 %
+Accuracy on 94 batch using median of sampled probabilities, not considering unclassified examples: 0.93415636 %
+Accuracy on 95 batch using median of sampled probabilities: 0.9 %
+Accuracy on 95 batch using median of sampled probabilities, not considering unclassified examples: 0.93360996 %
+Accuracy on 96 batch using median of sampled probabilities: 0.896 %
+Accuracy on 96 batch using median of sampled probabilities, not considering unclassified examples: 0.92371136 %
+Accuracy on 97 batch using median of sampled probabilities: 0.906 %
+Accuracy on 97 batch using median of sampled probabilities, not considering unclassified examples: 0.9378882 %
+Accuracy on 98 batch using median of sampled probabilities: 0.892 %
+Accuracy on 98 batch using median of sampled probabilities, not considering unclassified examples: 0.92339545 %
+Accuracy on 99 batch using median of sampled probabilities: 0.9 %
+Accuracy on 99 batch using median of sampled probabilities, not considering unclassified examples: 0.92975205 %
+-- Accuracy on test set using median of sampled probabilities: 0.89746004 % 
+
+-- Accuracy on test set using median of sampled probabilities, not considering unclassified examples: 0.9236156 % 
+
+Adding Not classified label
+Saved confusion matrix at models/fivelabel_20k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_/cm_confusion_frozen_weights.pdf
+Saved confusion matrix values at models/fivelabel_20k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_/cm_confusion_frozen_weights_values.txt

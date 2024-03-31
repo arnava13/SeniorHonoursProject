@@ -16,7 +16,7 @@ fname fivelabel_20k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_
 model_name custom
 my_path None
 DIR data/train
-TEST_DIR 
+TEST_DIR data/test
 models_dir models/
 save_ckpt True
 out_path_overwrite False
