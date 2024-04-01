@@ -10,9 +10,9 @@ c_0 ['lcdm']
 c_1 ['True', 'dgp', 'ds', 'fR', 'rand--save_ckpt', 'wcdm']
 dataset_balanced False
 include_last False
-log_path models/sixlabel_20k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5__log.txt
+log_path models/sixlabel_20k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_space-1_log.txt
 restore False
-fname sixlabel_20k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_
+fname sixlabel_20k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_space-1
 model_name custom
 my_path None
 DIR data/train
