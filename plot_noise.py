@@ -73,10 +73,10 @@ def main():
 
         theory_errors.append(theoryerr_forz)
         cosmic_variances.append(cosmicvariance)
-        total_noises.append(np.abs(theoryerr_forz)+cosmicvariance)
+        total_noises.append(theoryerr_forz+cosmicvariance)
             
         plt.figure(i+4)  # Refer to the figure for the current z value
-        plt.title("Absolute Theory Error and Cosmic Variance \n z = " + str(z), fontsize = 16)
+        plt.title("Theory Error and Cosmic Variance \n z = " + str(z), fontsize = 16)
         plt.xlabel("k", fontsize = 13)
         plt.ylabel("Fractional Error", fontsize = 13)
         plt.plot(k_values, cosmicvariance, 'k-', label="Cosmic Variance")
