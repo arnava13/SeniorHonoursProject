@@ -1,0 +1,74 @@
+
+ -------- Parameters:
+bayesian True
+test_mode False
+n_test_idx 2
+seed 1312
+fine_tune False
+one_vs_all False
+c_0 ['lcdm']
+c_1 ['True', 'dgp', 'ds', 'fR', 'rand--save_ckpt', 'wcdm']
+dataset_balanced False
+include_last False
+log_path models/fivelabel_20k_EE2_equalexamples-randoms_kmin-1.5_kmax-2.5__log.txt
+restore False
+fname fivelabel_20k_EE2_equalexamples-randoms_kmin-1.5_kmax-2.5_
+model_name custom
+my_path None
+DIR data/fivelabel_train
+TEST_DIR 
+models_dir models/
+save_ckpt True
+out_path_overwrite False
+curves_folder data/curve_files_sys/theory_error
+save_processed_spectra False
+cache_dir False
+im_depth 500
+im_width 1
+im_channels 4
+swap_axes True
+sort_labels True
+norm_data_name /planck_ee2.txt
+normalization stdcosmo
+sample_pace 1
+k_max 2.5
+k_min 1.5
+i_max None
+i_min None
+add_noise True
+n_noisy_samples 10
+add_shot False
+add_sys True
+add_cosvar True
+sigma_sys None
+sys_scaled None
+sys_factor None
+sys_max None
+sigma_curves 0.05
+sigma_curves_default 0.05
+rescale_curves uniform
+z_bins [0, 1, 2, 3]
+n_dense 1
+filters [8, 16, 32]
+kernel_sizes [10, 5, 2]
+strides [2, 2, 1]
+pool_sizes [2, 2, 0]
+strides_pooling [2, 1, 0]
+add_FT_dense False
+trainable False
+unfreeze False
+lr 0.01
+drop 0.5
+n_epochs 100
+val_size 0.15
+test_size 0.0
+batch_size 12000
+patience 20
+GPU True
+TPU False
+decay 0.95
+BatchNorm True
+padding valid
+shuffle True
+
+------------ CREATING DATA GENERATORS ------------
