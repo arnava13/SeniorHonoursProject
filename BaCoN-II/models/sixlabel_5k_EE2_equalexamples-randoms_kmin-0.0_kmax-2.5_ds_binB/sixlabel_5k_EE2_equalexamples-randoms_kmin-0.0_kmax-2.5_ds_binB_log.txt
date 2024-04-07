@@ -1,0 +1,636 @@
+
+ -------- Parameters:
+bayesian True
+test_mode False
+n_test_idx 2
+seed 1312
+fine_tune False
+one_vs_all False
+c_0 ['lcdm']
+c_1 ['True', 'dgp', 'ds', 'fR', 'rand--save_ckpt', 'wcdm']
+dataset_balanced False
+include_last False
+log_path models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB_log.txt
+restore False
+fname sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB
+model_name custom
+my_path None
+DIR data/train
+TEST_DIR data/test/
+models_dir models/
+save_ckpt True
+out_path_overwrite False
+curves_folder data/curve_files_sys/theory_error
+save_processed_spectra False
+cache_dir False
+im_depth 500
+im_width 1
+im_channels 4
+swap_axes True
+sort_labels True
+norm_data_name /planck_ee2.txt
+normalization stdcosmo
+sample_pace 1
+k_max 2.5
+k_min 0.0
+i_max None
+i_min None
+add_noise True
+n_noisy_samples 10
+add_shot False
+add_sys True
+add_cosvar True
+sigma_sys None
+sys_scaled None
+sys_factor None
+sys_max None
+sigma_curves 0.05
+sigma_curves_default 0.05
+rescale_curves uniform
+z_bins [0, 1, 2, 3]
+n_dense 1
+filters [8, 16, 32]
+kernel_sizes [10, 5, 2]
+strides [2, 2, 1]
+pool_sizes [2, 2, 0]
+strides_pooling [2, 1, 0]
+add_FT_dense False
+trainable False
+unfreeze False
+lr 0.01
+drop 0.5
+n_epochs 100
+val_size 0.15
+test_size 0.0
+batch_size 3000
+patience 20
+GPU True
+TPU False
+decay 0.95
+BatchNorm True
+padding valid
+shuffle True
+
+------------ CREATING DATA GENERATORS ------------
+labels : ['dgp', 'ds_binB', 'fr', 'lcdm', 'rand', 'wcdm']
+Labels encoding: 
+{'dgp': 0, 'ds_binB': 1, 'fr': 2, 'lcdm': 3, 'rand': 4, 'wcdm': 5}
+n_labels : 6
+dgp - 5000 training examples
+ds_binB - 5000 training examples
+fr - 5000 training examples
+lcdm - 5000 training examples
+rand - 5000 training examples
+wcdm - 5000 training examples
+
+N. of data files: 5000
+get_all_indexes labels dict: {'dgp': 0, 'ds_binB': 1, 'fr': 2, 'lcdm': 3, 'rand': 4, 'wcdm': 5}
+create_generators n_labels: 6
+create_generators n_labels_eff: 6
+create_generators len_c1: 1
+Check for no duplicates in test: (0=ok):
+0.0
+Check for no duplicates in val: (0=ok):
+0
+N of indexes in training set: 4250
+N of indexes in validation set: 750
+N of indexes in test set: 0
+Check - total per class: 5000
+--create_generators, train indexes
+batch_size: 3000
+- Cut sample
+bs: 3000
+N_labels: 6
+N_noise: 10
+len_c1: 1
+Train index length: 4250
+--create_generators, validation indexes
+- Cut sample
+bs: 3000
+N_labels: 6
+N_noise: 10
+len_c1: 1
+Val index length: 750
+len(train_index_1), batch_size, n_labels_eff, n_noisy_samples = 4250, 3000, 6, 10
+
+--DataSet Train
+DataSet Initialization
+Using z bins [0, 1, 2, 3]
+Normalisation file is /planck_ee2.txt
+Specified k_max is 2.5
+Corresponding i_max is 399
+Closest k to k_max is 2.504942
+Specified k_min is 0.0
+Corresponding i_min is 0
+Closest k to k_min is 0.01
+New data dim: (399, 1)
+Final i_max used is 399
+Final i_min used is 0
+one_vs_all: False
+dataset_balanced: False
+base_case_dataset: True
+N. classes: 6
+N. n_classes in output: 6
+LABELS: ['dgp', 'ds_binB', 'fr', 'lcdm', 'rand', 'wcdm']
+list_IDs length: 4250
+n_indexes (n of file IDs read for each batch): 50
+batch size: 3000
+n_batches : 85
+For each batch we read 50 file IDs
+For each file ID we have 6 labels
+For each ID, label we have 10 realizations of noise
+In total, for each batch we have 3000 training examples
+Input batch size: 3000
+N of batches to cover all file IDs: 85
+len(fname_list), batch_size, n_noisy_samples, n_batches: 25500, 3000, 10, 85
+
+--DataSet Validation
+DataSet Initialization
+Using z bins [0, 1, 2, 3]
+Normalisation file is /planck_ee2.txt
+Specified k_max is 2.5
+Corresponding i_max is 399
+Closest k to k_max is 2.504942
+Specified k_min is 0.0
+Corresponding i_min is 0
+Closest k to k_min is 0.01
+New data dim: (399, 1)
+Final i_max used is 399
+Final i_min used is 0
+one_vs_all: False
+dataset_balanced: False
+base_case_dataset: True
+N. classes: 6
+N. n_classes in output: 6
+LABELS: ['dgp', 'ds_binB', 'fr', 'lcdm', 'rand', 'wcdm']
+list_IDs length: 750
+n_indexes (n of file IDs read for each batch): 50
+batch size: 3000
+n_batches : 15
+For each batch we read 50 file IDs
+For each file ID we have 6 labels
+For each ID, label we have 10 realizations of noise
+In total, for each batch we have 3000 training examples
+Input batch size: 3000
+N of batches to cover all file IDs: 15
+len(fname_list), batch_size, n_noisy_samples, n_batches: 4500, 3000, 10, 15
+------------ DONE ------------
+
+------------ BUILDING MODEL ------------
+Input shape (399, 4)
+Model: "model"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ input_1 (InputLayer)        [(None, 399, 4)]          0         
+                                                                 
+ conv1d_flipout (Conv1DFlip  (None, 195, 8)            648       
+ out)                                                            
+                                                                 
+ max_pooling1d (MaxPooling1  (None, 97, 8)             0         
+ D)                                                              
+                                                                 
+ batch_normalization (Batch  (None, 97, 8)             32        
+ Normalization)                                                  
+                                                                 
+ conv1d_flipout_1 (Conv1DFl  (None, 47, 16)            1296      
+ ipout)                                                          
+                                                                 
+ max_pooling1d_1 (MaxPoolin  (None, 46, 16)            0         
+ g1D)                                                            
+                                                                 
+ batch_normalization_1 (Bat  (None, 46, 16)            64        
+ chNormalization)                                                
+                                                                 
+ conv1d_flipout_2 (Conv1DFl  (None, 45, 32)            2080      
+ ipout)                                                          
+                                                                 
+ batch_normalization_2 (Bat  (None, 45, 32)            128       
+ chNormalization)                                                
+                                                                 
+ global_average_pooling1d (  (None, 32)                0         
+ GlobalAveragePooling1D)                                         
+                                                                 
+ dense_flipout (DenseFlipou  (None, 32)                2080      
+ t)                                                              
+                                                                 
+ batch_normalization_3 (Bat  (None, 32)                128       
+ chNormalization)                                                
+                                                                 
+ dense_flipout_1 (DenseFlip  (None, 6)                 390       
+ out)                                                            
+                                                                 
+=================================================================
+Total params: 6846 (26.74 KB)
+Trainable params: 6670 (26.05 KB)
+Non-trainable params: 176 (704.00 Byte)
+_________________________________________________________________
+None
+Found GPU at: /device:GPU:0
+------------ TRAINING ------------
+
+Features shape: (3000, 399, 4)
+Labels shape: (3000, 6)
+Initializing checkpoint from scratch.
+Epoch 0
+Validation loss decreased. Saved checkpoint for step 1: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-1
+Time:  33.32s, ---- Loss: 1.1322, Acc.: 0.4575, Val. Loss: 2.2346, Val. Acc.: 0.1824
+
+Epoch 1
+Loss did not decrease. Count = 1
+Time:  0.98s, ---- Loss: 0.9976, Acc.: 0.5825, Val. Loss: 2.3353, Val. Acc.: 0.3288
+
+Epoch 2
+Validation loss decreased. Saved checkpoint for step 3: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-2
+Time:  1.08s, ---- Loss: 0.8857, Acc.: 0.6371, Val. Loss: 1.7956, Val. Acc.: 0.4127
+
+Epoch 3
+Validation loss decreased. Saved checkpoint for step 4: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-3
+Time:  1.08s, ---- Loss: 0.8207, Acc.: 0.6664, Val. Loss: 1.5019, Val. Acc.: 0.5294
+
+Epoch 4
+Validation loss decreased. Saved checkpoint for step 5: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-4
+Time:  1.07s, ---- Loss: 0.7887, Acc.: 0.6834, Val. Loss: 1.2988, Val. Acc.: 0.5802
+
+Epoch 5
+Validation loss decreased. Saved checkpoint for step 6: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-5
+Time:  1.08s, ---- Loss: 0.7368, Acc.: 0.6973, Val. Loss: 1.0879, Val. Acc.: 0.6350
+
+Epoch 6
+Validation loss decreased. Saved checkpoint for step 7: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-6
+Time:  1.07s, ---- Loss: 0.7195, Acc.: 0.7070, Val. Loss: 0.9941, Val. Acc.: 0.6720
+
+Epoch 7
+Validation loss decreased. Saved checkpoint for step 8: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-7
+Time:  1.07s, ---- Loss: 0.7104, Acc.: 0.7132, Val. Loss: 0.9317, Val. Acc.: 0.7007
+
+Epoch 8
+Validation loss decreased. Saved checkpoint for step 9: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-8
+Time:  1.08s, ---- Loss: 0.7028, Acc.: 0.7190, Val. Loss: 0.9216, Val. Acc.: 0.7064
+
+Epoch 9
+Validation loss decreased. Saved checkpoint for step 10: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-9
+Time:  1.07s, ---- Loss: 0.6892, Acc.: 0.7229, Val. Loss: 0.9086, Val. Acc.: 0.7131
+
+Epoch 10
+Loss did not decrease. Count = 1
+Time:  0.97s, ---- Loss: 0.6729, Acc.: 0.7270, Val. Loss: 0.9306, Val. Acc.: 0.7040
+
+Epoch 11
+Loss did not decrease. Count = 2
+Time:  0.96s, ---- Loss: 0.6742, Acc.: 0.7304, Val. Loss: 0.9138, Val. Acc.: 0.7126
+
+Epoch 12
+Loss did not decrease. Count = 3
+Time:  0.96s, ---- Loss: 0.6635, Acc.: 0.7341, Val. Loss: 0.9086, Val. Acc.: 0.7154
+
+Epoch 13
+Validation loss decreased. Saved checkpoint for step 14: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-10
+Time:  1.08s, ---- Loss: 0.6491, Acc.: 0.7364, Val. Loss: 0.8878, Val. Acc.: 0.7278
+
+Epoch 14
+Validation loss decreased. Saved checkpoint for step 15: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-11
+Time:  1.07s, ---- Loss: 0.6551, Acc.: 0.7383, Val. Loss: 0.8798, Val. Acc.: 0.7314
+
+Epoch 15
+Validation loss decreased. Saved checkpoint for step 16: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-12
+Time:  1.07s, ---- Loss: 0.6476, Acc.: 0.7404, Val. Loss: 0.8632, Val. Acc.: 0.7360
+
+Epoch 16
+Validation loss decreased. Saved checkpoint for step 17: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-13
+Time:  1.07s, ---- Loss: 0.6360, Acc.: 0.7413, Val. Loss: 0.8593, Val. Acc.: 0.7376
+
+Epoch 17
+Loss did not decrease. Count = 1
+Time:  0.95s, ---- Loss: 0.6294, Acc.: 0.7435, Val. Loss: 0.8595, Val. Acc.: 0.7395
+
+Epoch 18
+Validation loss decreased. Saved checkpoint for step 19: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-14
+Time:  1.07s, ---- Loss: 0.6302, Acc.: 0.7450, Val. Loss: 0.8584, Val. Acc.: 0.7397
+
+Epoch 19
+Loss did not decrease. Count = 1
+Time:  0.95s, ---- Loss: 0.6287, Acc.: 0.7459, Val. Loss: 0.8592, Val. Acc.: 0.7404
+
+Epoch 20
+Validation loss decreased. Saved checkpoint for step 21: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-15
+Time:  1.08s, ---- Loss: 0.6265, Acc.: 0.7480, Val. Loss: 0.8581, Val. Acc.: 0.7393
+
+Epoch 21
+Validation loss decreased. Saved checkpoint for step 22: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-16
+Time:  1.08s, ---- Loss: 0.6266, Acc.: 0.7490, Val. Loss: 0.8527, Val. Acc.: 0.7429
+
+Epoch 22
+Loss did not decrease. Count = 1
+Time:  0.95s, ---- Loss: 0.6202, Acc.: 0.7501, Val. Loss: 0.8530, Val. Acc.: 0.7411
+
+Epoch 23
+Loss did not decrease. Count = 2
+Time:  0.95s, ---- Loss: 0.6181, Acc.: 0.7504, Val. Loss: 0.8624, Val. Acc.: 0.7391
+
+Epoch 24
+Loss did not decrease. Count = 3
+Time:  0.95s, ---- Loss: 0.6251, Acc.: 0.7518, Val. Loss: 0.8593, Val. Acc.: 0.7388
+
+Epoch 25
+Loss did not decrease. Count = 4
+Time:  0.96s, ---- Loss: 0.6164, Acc.: 0.7517, Val. Loss: 0.8534, Val. Acc.: 0.7433
+
+Epoch 26
+Loss did not decrease. Count = 5
+Time:  0.95s, ---- Loss: 0.6210, Acc.: 0.7529, Val. Loss: 0.8539, Val. Acc.: 0.7425
+
+Epoch 27
+Loss did not decrease. Count = 6
+Time:  0.96s, ---- Loss: 0.6136, Acc.: 0.7540, Val. Loss: 0.8544, Val. Acc.: 0.7431
+
+Epoch 28
+Validation loss decreased. Saved checkpoint for step 29: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-17
+Time:  1.07s, ---- Loss: 0.6176, Acc.: 0.7543, Val. Loss: 0.8409, Val. Acc.: 0.7515
+
+Epoch 29
+Validation loss decreased. Saved checkpoint for step 30: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-18
+Time:  1.07s, ---- Loss: 0.6121, Acc.: 0.7551, Val. Loss: 0.8401, Val. Acc.: 0.7506
+
+Epoch 30
+Validation loss decreased. Saved checkpoint for step 31: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-19
+Time:  1.07s, ---- Loss: 0.6034, Acc.: 0.7553, Val. Loss: 0.8391, Val. Acc.: 0.7516
+
+Epoch 31
+Loss did not decrease. Count = 1
+Time:  0.95s, ---- Loss: 0.6106, Acc.: 0.7558, Val. Loss: 0.8403, Val. Acc.: 0.7494
+
+Epoch 32
+Validation loss decreased. Saved checkpoint for step 33: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-20
+Time:  1.09s, ---- Loss: 0.6111, Acc.: 0.7571, Val. Loss: 0.8288, Val. Acc.: 0.7539
+
+Epoch 33
+Loss did not decrease. Count = 1
+Time:  0.96s, ---- Loss: 0.6025, Acc.: 0.7566, Val. Loss: 0.8303, Val. Acc.: 0.7557
+
+Epoch 34
+Loss did not decrease. Count = 2
+Time:  0.95s, ---- Loss: 0.6044, Acc.: 0.7574, Val. Loss: 0.8313, Val. Acc.: 0.7552
+
+Epoch 35
+Loss did not decrease. Count = 3
+Time:  0.95s, ---- Loss: 0.5973, Acc.: 0.7581, Val. Loss: 0.8355, Val. Acc.: 0.7548
+
+Epoch 36
+Loss did not decrease. Count = 4
+Time:  0.94s, ---- Loss: 0.6063, Acc.: 0.7587, Val. Loss: 0.8342, Val. Acc.: 0.7534
+
+Epoch 37
+Loss did not decrease. Count = 5
+Time:  0.95s, ---- Loss: 0.6077, Acc.: 0.7586, Val. Loss: 0.8307, Val. Acc.: 0.7562
+
+Epoch 38
+Validation loss decreased. Saved checkpoint for step 39: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-21
+Time:  1.07s, ---- Loss: 0.6048, Acc.: 0.7583, Val. Loss: 0.8282, Val. Acc.: 0.7571
+
+Epoch 39
+Loss did not decrease. Count = 1
+Time:  0.95s, ---- Loss: 0.5983, Acc.: 0.7594, Val. Loss: 0.8285, Val. Acc.: 0.7576
+
+Epoch 40
+Validation loss decreased. Saved checkpoint for step 41: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-22
+Time:  1.07s, ---- Loss: 0.5982, Acc.: 0.7598, Val. Loss: 0.8267, Val. Acc.: 0.7592
+
+Epoch 41
+Validation loss decreased. Saved checkpoint for step 42: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-23
+Time:  1.07s, ---- Loss: 0.6024, Acc.: 0.7602, Val. Loss: 0.8258, Val. Acc.: 0.7593
+
+Epoch 42
+Validation loss decreased. Saved checkpoint for step 43: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-24
+Time:  1.07s, ---- Loss: 0.5991, Acc.: 0.7605, Val. Loss: 0.8234, Val. Acc.: 0.7589
+
+Epoch 43
+Validation loss decreased. Saved checkpoint for step 44: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-25
+Time:  1.09s, ---- Loss: 0.5961, Acc.: 0.7609, Val. Loss: 0.8228, Val. Acc.: 0.7617
+
+Epoch 44
+Loss did not decrease. Count = 1
+Time:  0.96s, ---- Loss: 0.6010, Acc.: 0.7614, Val. Loss: 0.8233, Val. Acc.: 0.7601
+
+Epoch 45
+Loss did not decrease. Count = 2
+Time:  0.95s, ---- Loss: 0.5944, Acc.: 0.7612, Val. Loss: 0.8238, Val. Acc.: 0.7601
+
+Epoch 46
+Validation loss decreased. Saved checkpoint for step 47: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-26
+Time:  1.07s, ---- Loss: 0.5953, Acc.: 0.7616, Val. Loss: 0.8207, Val. Acc.: 0.7607
+
+Epoch 47
+Loss did not decrease. Count = 1
+Time:  0.95s, ---- Loss: 0.5940, Acc.: 0.7619, Val. Loss: 0.8234, Val. Acc.: 0.7611
+
+Epoch 48
+Loss did not decrease. Count = 2
+Time:  0.95s, ---- Loss: 0.5929, Acc.: 0.7622, Val. Loss: 0.8212, Val. Acc.: 0.7616
+
+Epoch 49
+Validation loss decreased. Saved checkpoint for step 50: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-27
+Time:  1.08s, ---- Loss: 0.5939, Acc.: 0.7624, Val. Loss: 0.8202, Val. Acc.: 0.7621
+
+Epoch 50
+Validation loss decreased. Saved checkpoint for step 51: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-28
+Time:  1.07s, ---- Loss: 0.5943, Acc.: 0.7628, Val. Loss: 0.8179, Val. Acc.: 0.7617
+
+Epoch 51
+Loss did not decrease. Count = 1
+Time:  0.95s, ---- Loss: 0.6016, Acc.: 0.7625, Val. Loss: 0.8204, Val. Acc.: 0.7610
+
+Epoch 52
+Loss did not decrease. Count = 2
+Time:  0.95s, ---- Loss: 0.5955, Acc.: 0.7627, Val. Loss: 0.8197, Val. Acc.: 0.7622
+
+Epoch 53
+Loss did not decrease. Count = 3
+Time:  0.95s, ---- Loss: 0.5994, Acc.: 0.7632, Val. Loss: 0.8207, Val. Acc.: 0.7618
+
+Epoch 54
+Loss did not decrease. Count = 4
+Time:  0.95s, ---- Loss: 0.5913, Acc.: 0.7630, Val. Loss: 0.8207, Val. Acc.: 0.7624
+
+Epoch 55
+Loss did not decrease. Count = 5
+Time:  0.96s, ---- Loss: 0.5908, Acc.: 0.7634, Val. Loss: 0.8187, Val. Acc.: 0.7630
+
+Epoch 56
+Loss did not decrease. Count = 6
+Time:  0.95s, ---- Loss: 0.5953, Acc.: 0.7639, Val. Loss: 0.8198, Val. Acc.: 0.7622
+
+Epoch 57
+Loss did not decrease. Count = 7
+Time:  0.96s, ---- Loss: 0.5933, Acc.: 0.7633, Val. Loss: 0.8201, Val. Acc.: 0.7614
+
+Epoch 58
+Loss did not decrease. Count = 8
+Time:  0.99s, ---- Loss: 0.5943, Acc.: 0.7647, Val. Loss: 0.8190, Val. Acc.: 0.7634
+
+Epoch 59
+Loss did not decrease. Count = 9
+Time:  0.95s, ---- Loss: 0.5933, Acc.: 0.7635, Val. Loss: 0.8198, Val. Acc.: 0.7621
+
+Epoch 60
+Loss did not decrease. Count = 10
+Time:  0.95s, ---- Loss: 0.5963, Acc.: 0.7638, Val. Loss: 0.8193, Val. Acc.: 0.7629
+
+Epoch 61
+Loss did not decrease. Count = 11
+Time:  0.95s, ---- Loss: 0.5893, Acc.: 0.7641, Val. Loss: 0.8197, Val. Acc.: 0.7624
+
+Epoch 62
+Loss did not decrease. Count = 12
+Time:  0.95s, ---- Loss: 0.5922, Acc.: 0.7643, Val. Loss: 0.8184, Val. Acc.: 0.7636
+
+Epoch 63
+Loss did not decrease. Count = 13
+Time:  0.95s, ---- Loss: 0.5962, Acc.: 0.7654, Val. Loss: 0.8185, Val. Acc.: 0.7653
+
+Epoch 64
+Loss did not decrease. Count = 14
+Time:  0.94s, ---- Loss: 0.5949, Acc.: 0.7647, Val. Loss: 0.8191, Val. Acc.: 0.7634
+
+Epoch 65
+Loss did not decrease. Count = 15
+Time:  0.95s, ---- Loss: 0.5878, Acc.: 0.7652, Val. Loss: 0.8186, Val. Acc.: 0.7639
+
+Epoch 66
+Loss did not decrease. Count = 16
+Time:  0.95s, ---- Loss: 0.5915, Acc.: 0.7651, Val. Loss: 0.8183, Val. Acc.: 0.7626
+
+Epoch 67
+Validation loss decreased. Saved checkpoint for step 68: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-29
+Time:  1.08s, ---- Loss: 0.5902, Acc.: 0.7655, Val. Loss: 0.8174, Val. Acc.: 0.7636
+
+Epoch 68
+Validation loss decreased. Saved checkpoint for step 69: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-30
+Time:  1.07s, ---- Loss: 0.5952, Acc.: 0.7650, Val. Loss: 0.8168, Val. Acc.: 0.7624
+
+Epoch 69
+Loss did not decrease. Count = 1
+Time:  0.95s, ---- Loss: 0.5924, Acc.: 0.7651, Val. Loss: 0.8174, Val. Acc.: 0.7627
+
+Epoch 70
+Loss did not decrease. Count = 2
+Time:  0.96s, ---- Loss: 0.5883, Acc.: 0.7649, Val. Loss: 0.8177, Val. Acc.: 0.7629
+
+Epoch 71
+Loss did not decrease. Count = 3
+Time:  0.95s, ---- Loss: 0.5891, Acc.: 0.7660, Val. Loss: 0.8180, Val. Acc.: 0.7635
+
+Epoch 72
+Loss did not decrease. Count = 4
+Time:  0.95s, ---- Loss: 0.5910, Acc.: 0.7654, Val. Loss: 0.8179, Val. Acc.: 0.7645
+
+Epoch 73
+Loss did not decrease. Count = 5
+Time:  0.95s, ---- Loss: 0.5881, Acc.: 0.7652, Val. Loss: 0.8176, Val. Acc.: 0.7633
+
+Epoch 74
+Validation loss decreased. Saved checkpoint for step 75: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-31
+Time:  1.08s, ---- Loss: 0.5881, Acc.: 0.7658, Val. Loss: 0.8168, Val. Acc.: 0.7660
+
+Epoch 75
+Loss did not decrease. Count = 1
+Time:  0.95s, ---- Loss: 0.5887, Acc.: 0.7654, Val. Loss: 0.8180, Val. Acc.: 0.7633
+
+Epoch 76
+Validation loss decreased. Saved checkpoint for step 77: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-32
+Time:  1.07s, ---- Loss: 0.5880, Acc.: 0.7661, Val. Loss: 0.8161, Val. Acc.: 0.7635
+
+Epoch 77
+Validation loss decreased. Saved checkpoint for step 78: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-33
+Time:  1.07s, ---- Loss: 0.5921, Acc.: 0.7656, Val. Loss: 0.8159, Val. Acc.: 0.7643
+
+Epoch 78
+Validation loss decreased. Saved checkpoint for step 79: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-34
+Time:  1.09s, ---- Loss: 0.5927, Acc.: 0.7652, Val. Loss: 0.8155, Val. Acc.: 0.7650
+
+Epoch 79
+Loss did not decrease. Count = 1
+Time:  0.95s, ---- Loss: 0.5836, Acc.: 0.7654, Val. Loss: 0.8182, Val. Acc.: 0.7634
+
+Epoch 80
+Loss did not decrease. Count = 2
+Time:  0.95s, ---- Loss: 0.5884, Acc.: 0.7653, Val. Loss: 0.8165, Val. Acc.: 0.7639
+
+Epoch 81
+Loss did not decrease. Count = 3
+Time:  0.95s, ---- Loss: 0.5907, Acc.: 0.7663, Val. Loss: 0.8166, Val. Acc.: 0.7648
+
+Epoch 82
+Validation loss decreased. Saved checkpoint for step 83: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-35
+Time:  1.07s, ---- Loss: 0.5910, Acc.: 0.7658, Val. Loss: 0.8152, Val. Acc.: 0.7635
+
+Epoch 83
+Validation loss decreased. Saved checkpoint for step 84: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-36
+Time:  1.07s, ---- Loss: 0.5917, Acc.: 0.7658, Val. Loss: 0.8151, Val. Acc.: 0.7651
+
+Epoch 84
+Loss did not decrease. Count = 1
+Time:  0.95s, ---- Loss: 0.5886, Acc.: 0.7662, Val. Loss: 0.8159, Val. Acc.: 0.7638
+
+Epoch 85
+Loss did not decrease. Count = 2
+Time:  0.95s, ---- Loss: 0.5908, Acc.: 0.7658, Val. Loss: 0.8167, Val. Acc.: 0.7654
+
+Epoch 86
+Loss did not decrease. Count = 3
+Time:  0.95s, ---- Loss: 0.5846, Acc.: 0.7664, Val. Loss: 0.8168, Val. Acc.: 0.7633
+
+Epoch 87
+Loss did not decrease. Count = 4
+Time:  0.95s, ---- Loss: 0.5880, Acc.: 0.7665, Val. Loss: 0.8164, Val. Acc.: 0.7645
+
+Epoch 88
+Loss did not decrease. Count = 5
+Time:  0.95s, ---- Loss: 0.5834, Acc.: 0.7665, Val. Loss: 0.8165, Val. Acc.: 0.7654
+
+Epoch 89
+Loss did not decrease. Count = 6
+Time:  0.96s, ---- Loss: 0.5891, Acc.: 0.7657, Val. Loss: 0.8154, Val. Acc.: 0.7650
+
+Epoch 90
+Loss did not decrease. Count = 7
+Time:  0.96s, ---- Loss: 0.5893, Acc.: 0.7662, Val. Loss: 0.8159, Val. Acc.: 0.7641
+
+Epoch 91
+Validation loss decreased. Saved checkpoint for step 92: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-37
+Time:  1.07s, ---- Loss: 0.5876, Acc.: 0.7662, Val. Loss: 0.8150, Val. Acc.: 0.7645
+
+Epoch 92
+Validation loss decreased. Saved checkpoint for step 93: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-38
+Time:  1.07s, ---- Loss: 0.5856, Acc.: 0.7663, Val. Loss: 0.8148, Val. Acc.: 0.7656
+
+Epoch 93
+Loss did not decrease. Count = 1
+Time:  0.95s, ---- Loss: 0.5887, Acc.: 0.7663, Val. Loss: 0.8149, Val. Acc.: 0.7652
+
+Epoch 94
+Loss did not decrease. Count = 2
+Time:  0.95s, ---- Loss: 0.5906, Acc.: 0.7664, Val. Loss: 0.8151, Val. Acc.: 0.7655
+
+Epoch 95
+Loss did not decrease. Count = 3
+Time:  0.95s, ---- Loss: 0.5897, Acc.: 0.7664, Val. Loss: 0.8156, Val. Acc.: 0.7659
+
+Epoch 96
+Validation loss decreased. Saved checkpoint for step 97: models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/tf_ckpts/ckpt-39
+Time:  1.08s, ---- Loss: 0.5870, Acc.: 0.7664, Val. Loss: 0.8147, Val. Acc.: 0.7657
+
+Epoch 97
+Loss did not decrease. Count = 1
+Time:  0.95s, ---- Loss: 0.5859, Acc.: 0.7660, Val. Loss: 0.8154, Val. Acc.: 0.7662
+
+Epoch 98
+Loss did not decrease. Count = 2
+Time:  0.95s, ---- Loss: 0.5907, Acc.: 0.7666, Val. Loss: 0.8151, Val. Acc.: 0.7649
+
+Epoch 99
+Loss did not decrease. Count = 3
+Time:  0.95s, ---- Loss: 0.5853, Acc.: 0.7662, Val. Loss: 0.8149, Val. Acc.: 0.7658
+
+Saving at models/sixlabel_5k_EE2_equalexamples-randoms_kmin-0.0_kmax-2.5_ds_binB/hist.png
+Done in 1106.43s
