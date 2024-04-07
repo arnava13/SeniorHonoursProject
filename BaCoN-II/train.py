@@ -316,7 +316,7 @@ def main():
     parser.add_argument("--model_name", default='custom', type=str, required=False)
     parser.add_argument("--my_path", default=None, type=str, required=False)
     parser.add_argument("--DIR", default='data/train_data/', type=str, required=False)
-    parser.add_argument("--TEST_DIR", default='', type=str, required=False)  
+    parser.add_argument("--TEST_DIR", default='data/test/', type=str, required=False)  
     parser.add_argument("--models_dir", default='models/', type=str, required=False)
     parser.add_argument("--save_ckpt", default=True, type=str2bool, required=False)
     parser.add_argument("--out_path_overwrite", default=False, type=str2bool, required=False)
