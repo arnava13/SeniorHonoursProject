@@ -2,52 +2,38 @@
 echo "Initializing training data"
 echo ""
 
+# Navigate to the script's directory
 cd "$(dirname "$0")"
+echo "Working directory: $PWD"
 
-echo $PWD
-n=0
-indir= #YOUR INPUT DIRECTORY HERE
-n_perbin= #NUMBER OF EXAMPLES PER BIN (TOTAL EXAMPLES / 4)
-cosmologyFile= #YOUR ORDERD COSMOLOGY FILE HERE
+# Initialize variables
+indir="/Users/arnav/shp_dat/Data/Binned_DS_Data/train/ordered_all/ds_ordered" # Path to input directory
+n_perbin=5000 # Number of examples per bin, assuming a total of 100 for simplicity
+cosmologyFile="/Users/arnav/shp_dat/Data/Binned_DS_Data/train/ordered_all/cosmo_ds_ordered_train.txt" # Path to the ordered cosmology file
 
-mkdir binA
-binAFile="binA.txt"
-for iteration in $(seq 1 $n_perbin)
-do
-echo "Adding ${iteration} to bin A"
-n=$((n+1))
-cp $indir/${iteration}.txt binA/${n}.txt
-echo "${n} $(awk -v id="${iteration}" 'NR==id {print $0}' $cosmologyFile)" >> $binAFile
-done
+# Function to create bins and corresponding text files
+create_bin() {
+    local binName=$1
+    local binFile="${binName}.txt"
+    local start=$((($2 - 1) * n_perbin + 1))
+    local end=$(($2 * n_perbin))
 
-mkdir binB
-binBFile="binB.txt"
-for iteration in $(seq 1 $n_perbin)
-do
-myi=$((iteration + $n_perbin))
-echo "Adding ${myi} to bin B"
-cp $indir/${myi}.txt binB/${iteration}.txt
-echo "${iteration} $(awk -v id="${myi}" 'NR==id {print $0}' $cosmologyFile)" >> $binBFile
-done
+    echo "Creating ${binName}..."
+    mkdir $binName
 
-mkdir binC
-binCFile="binC.txt"
-for iteration in $(seq 1 $n_perbin)
-do
-myi=$((iteration + 2*$n_perbin))
-echo "Adding ${myi} to bin C"
-cp $indir/${myi}.txt binC/${iteration}.txt
-echo "${iteration} $(awk -v id="${myi}" 'NR==id {print $0}' $cosmologyFile)" >> $binCFile
-done
+    for ((i = start; i <= end; i++)); do
+        local outputFile=$((i - start + 1))
+        echo "Adding ${i}.txt to ${binName} as ${outputFile}.txt"
+        cp "${indir}/${i}.txt" "${binName}/${outputFile}.txt"
+        # Extract the entire row from the cosmology file, prepending the new file index
+        echo "${outputFile} $(awk -v id="$i" 'NR==id {print $0}' $cosmologyFile)" >> $binFile
+    done
+}
 
-mkdir binD
-binDFile="binD.txt"
-for iteration in $(seq 1 $n_perbin)
-do
-myi=$((iteration + 3*$n_perbin))
-echo "Adding ${myi} to bin D"
-cp $indir/${myi}.txt binD/${iteration}.txt
-echo "${iteration} $(awk -v id="${myi}" 'NR==id {print $0}' $cosmologyFile)" >> $binDFile
-done
+# Create bins A, B, C, D
+create_bin "binA" 1
+create_bin "binB" 2
+create_bin "binC" 3
+create_bin "binD" 4
 
-echo "DONE!!! :D "
+echo "Processing DONE!!! :D"
