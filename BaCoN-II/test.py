@@ -167,6 +167,8 @@ def print_cm(cm, names, out_path, cm_name_custom,tot_acc,tot_acc_no_uncl, FLAGS)
             names[i] = r'Random'
         if name == 'wcdm':
             names[i] = r'$w$CDM'
+        if 'ds_bin' in name:
+            names[i] = r'DS (Bin {})'.format(name[-1])
 
     matrix_proportions = np.zeros((len(names),len(names)))
     for i in range(0,len(names)):

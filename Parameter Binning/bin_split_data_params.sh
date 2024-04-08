@@ -7,9 +7,9 @@ cd "$(dirname "$0")"
 echo "Working directory: $PWD"
 
 # Initialize variables
-indir="/Users/arnav/shp_dat/Data/Binned_DS_Data/train/ordered_all/ds_ordered" # Path to input directory
-n_perbin=5000 # Number of examples per bin, assuming a total of 100 for simplicity
-cosmologyFile="/Users/arnav/shp_dat/Data/Binned_DS_Data/train/ordered_all/cosmo_ds_ordered_train.txt" # Path to the ordered cosmology file
+indir="/Users/arnav/shp_dat/Data/Binned_DS_Data/test/ordered_all/ds_test_ordered" # Path to input directory
+n_perbin=250 # Number of examples per bin, assuming a total of 100 for simplicity
+cosmologyFile="/Users/arnav/shp_dat/Data/Binned_DS_Data/test/ordered_all/cosmo_ds_test_ordered.txt" # Path to the ordered cosmology file
 
 # Function to create bins and corresponding text files
 create_bin() {
