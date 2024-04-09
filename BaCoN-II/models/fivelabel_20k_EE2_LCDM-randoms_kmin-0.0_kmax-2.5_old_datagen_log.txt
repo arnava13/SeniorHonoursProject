@@ -1,0 +1,29 @@
+2024-04-09 16:20:33.688634: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:9261] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-04-09 16:20:33.688681: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:607] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-04-09 16:20:33.690252: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1515] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-04-09 16:20:34.718752: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+usage: train.py [-h] [--bayesian BAYESIAN] [--test_mode TEST_MODE] [--n_test_idx N_TEST_IDX]
+[--seed SEED] [--fine_tune FINE_TUNE] [--one_vs_all ONE_VS_ALL]
+[--c_0 C_0 [C_0 ...]] [--c_1 C_1 [C_1 ...]] [--dataset_balanced DATASET_BALANCED]
+[--include_last INCLUDE_LAST] [--log_path LOG_PATH] [--restore RESTORE]
+[--fname FNAME] [--model_name MODEL_NAME] [--my_path MY_PATH] [--DIR DIR]
+[--TEST_DIR TEST_DIR] [--models_dir MODELS_DIR] [--save_ckpt SAVE_CKPT]
+[--out_path_overwrite OUT_PATH_OVERWRITE] [--curves_folder CURVES_FOLDER]
+[--save_processed_spectra SAVE_PROCESSED_SPECTRA] [--im_depth IM_DEPTH]
+[--im_width IM_WIDTH] [--im_channels IM_CHANNELS] [--swap_axes SWAP_AXES]
+[--sort_labels SORT_LABELS] [--norm_data_name NORM_DATA_NAME]
+[--normalization NORMALIZATION] [--sample_pace SAMPLE_PACE] [--k_max K_MAX]
+[--i_max I_MAX] [--add_noise ADD_NOISE] [--n_noisy_samples N_NOISY_SAMPLES]
+[--add_shot ADD_SHOT] [--add_sys ADD_SYS] [--add_cosvar ADD_COSVAR]
+[--sigma_sys SIGMA_SYS] [--sys_scaled SYS_SCALED] [--sys_factor SYS_FACTOR]
+[--sys_max SYS_MAX] [--sigma_curves SIGMA_CURVES]
+[--sigma_curves_default SIGMA_CURVES_DEFAULT] [--rescale_curves RESCALE_CURVES]
+[--z_bins Z_BINS [Z_BINS ...]] [--n_dense N_DENSE]
+[--filters FILTERS [FILTERS ...]] [--kernel_sizes KERNEL_SIZES [KERNEL_SIZES ...]]
+[--strides STRIDES [STRIDES ...]] [--pool_sizes POOL_SIZES [POOL_SIZES ...]]
+[--strides_pooling STRIDES_POOLING [STRIDES_POOLING ...]]
+[--add_FT_dense ADD_FT_DENSE] [--trainable TRAINABLE] [--unfreeze UNFREEZE]
+[--lr LR] [--drop DROP] [--n_epochs N_EPOCHS] [--val_size VAL_SIZE]
+[--test_size TEST_SIZE] [--batch_size BATCH_SIZE] [--patience PATIENCE]
+[--GPU GPU] [--decay DECAY] [--BatchNorm BATCHNORM]
+train.py: error: unrecognized arguments: --cache_dir False
