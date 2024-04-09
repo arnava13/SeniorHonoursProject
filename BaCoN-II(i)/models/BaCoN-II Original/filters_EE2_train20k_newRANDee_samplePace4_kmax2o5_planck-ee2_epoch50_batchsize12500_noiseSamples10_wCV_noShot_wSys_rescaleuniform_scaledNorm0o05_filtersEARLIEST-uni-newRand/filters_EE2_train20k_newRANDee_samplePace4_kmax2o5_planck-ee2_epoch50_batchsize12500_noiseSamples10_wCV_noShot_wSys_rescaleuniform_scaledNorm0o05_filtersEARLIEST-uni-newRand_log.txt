@@ -1,0 +1,424 @@
+
+ -------- Parameters:
+bayesian True
+test_mode False
+n_test_idx 2
+seed 1312
+fine_tune False
+one_vs_all False
+c_0 ['lcdm']
+c_1 ['dgp', 'fR', 'rand', 'wcdm']
+dataset_balanced False
+include_last False
+log_path models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand_log.txt
+restore False
+fname filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand
+model_name custom
+my_path None
+DIR data/B2_20k/ee2/ee2_obstd_0p016/nu_wb/train
+TEST_DIR data/test_data/
+models_dir models/
+save_ckpt True
+out_path_overwrite False
+curves_folder data/curve_files_sys/theory_error/filters_earliest_onset
+save_processed_spectra False
+im_depth 500
+im_width 1
+im_channels 4
+swap_axes True
+sort_labels True
+norm_data_name /planck_ee2.txt
+normalization stdcosmo
+sample_pace 4
+k_max 2.5
+i_max None
+add_noise True
+n_noisy_samples 10
+add_shot False
+add_sys True
+add_cosvar True
+sigma_sys None
+sys_scaled None
+sys_factor None
+sys_max None
+sigma_curves 0.05
+sigma_curves_default 0.05
+rescale_curves uniform
+z_bins [0, 1, 2, 3]
+n_dense 1
+filters [8, 16, 32]
+kernel_sizes [10, 5, 2]
+strides [2, 2, 1]
+pool_sizes [2, 2, 0]
+strides_pooling [2, 1, 0]
+add_FT_dense False
+trainable False
+unfreeze False
+lr 0.01
+drop 0.5
+n_epochs 50
+val_size 0.15
+test_size 0.0
+batch_size 12500
+patience 50
+GPU False
+decay 0.95
+BatchNorm True
+
+------------ CREATING DATA GENERATORS ------------
+labels : ['dgp', 'fr', 'lcdm', 'n-wcdm', 'rand']
+Labels encoding: 
+{'dgp': 0, 'fr': 1, 'lcdm': 2, 'n-wcdm': 3, 'rand': 4}
+n_labels : 5
+dgp - 20000 training examples
+fr - 20000 training examples
+lcdm - 20000 training examples
+n-wcdm - 20000 training examples
+rand - 20000 training examples
+
+N. of data files: 20000
+get_all_indexes labels dict: {'dgp': 0, 'fr': 1, 'lcdm': 2, 'n-wcdm': 3, 'rand': 4}
+create_generators n_labels: 5
+create_generators n_labels_eff: 5
+create_generators len_c1: 1
+Check for no duplicates in test: (0=ok):
+0.0
+Check for no duplicates in val: (0=ok):
+0
+N of files in training set: 17000
+N of files in validation set: 3000
+N of files in test set: 0
+Check - total: 20000
+--create_generators, train indexes
+batch_size: 12500
+- Cut sample
+bs: 12500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+Train index length: 17000
+--create_generators, validation indexes
+- Cut sample
+bs: 12500
+N_labels: 5
+N_noise: 10
+len_c1: 1
+Val index length: 3000
+len(train_index_1), batch_size, n_labels_eff, n_noisy_samples = 17000, 12500, 5, 10
+
+--DataGenerator Train
+Data Generator Initialization
+Using z bins [0, 1, 2, 3]
+Normalisation file is /planck_ee2.txt
+Specified k_max is 2.5
+Corresponding i_max is 100
+Closest k to k_max is 2.539859
+New data dim: (100, 1)
+Final i_max used is 100
+one_vs_all: False
+dataset_balanced: False
+base_case_dataset: True
+N. classes: 5
+N. n_classes in output: 5
+LABELS: ['dgp', 'fr', 'lcdm', 'n-wcdm', 'rand']
+list_IDs length: 17000
+n_indexes (n of file IDs read for each batch): 250
+batch size: 12500
+n_batches : 68
+For each batch we read 250 file IDs
+For each file ID we have 5 labels
+For each ID, label we have 10 realizations of noise
+In total, for each batch we have 12500 training examples
+Input batch size: 12500
+N of batches to cover all file IDs: 68
+
+--DataGenerator Validation
+Data Generator Initialization
+Using z bins [0, 1, 2, 3]
+Normalisation file is /planck_ee2.txt
+Specified k_max is 2.5
+Corresponding i_max is 100
+Closest k to k_max is 2.539859
+New data dim: (100, 1)
+Final i_max used is 100
+one_vs_all: False
+dataset_balanced: False
+base_case_dataset: True
+N. classes: 5
+N. n_classes in output: 5
+LABELS: ['dgp', 'fr', 'lcdm', 'n-wcdm', 'rand']
+list_IDs length: 3000
+n_indexes (n of file IDs read for each batch): 250
+batch size: 12500
+n_batches : 12
+For each batch we read 250 file IDs
+For each file ID we have 5 labels
+For each ID, label we have 10 realizations of noise
+In total, for each batch we have 12500 training examples
+Input batch size: 12500
+N of batches to cover all file IDs: 12
+------------ DONE ------------
+
+------------ BUILDING MODEL ------------
+Input shape (100, 4)
+using 1D layers and 4 channels
+Expected output dimension of layer conv1d_flipout: 46.0
+Expected output dimension of layer max_pooling1d: 23.0
+Expected output dimension of layer conv1d_flipout_1: 10.0
+Expected output dimension of layer max_pooling1d_1: 9.0
+Expected output dimension of layer conv1d_flipout_2: 8.0
+Model: "model"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ input_1 (InputLayer)        [(None, 100, 4)]          0         
+                                                                 
+ conv1d_flipout (Conv1DFlipo  (None, 46, 8)            648       
+ ut)                                                             
+                                                                 
+ max_pooling1d (MaxPooling1D  (None, 23, 8)            0         
+ )                                                               
+                                                                 
+ batch_normalization (BatchN  (None, 23, 8)            32        
+ ormalization)                                                   
+                                                                 
+ conv1d_flipout_1 (Conv1DFli  (None, 10, 16)           1296      
+ pout)                                                           
+                                                                 
+ max_pooling1d_1 (MaxPooling  (None, 9, 16)            0         
+ 1D)                                                             
+                                                                 
+ batch_normalization_1 (Batc  (None, 9, 16)            64        
+ hNormalization)                                                 
+                                                                 
+ conv1d_flipout_2 (Conv1DFli  (None, 8, 32)            2080      
+ pout)                                                           
+                                                                 
+ batch_normalization_2 (Batc  (None, 8, 32)            128       
+ hNormalization)                                                 
+                                                                 
+ global_average_pooling1d (G  (None, 32)               0         
+ lobalAveragePooling1D)                                          
+                                                                 
+ dense_flipout (DenseFlipout  (None, 32)               2080      
+ )                                                               
+                                                                 
+ batch_normalization_3 (Batc  (None, 32)               128       
+ hNormalization)                                                 
+                                                                 
+ dense_flipout_1 (DenseFlipo  (None, 5)                325       
+ ut)                                                             
+                                                                 
+=================================================================
+Total params: 6,781
+Trainable params: 6,605
+Non-trainable params: 176
+_________________________________________________________________
+None
+------------ TRAINING ------------
+
+Features shape: (12500, 100, 4)
+Labels shape: (12500, 5)
+Initializing checkpoint from scratch.
+Epoch 0
+Validation loss decreased. Saved checkpoint for step 1: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-1
+Time:  5155.41s, ---- Loss: 0.7275, Acc.: 0.5930, Val. Loss: 2.1412, Val. Acc.: 0.2194
+
+Epoch 1
+Loss did not decrease. Count = 1
+Time:  4815.61s, ---- Loss: 0.5907, Acc.: 0.7443, Val. Loss: 3.1606, Val. Acc.: 0.2980
+
+Epoch 2
+Loss did not decrease. Count = 2
+Time:  4871.66s, ---- Loss: 0.5162, Acc.: 0.7809, Val. Loss: 2.3981, Val. Acc.: 0.3591
+
+Epoch 3
+Validation loss decreased. Saved checkpoint for step 4: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-2
+Time:  4905.99s, ---- Loss: 0.4836, Acc.: 0.8088, Val. Loss: 2.0467, Val. Acc.: 0.4146
+
+Epoch 4
+Validation loss decreased. Saved checkpoint for step 5: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-3
+Time:  4992.33s, ---- Loss: 0.4111, Acc.: 0.8299, Val. Loss: 1.6891, Val. Acc.: 0.4517
+
+Epoch 5
+Validation loss decreased. Saved checkpoint for step 6: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-4
+Time:  5041.33s, ---- Loss: 0.3864, Acc.: 0.8435, Val. Loss: 1.0356, Val. Acc.: 0.6128
+
+Epoch 6
+Validation loss decreased. Saved checkpoint for step 7: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-5
+Time:  4923.10s, ---- Loss: 0.3817, Acc.: 0.8530, Val. Loss: 0.7069, Val. Acc.: 0.7344
+
+Epoch 7
+Validation loss decreased. Saved checkpoint for step 8: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-6
+Time:  5145.47s, ---- Loss: 0.3413, Acc.: 0.8606, Val. Loss: 0.5555, Val. Acc.: 0.8006
+
+Epoch 8
+Validation loss decreased. Saved checkpoint for step 9: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-7
+Time:  4947.60s, ---- Loss: 0.3285, Acc.: 0.8673, Val. Loss: 0.5030, Val. Acc.: 0.8228
+
+Epoch 9
+Loss did not decrease. Count = 1
+Time:  4860.40s, ---- Loss: 0.3278, Acc.: 0.8713, Val. Loss: 0.5166, Val. Acc.: 0.8207
+
+Epoch 10
+Validation loss decreased. Saved checkpoint for step 11: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-8
+Time:  4783.25s, ---- Loss: 0.3117, Acc.: 0.8752, Val. Loss: 0.4943, Val. Acc.: 0.8281
+
+Epoch 11
+Loss did not decrease. Count = 1
+Time:  5013.63s, ---- Loss: 0.3159, Acc.: 0.8778, Val. Loss: 0.4966, Val. Acc.: 0.8292
+
+Epoch 12
+Loss did not decrease. Count = 2
+Time:  4898.83s, ---- Loss: 0.3110, Acc.: 0.8794, Val. Loss: 0.5366, Val. Acc.: 0.8103
+
+Epoch 13
+Loss did not decrease. Count = 3
+Time:  4856.97s, ---- Loss: 0.3003, Acc.: 0.8827, Val. Loss: 0.5883, Val. Acc.: 0.7868
+
+Epoch 14
+Loss did not decrease. Count = 4
+Time:  4737.41s, ---- Loss: 0.2960, Acc.: 0.8839, Val. Loss: 0.6002, Val. Acc.: 0.7825
+
+Epoch 15
+Loss did not decrease. Count = 5
+Time:  4676.00s, ---- Loss: 0.2941, Acc.: 0.8861, Val. Loss: 0.5466, Val. Acc.: 0.8078
+
+Epoch 16
+Loss did not decrease. Count = 6
+Time:  4683.18s, ---- Loss: 0.2813, Acc.: 0.8866, Val. Loss: 0.5532, Val. Acc.: 0.8036
+
+Epoch 17
+Validation loss decreased. Saved checkpoint for step 18: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-9
+Time:  4765.41s, ---- Loss: 0.2803, Acc.: 0.8882, Val. Loss: 0.4825, Val. Acc.: 0.8327
+
+Epoch 18
+Validation loss decreased. Saved checkpoint for step 19: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-10
+Time:  4837.97s, ---- Loss: 0.2734, Acc.: 0.8893, Val. Loss: 0.4690, Val. Acc.: 0.8408
+
+Epoch 19
+Validation loss decreased. Saved checkpoint for step 20: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-11
+Time:  4781.33s, ---- Loss: 0.2785, Acc.: 0.8910, Val. Loss: 0.4183, Val. Acc.: 0.8627
+
+Epoch 20
+Loss did not decrease. Count = 1
+Time:  4836.64s, ---- Loss: 0.2773, Acc.: 0.8916, Val. Loss: 0.4196, Val. Acc.: 0.8633
+
+Epoch 21
+Loss did not decrease. Count = 2
+Time:  4916.58s, ---- Loss: 0.2756, Acc.: 0.8922, Val. Loss: 0.4206, Val. Acc.: 0.8622
+
+Epoch 22
+Validation loss decreased. Saved checkpoint for step 23: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-12
+Time:  4896.96s, ---- Loss: 0.2765, Acc.: 0.8930, Val. Loss: 0.3893, Val. Acc.: 0.8771
+
+Epoch 23
+Loss did not decrease. Count = 1
+Time:  4895.39s, ---- Loss: 0.2717, Acc.: 0.8939, Val. Loss: 0.4041, Val. Acc.: 0.8682
+
+Epoch 24
+Loss did not decrease. Count = 2
+Time:  4855.40s, ---- Loss: 0.2799, Acc.: 0.8941, Val. Loss: 0.3963, Val. Acc.: 0.8729
+
+Epoch 25
+Validation loss decreased. Saved checkpoint for step 26: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-13
+Time:  5228.62s, ---- Loss: 0.2707, Acc.: 0.8948, Val. Loss: 0.3821, Val. Acc.: 0.8791
+
+Epoch 26
+Loss did not decrease. Count = 1
+Time:  4956.92s, ---- Loss: 0.2676, Acc.: 0.8953, Val. Loss: 0.3870, Val. Acc.: 0.8772
+
+Epoch 27
+Validation loss decreased. Saved checkpoint for step 28: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-14
+Time:  4849.54s, ---- Loss: 0.2781, Acc.: 0.8955, Val. Loss: 0.3743, Val. Acc.: 0.8829
+
+Epoch 28
+Validation loss decreased. Saved checkpoint for step 29: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-15
+Time:  4777.80s, ---- Loss: 0.2733, Acc.: 0.8961, Val. Loss: 0.3676, Val. Acc.: 0.8854
+
+Epoch 29
+Validation loss decreased. Saved checkpoint for step 30: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-16
+Time:  5154.44s, ---- Loss: 0.2688, Acc.: 0.8962, Val. Loss: 0.3638, Val. Acc.: 0.8867
+
+Epoch 30
+Validation loss decreased. Saved checkpoint for step 31: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-17
+Time:  4946.83s, ---- Loss: 0.2676, Acc.: 0.8974, Val. Loss: 0.3615, Val. Acc.: 0.8883
+
+Epoch 31
+Loss did not decrease. Count = 1
+Time:  4795.54s, ---- Loss: 0.2670, Acc.: 0.8973, Val. Loss: 0.3683, Val. Acc.: 0.8857
+
+Epoch 32
+Validation loss decreased. Saved checkpoint for step 33: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-18
+Time:  4768.47s, ---- Loss: 0.2690, Acc.: 0.8976, Val. Loss: 0.3561, Val. Acc.: 0.8921
+
+Epoch 33
+Loss did not decrease. Count = 1
+Time:  5060.22s, ---- Loss: 0.2634, Acc.: 0.8986, Val. Loss: 0.3594, Val. Acc.: 0.8892
+
+Epoch 34
+Loss did not decrease. Count = 2
+Time:  5164.86s, ---- Loss: 0.2730, Acc.: 0.8986, Val. Loss: 0.3619, Val. Acc.: 0.8894
+
+Epoch 35
+Loss did not decrease. Count = 3
+Time:  5310.37s, ---- Loss: 0.2540, Acc.: 0.8983, Val. Loss: 0.3596, Val. Acc.: 0.8897
+
+Epoch 36
+Validation loss decreased. Saved checkpoint for step 37: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-19
+Time:  5045.53s, ---- Loss: 0.2623, Acc.: 0.8992, Val. Loss: 0.3547, Val. Acc.: 0.8919
+
+Epoch 37
+Validation loss decreased. Saved checkpoint for step 38: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-20
+Time:  5193.98s, ---- Loss: 0.2635, Acc.: 0.8994, Val. Loss: 0.3536, Val. Acc.: 0.8932
+
+Epoch 38
+Loss did not decrease. Count = 1
+Time:  5574.58s, ---- Loss: 0.2547, Acc.: 0.8991, Val. Loss: 0.3544, Val. Acc.: 0.8924
+
+Epoch 39
+Validation loss decreased. Saved checkpoint for step 40: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-21
+Time:  5364.07s, ---- Loss: 0.2591, Acc.: 0.8999, Val. Loss: 0.3531, Val. Acc.: 0.8931
+
+Epoch 40
+Validation loss decreased. Saved checkpoint for step 41: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-22
+Time:  5323.91s, ---- Loss: 0.2623, Acc.: 0.8991, Val. Loss: 0.3525, Val. Acc.: 0.8930
+
+Epoch 41
+Validation loss decreased. Saved checkpoint for step 42: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-23
+Time:  5180.41s, ---- Loss: 0.2687, Acc.: 0.8994, Val. Loss: 0.3496, Val. Acc.: 0.8936
+
+Epoch 42
+Validation loss decreased. Saved checkpoint for step 43: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-24
+Time:  4805.58s, ---- Loss: 0.2548, Acc.: 0.9004, Val. Loss: 0.3466, Val. Acc.: 0.8962
+
+Epoch 43
+Validation loss decreased. Saved checkpoint for step 44: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-25
+Time:  4789.50s, ---- Loss: 0.2589, Acc.: 0.9004, Val. Loss: 0.3459, Val. Acc.: 0.8961
+
+Epoch 44
+Validation loss decreased. Saved checkpoint for step 45: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-26
+Time:  4857.16s, ---- Loss: 0.2600, Acc.: 0.9005, Val. Loss: 0.3457, Val. Acc.: 0.8967
+
+Epoch 45
+Validation loss decreased. Saved checkpoint for step 46: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-27
+Time:  4641.58s, ---- Loss: 0.2608, Acc.: 0.9007, Val. Loss: 0.3420, Val. Acc.: 0.8977
+
+Epoch 46
+Validation loss decreased. Saved checkpoint for step 47: models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/tf_ckpts/ckpt-28
+Time:  4584.15s, ---- Loss: 0.2590, Acc.: 0.9008, Val. Loss: 0.3413, Val. Acc.: 0.8981
+
+Epoch 47
+Loss did not decrease. Count = 1
+Time:  4603.79s, ---- Loss: 0.2575, Acc.: 0.9009, Val. Loss: 0.3511, Val. Acc.: 0.8935
+
+Epoch 48
+Loss did not decrease. Count = 2
+Time:  4545.37s, ---- Loss: 0.2545, Acc.: 0.9008, Val. Loss: 0.3438, Val. Acc.: 0.8969
+
+Epoch 49
+Loss did not decrease. Count = 3
+Time:  4585.30s, ---- Loss: 0.2520, Acc.: 0.9010, Val. Loss: 0.3454, Val. Acc.: 0.8963
+
+Saving at models/filters_EE2_train20k_newRANDee_samplePace4_kmax2o5_planck-ee2_epoch50_batchsize12500_noiseSamples10_wCV_noShot_wSys_rescaleuniform_scaledNorm0o05_filtersEARLIEST-uni-newRand/hist.png
+Done in 246380.73s
