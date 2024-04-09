@@ -1,33 +1,5 @@
-2024-04-09 16:20:46.782072: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:9261] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
-2024-04-09 16:20:46.782116: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:607] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
-2024-04-09 16:20:46.783369: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1515] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
-2024-04-09 16:20:47.817976: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
-2024-04-09 16:20:51.600166: W tensorflow/core/common_runtime/gpu/gpu_bfc_allocator.cc:47] Overriding orig_value setting because the TF_FORCE_GPU_ALLOW_GROWTH environment variable is set. Original config value was 0.
-using 1D layers and 4 channels
-/usr/local/lib/python3.10/dist-packages/tensorflow_probability/python/layers/util.py:98: UserWarning: `layer.add_variable` is deprecated and will be removed in a future version. Please use the `layer.add_weight()` method instead.
-loc = add_variable_fn(
-/usr/local/lib/python3.10/dist-packages/tensorflow_probability/python/layers/util.py:108: UserWarning: `layer.add_variable` is deprecated and will be removed in a future version. Please use the `layer.add_weight()` method instead.
-untransformed_scale = add_variable_fn(
-Expected output dimension after layer: conv1d_flipout : 23
-Expected output dimension after layer: conv1d_flipout_1 : 9
-Expected output dimension after layer: conv1d_flipout_2 : 8
-WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
-I0000 00:00:1712679710.605388    3519 device_compiler.h:186] Compiled cluster using XLA!  This line is logged at most once for the lifetime of the process.
-Traceback (most recent call last):
-File "/content/SeniorHonoursProject/BaCoN-II/train.py", line 639, in <module>
-if FLAGS.TPU:
-File "/content/SeniorHonoursProject/BaCoN-II/train.py", line 609, in main
-n_labels=n_classes,
-File "/content/SeniorHonoursProject/BaCoN-II/train.py", line 143, in my_train
-print('Last learning rate was %s' %ckpt.optimizer.learning_rate)
-File "/usr/local/lib/python3.10/dist-packages/tensorflow/python/util/traceback_utils.py", line 153, in error_handler
-raise e.with_traceback(filtered_tb) from None
-File "/usr/local/lib/python3.10/dist-packages/tensorflow/python/autograph/impl/api.py", line 439, in converted_call
-result = converted_f(*effective_args, **kwargs)
-TypeError: in user code:
-TypeError: outer_factory.<locals>.inner_factory.<locals>.tf__step_fn() takes from 0 to 2 positional arguments but 7 were given
-Creating directory models/fivelabel_20k_EE2_LCDM-randoms_kmin-0.0_kmax-2.5_old_datagen
--------- Parameters:
+
+ -------- Parameters:
 bayesian True
 test_mode False
 n_test_idx 2
@@ -92,9 +64,10 @@ patience 20
 GPU True
 decay 0.95
 BatchNorm True
+
 ------------ CREATING DATA GENERATORS ------------
 labels : ['dgp', 'fr', 'lcdm', 'rand', 'wcdm']
-Labels encoding:
+Labels encoding: 
 {'dgp': 0, 'fr': 1, 'lcdm': 2, 'rand': 3, 'wcdm': 4}
 n_labels : 5
 dgp - 20000 training examples
@@ -102,6 +75,7 @@ fr - 20000 training examples
 lcdm - 20000 training examples
 rand - 20000 training examples
 wcdm - 20000 training examples
+
 N. of data files: 20000
 get_all_indexes labels dict: {'dgp': 0, 'fr': 1, 'lcdm': 2, 'rand': 3, 'wcdm': 4}
 create_generators n_labels: 5
@@ -131,6 +105,7 @@ N_noise: 10
 len_c1: 1
 Val index length: 3000
 len(train_index_1), batch_size, n_labels_eff, n_noisy_samples = 17000, 12500, 5, 10
+
 --DataGenerator Train
 Data Generator Initialization
 Using z bins [0, 1, 2, 3]
@@ -156,6 +131,7 @@ For each ID, label we have 10 realizations of noise
 In total, for each batch we have 12500 training examples
 Input batch size: 12500
 N of batches to cover all file IDs: 68
+
 --DataGenerator Validation
 Data Generator Initialization
 Using z bins [0, 1, 2, 3]
@@ -182,37 +158,51 @@ In total, for each batch we have 12500 training examples
 Input batch size: 12500
 N of batches to cover all file IDs: 12
 ------------ DONE ------------
+
 ------------ BUILDING MODEL ------------
 Input shape (100, 4)
 Model: "model"
 _________________________________________________________________
-Layer (type)                Output Shape              Param #
+ Layer (type)                Output Shape              Param #   
 =================================================================
-input_1 (InputLayer)        [(None, 100, 4)]          0
-conv1d_flipout (Conv1DFlip  (None, 46, 8)             648
-out)
-max_pooling1d (MaxPooling1  (None, 23, 8)             0
-D)
-batch_normalization (Batch  (None, 23, 8)             32
-Normalization)
-conv1d_flipout_1 (Conv1DFl  (None, 10, 16)            1296
-ipout)
-max_pooling1d_1 (MaxPoolin  (None, 9, 16)             0
-g1D)
-batch_normalization_1 (Bat  (None, 9, 16)             64
-chNormalization)
-conv1d_flipout_2 (Conv1DFl  (None, 8, 32)             2080
-ipout)
-batch_normalization_2 (Bat  (None, 8, 32)             128
-chNormalization)
-global_average_pooling1d (  (None, 32)                0
-GlobalAveragePooling1D)
-dense_flipout (DenseFlipou  (None, 32)                2080
-t)
-batch_normalization_3 (Bat  (None, 32)                128
-chNormalization)
-dense_flipout_1 (DenseFlip  (None, 5)                 325
-out)
+ input_1 (InputLayer)        [(None, 100, 4)]          0         
+                                                                 
+ conv1d_flipout (Conv1DFlip  (None, 46, 8)             648       
+ out)                                                            
+                                                                 
+ max_pooling1d (MaxPooling1  (None, 23, 8)             0         
+ D)                                                              
+                                                                 
+ batch_normalization (Batch  (None, 23, 8)             32        
+ Normalization)                                                  
+                                                                 
+ conv1d_flipout_1 (Conv1DFl  (None, 10, 16)            1296      
+ ipout)                                                          
+                                                                 
+ max_pooling1d_1 (MaxPoolin  (None, 9, 16)             0         
+ g1D)                                                            
+                                                                 
+ batch_normalization_1 (Bat  (None, 9, 16)             64        
+ chNormalization)                                                
+                                                                 
+ conv1d_flipout_2 (Conv1DFl  (None, 8, 32)             2080      
+ ipout)                                                          
+                                                                 
+ batch_normalization_2 (Bat  (None, 8, 32)             128       
+ chNormalization)                                                
+                                                                 
+ global_average_pooling1d (  (None, 32)                0         
+ GlobalAveragePooling1D)                                         
+                                                                 
+ dense_flipout (DenseFlipou  (None, 32)                2080      
+ t)                                                              
+                                                                 
+ batch_normalization_3 (Bat  (None, 32)                128       
+ chNormalization)                                                
+                                                                 
+ dense_flipout_1 (DenseFlip  (None, 5)                 325       
+ out)                                                            
+                                                                 
 =================================================================
 Total params: 6781 (26.49 KB)
 Trainable params: 6605 (25.80 KB)
@@ -221,6 +211,7 @@ _________________________________________________________________
 None
 Found GPU at: /device:GPU:0
 ------------ TRAINING ------------
+
 Features shape: (12500, 100, 4)
 Labels shape: (12500, 5)
 Initializing checkpoint from scratch.
