@@ -10,7 +10,7 @@ python Generate_Randoms.py <spectra_source_dir> <filters_source_dir> <outdir> <n
 1. `spectra_source_dir`: Directory containing the spectra in class subfolders/LCDM class folder.
 2. `filters_source_dir`: Directory containing random filters
 3. `outdir`: The output directory where the generated files will be stored.
-4. `n`: The number of examples to use (from each class in 'equal' mode) of spectra (total number of random spectra will be n * the number of non-random classes in equal mode, n in LCDM mode.)
+4. `n`: The number of examples per class
 5. `start_spectrum_number`: The starting index for the spectra files (1-based indexing).
 6. `start_filter_number`: The starting index for the filter files (1-based indexing).
 
