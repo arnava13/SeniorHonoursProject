@@ -483,7 +483,7 @@ def main():
         
     if FLAGS.TPU:
         try:
-            tpu_resolver = tf.distribute.cluster_resolver.TPUClusterResolver()  # Automatically detects the TPU
+            tpu_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(tpu='')  # Automatically detects the TPU
             tf.config.experimental_connect_to_cluster(tpu_resolver)  # Connects to the TPU cluster
             tf.tpu.experimental.initialize_tpu_system(tpu_resolver)  # Initializes the TPU system
             strategy = tf.distribute.TPUStrategy(tpu_resolver)
