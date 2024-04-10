@@ -98,7 +98,7 @@ def TPU_loss(bayesian, strategy):
             loss = tf.nn.compute_average_loss(per_example_loss)
             return loss
         
-    return bayesian_loss if bayesian else non_bayesian_loss
+        return bayesian_loss if bayesian else non_bayesian_loss
 
 def my_train(model, optimizer, loss,
              epochs, 
@@ -106,7 +106,7 @@ def my_train(model, optimizer, loss,
              val_dataset, manager, ckpt,            
              train_acc_metric, val_acc_metric,
              restore=False, patience=100,
-             bayesian=False, save_ckpt=False, decayed_lr_value=None, TPU=False, strategy=None, model_weights_path=None, cache_dir='/cache',
+             bayesian=False, save_ckpt=False, decayed_lr_value=None, TPU=False, strategy=None, cache_dir='/cache',
               ):
   fname_hist = os.path.join(manager.directory, 'history')
   fname_idxs_train = os.path.join(manager.directory, 'idxs_train.txt')
@@ -201,12 +201,11 @@ def my_train(model, optimizer, loss,
         loss_value = loss_value.numpy()
 
     if val_loss_value<best_loss: #int(ckpt.step) % 10 == 0:
-        if not TPU:
-            if save_ckpt:
-                save_path = manager.save()
-                print("Validation loss decreased. Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
-            else:
-                tf.io.gfile.makedirs(manager.directory)
+        if save_ckpt:
+            save_path = manager.save()
+            print("Validation loss decreased. Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
+        else:
+            tf.io.gfile.makedirs(manager.directory)
 
         best_loss = val_loss_value
         #print("New loss {:1.2f}".format(best_loss))
@@ -259,15 +258,6 @@ def my_train(model, optimizer, loss,
     #                      train_accuracy = train_acc.numpy(), val_accuracy=val_acc.numpy())
     #print("Time taken: %.2fs" % (time.time() - start_time))
     print("Time:  %.2fs, ---- Loss: %.4f, Acc.: %.4f, Val. Loss: %.4f, Val. Acc.: %.4f\n" % (time.time() - start_time, train_loss, train_acc, val_loss, val_acc))
-  
-  if not save_ckpt:
-    buffer = io.BytesIO()
-    with h5py.File(buffer, 'w') as h5file:
-        tf.keras.models.save_model(model, h5file)
-
-    buffer.seek(0)
-    with open(model_weights_path, 'wb') as f:
-        f.write(buffer.read())
 
   return model, history
 
@@ -474,13 +464,6 @@ def main():
     
     if FLAGS.test_mode and not FLAGS.fine_tune:
         out_path=out_path+'_test'
-        
-    
-        
-    if not FLAGS.save_ckpt or FLAGS.TPU:
-        model_weights_path = os.path.join(out_path, 'model_weights.h5')
-    else:
-        model_weights_path = None
     
     if not os.path.exists(out_path):
         print('Creating directory %s' %out_path)
@@ -513,14 +496,6 @@ def main():
             raise Exception("TPU not found. Check if TPU is enabled in the notebook settings")
     else:
         strategy = None
-
-    if FLAGS.TPU and FLAGS.save_ckpt:
-        print('Cannot save checkpoints in TPU training. Saving model weights instead.')
-        FLAGS.save_ckpt=False
-    
-    if FLAGS.TPU and FLAGS.cache_dir:
-        print('Cannot cache on disk in TPU training. Caching on memory')
-        cache_dir=None
     
     #with open(out_path+'/params.txt', 'w') as fpar:    
     #    print('Opened params file %s. Writing params' %(out_path+'/params.txt'))
@@ -780,8 +755,7 @@ def main():
     
     print('------------ TRAINING ------------\n')
     if FLAGS.TPU:
-        with strategy.scope():
-              loss = TPU_loss(bayesian = FLAGS.bayesian, strategy=strategy)
+        loss = TPU_loss(bayesian = FLAGS.bayesian, strategy=strategy)
     else:
         if FLAGS.bayesian:
             loss=ELBO
@@ -798,8 +772,7 @@ def main():
              validation_dataset, manager, ckpt,
              train_acc_metric, val_acc_metric,
              patience=FLAGS.patience, restore=FLAGS.restore, 
-             bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None, TPU=FLAGS.TPU, strategy=strategy,
-             model_weights_path = model_weights_path, cache_dir = cache_dir)
+             bayesian=bayesian, save_ckpt=FLAGS.save_ckpt, decayed_lr_value=None, TPU=FLAGS.TPU, strategy=strategy, cache_dir = cache_dir)
     hist_path =  out_path+'/hist.png'
     if FLAGS.fine_tune:
         if FLAGS.test_mode:
