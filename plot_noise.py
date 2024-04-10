@@ -2,6 +2,14 @@
 
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import os
+plt.rcParams["font.family"] = 'serif'
+plt.rcParams["mathtext.fontset"] = "cm"
+latex_path = '/usr/local/texlive/2024/bin/universal-darwin/'
+if latex_path not in os.environ['PATH']:
+    os.environ['PATH'] += os.pathsep + latex_path
+plt.rcParams["text.usetex"] = True
+plt.rcParams['text.latex.preamble'] = r'\usepackage{siunitx}'
 import numpy as np
 import argparse
 import os
@@ -43,19 +51,19 @@ def main():
     # Create figures outside of the loop
     fig_theory_error = plt.figure(1)
     plt.title("Theory Error", fontsize = 16)
-    plt.xlabel("k", fontsize = 13)
+    plt.xlabel("$k$", fontsize = 13)
     plt.ylabel("Fractional Error", fontsize = 13)
     plt.xscale('log')
 
     fig_cosmic_variance = plt.figure(2)
     plt.title("Cosmic Variance", fontsize = 16)
-    plt.xlabel("k", fontsize = 13)
+    plt.xlabel("$k$", fontsize = 13)
     plt.ylabel("Fractional Error", fontsize = 13)
     plt.xscale('log')
 
     fig_total_noise = plt.figure(3)
     plt.title("Total Noise", fontsize = 16)
-    plt.xlabel("k", fontsize = 13)
+    plt.xlabel("$k$", fontsize = 13)
     plt.ylabel("Fractional Error", fontsize = 13)
     plt.xscale('log')
 
@@ -76,8 +84,8 @@ def main():
         total_noises.append(theoryerr_forz+cosmicvariance)
             
         plt.figure(i+4)  # Refer to the figure for the current z value
-        plt.title("Theory Error and Cosmic Variance \n z = " + str(z), fontsize = 16)
-        plt.xlabel("k", fontsize = 13)
+        plt.title("Theory Error and Cosmic Variance \n $z$ = " + str(z), fontsize = 16)
+        plt.xlabel("$k$", fontsize = 13)
         plt.ylabel("Fractional Error", fontsize = 13)
         plt.plot(k_values, cosmicvariance, 'k-', label="Cosmic Variance")
         plt.xlim(0.01, 5)
@@ -98,13 +106,13 @@ def main():
 
     for i, z in enumerate([1.5, 0.783, 0.478, 0.1]):
         plt.figure(fig_theory_error.number)
-        plt.plot(k_values, theory_errors[i], label="z = " + str(z))
+        plt.plot(k_values, theory_errors[i], label="$z$ = " + str(z))
         plt.legend()
         plt.figure(fig_cosmic_variance.number)
-        plt.plot(k_values, cosmic_variances[i], label="z = " + str(z))
+        plt.plot(k_values, cosmic_variances[i], label="$z$ = " + str(z))
         plt.legend()
         plt.figure(fig_total_noise.number)
-        plt.plot(k_values, total_noises[i], label="z = " + str(z))
+        plt.plot(k_values, total_noises[i], label="$z$ = " + str(z))
         plt.legend()
    
     plt.show()
