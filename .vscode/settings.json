@@ -1,5 +1,0 @@
-{
-    "terminal.integrated.env.osx": {
-        "PATH": "${env:HOME}/.pyenv/shims:${env:PATH}"
-    },
-}
